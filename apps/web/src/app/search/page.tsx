@@ -1,12 +1,12 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { Header } from "@/components/layout/Header";
 import { SearchBar } from "@/components/search/SearchBar";
 import { FiltersSidebar } from "@/components/search/FiltersSidebar";
 import { ListingCard, type Listing } from "@/components/listings/ListingCard";
 import { Button } from "@/components/ui/button";
-import { SlidersHorizontal, Grid3X3, List, ArrowUpDown } from "lucide-react";
+import { SlidersHorizontal, Grid3X3, List, ArrowUpDown, Loader2 } from "lucide-react";
 import {
   Select,
   SelectContent,
@@ -15,79 +15,41 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
-
-// Mock data for testing
-const MOCK_LISTINGS: Listing[] = [
-  {
-    id: "1",
-    title: "Ático luminoso con terraza panorámica",
-    price: 425000,
-    location: "Chamberí, Madrid",
-    image: "https://images.unsplash.com/photo-1502672260266-1c1ef2d93688?w=800&h=600&fit=crop",
-    specs: { beds: 3, baths: 2, sqm: 120 },
-    score: 94,
-    source: "Idealista",
-  },
-  {
-    id: "2",
-    title: "Piso reformado cerca del Retiro",
-    price: 380000,
-    location: "Retiro, Madrid",
-    image: "https://images.unsplash.com/photo-1560448204-e02f11c3d0e2?w=800&h=600&fit=crop",
-    specs: { beds: 2, baths: 1, sqm: 85 },
-    score: 88,
-    source: "Fotocasa",
-  },
-  {
-    id: "3",
-    title: "Dúplex con jardín privado",
-    price: 520000,
-    location: "Pozuelo, Madrid",
-    image: "https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?w=800&h=600&fit=crop",
-    specs: { beds: 4, baths: 3, sqm: 180 },
-    score: 96,
-    source: "Idealista",
-  },
-  {
-    id: "4",
-    title: "Estudio moderno en el centro",
-    price: 195000,
-    location: "Sol, Madrid",
-    image: "https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?w=800&h=600&fit=crop",
-    specs: { beds: 1, baths: 1, sqm: 45 },
-    score: 72,
-    source: "Fotocasa",
-  },
-  {
-    id: "5",
-    title: "Chalet independiente con piscina",
-    price: 890000,
-    location: "La Moraleja, Madrid",
-    image: "https://images.unsplash.com/photo-1613490493576-7fde63acd811?w=800&h=600&fit=crop",
-    specs: { beds: 5, baths: 4, sqm: 350 },
-    score: 91,
-    source: "Idealista",
-  },
-  {
-    id: "6",
-    title: "Piso con vistas al parque",
-    price: 310000,
-    location: "Moncloa, Madrid",
-    image: "https://images.unsplash.com/photo-1600585154340-be6161a56a0c?w=800&h=600&fit=crop",
-    specs: { beds: 3, baths: 2, sqm: 95 },
-    score: 85,
-    source: "Habitaclia",
-  },
-];
+import { useRecentListings } from "@/hooks/useSearch";
+import { Skeleton } from "@/components/ui/skeleton";
 
 export default function SearchPage() {
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
   const [sortBy, setSortBy] = useState("relevance");
   const [filtersOpen, setFiltersOpen] = useState(false);
 
+  // Fetch listings from API
+  const { data: apiListings, isLoading, isError } = useRecentListings("Madrid", 20);
+
+  // Transform API data to Listing format
+  const listings: Listing[] = useMemo(() => {
+    if (!apiListings?.listings) return [];
+
+    return apiListings.listings.map((item) => ({
+      id: item.id,
+      title: item.title,
+      price: item.price,
+      location: [item.neighborhood, item.city].filter(Boolean).join(", "),
+      image: item.images?.[0]?.cdnUrl || item.images?.[0]?.originalUrl ||
+        "https://images.unsplash.com/photo-1560448204-e02f11c3d0e2?w=800&h=600&fit=crop",
+      specs: {
+        beds: item.bedrooms ?? 0,
+        baths: item.bathrooms ?? 0,
+        sqm: item.sizeSqm ?? 0,
+      },
+      score: item.authenticityScore ?? 0,
+      source: item.source?.name ?? "Desconocido",
+    }));
+  }, [apiListings]);
+
   const handleSearch = (query: string) => {
     console.log("Search:", query);
-    // TODO: Implement actual search via tRPC
+    // TODO: Implement semantic search via tRPC
   };
 
   return (
@@ -121,7 +83,7 @@ export default function SearchPage() {
               <div>
                 <h1 className="text-2xl font-bold">Propiedades en Madrid</h1>
                 <p className="text-muted-foreground">
-                  {MOCK_LISTINGS.length} resultados encontrados
+                  {isLoading ? "Buscando..." : `${listings.length} resultados encontrados`}
                 </p>
               </div>
 
@@ -179,22 +141,56 @@ export default function SearchPage() {
             </div>
 
             {/* Results Grid */}
-            <div className={
-              viewMode === "grid"
-                ? "grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-6"
-                : "flex flex-col gap-4"
-            }>
-              {MOCK_LISTINGS.map((listing) => (
-                <ListingCard key={listing.id} listing={listing} />
-              ))}
-            </div>
+            {isLoading ? (
+              <div className={
+                viewMode === "grid"
+                  ? "grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-6"
+                  : "flex flex-col gap-4"
+              }>
+                {Array.from({ length: 6 }).map((_, i) => (
+                  <div key={i} className="space-y-3">
+                    <Skeleton className="h-48 w-full rounded-xl" />
+                    <Skeleton className="h-4 w-3/4" />
+                    <Skeleton className="h-4 w-1/2" />
+                  </div>
+                ))}
+              </div>
+            ) : isError ? (
+              <div className="text-center py-12">
+                <p className="text-muted-foreground mb-4">
+                  Error al cargar las propiedades. Por favor, intenta de nuevo.
+                </p>
+                <Button variant="outline" onClick={() => window.location.reload()}>
+                  Reintentar
+                </Button>
+              </div>
+            ) : listings.length === 0 ? (
+              <div className="text-center py-12">
+                <p className="text-muted-foreground">
+                  No se encontraron propiedades con los filtros seleccionados.
+                </p>
+              </div>
+            ) : (
+              <div className={
+                viewMode === "grid"
+                  ? "grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-6"
+                  : "flex flex-col gap-4"
+              }>
+                {listings.map((listing) => (
+                  <ListingCard key={listing.id} listing={listing} />
+                ))}
+              </div>
+            )}
 
             {/* Load More */}
-            <div className="mt-8 text-center">
-              <Button variant="outline" size="lg">
-                Cargar más resultados
-              </Button>
-            </div>
+            {listings.length > 0 && (
+              <div className="mt-8 text-center">
+                <Button variant="outline" size="lg" disabled={isLoading}>
+                  {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                  Cargar más resultados
+                </Button>
+              </div>
+            )}
           </main>
         </div>
       </div>
