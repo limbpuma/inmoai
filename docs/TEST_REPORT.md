@@ -13,7 +13,8 @@
 | Landing Page | ✅ Funcional |
 | Responsive Design | ✅ Funcional |
 | Search UI | ✅ Funcional |
-| Navegación | ⚠️ Páginas pendientes |
+| Search Page | ✅ Funcional |
+| Navegación | ⚠️ Pricing pendiente |
 | Backend API | ⏳ No probado (requiere DB) |
 
 ---
@@ -48,22 +49,44 @@
 | Tablet | 768x1024 | ✅ Grid 3 cols para features |
 | Desktop | 1280x800 | ✅ Layout completo |
 
+### 4. Search Page (✅ PASS)
+
+- **URL:** `/search`
+- **Filtros laterales:**
+  - Tipo de operación (Comprar/Alquilar)
+  - Tipo de inmueble (Select)
+  - Rango de precio (Slider dual: 50k€ - 2M€)
+  - Superficie (Slider dual: 20 - 500 m²)
+  - Habitaciones (1, 2, 3, 4, 5+)
+  - Baños (1, 2, 3, 4+)
+  - Verificación mínima (Slider: 0-100%)
+  - Características (Parking, Ascensor, Terraza, etc.)
+  - Fuentes (Idealista, Fotocasa, Habitaclia)
+- **Resultados:**
+  - Grid responsive de propiedades
+  - Toggle grid/list view
+  - Ordenar por relevancia, precio, fecha
+  - 6 mock listings con imágenes Unsplash
+  - Badge de autenticidad (72%-96%)
+  - Badge de fuente
+- **Mobile:** Sheet lateral para filtros
+
 ---
 
 ## Issues Encontrados
 
 ### Alta Prioridad
 
-1. **[404] Página /search no existe**
-   - Al hacer submit en el buscador → 404
-   - Requiere: Crear `apps/web/src/app/search/page.tsx`
+1. ~~**[404] Página /search no existe**~~ ✅ RESUELTO
+   - Creado `apps/web/src/app/search/page.tsx`
+   - Filtros completos + grid de resultados
 
 2. **[404] Página /pricing no existe**
    - Link "Precios" en nav → 404
    - Requiere: Crear página de pricing
 
-3. **[404] Página /search?mode=rent no existe**
-   - Link "Alquilar" en nav → 404
+3. ~~**[404] Página /search?mode=rent no existe**~~ ✅ RESUELTO
+   - La página /search ahora soporta modo alquiler via filtros
 
 ### Media Prioridad
 
