@@ -1,14 +1,16 @@
 import type { inferAsyncReturnType } from '@trpc/server';
 import type { FetchCreateContextFnOptions } from '@trpc/server/adapters/fetch';
+import { auth } from '@/config/auth';
 import { db } from '@/server/infrastructure/database';
 
-interface Session {
+export interface Session {
   user: {
     id: string;
     email: string;
-    name: string | null;
+    name?: string | null;
+    image?: string | null;
     role: 'user' | 'premium' | 'agency' | 'admin';
-  } | null;
+  };
   expires: string;
 }
 
@@ -16,12 +18,12 @@ interface Session {
  * Creates context for an incoming request
  */
 export async function createContext(opts: FetchCreateContextFnOptions) {
-  // TODO: Get session from NextAuth
-  const session: Session | null = null;
+  // Get session from NextAuth
+  const session = await auth();
 
   return {
     db,
-    session,
+    session: session as Session | null,
     req: opts.req,
   };
 }

@@ -20,6 +20,7 @@ const t = initTRPC.context<Context>().create({
  * Create a router
  */
 export const createTRPCRouter = t.router;
+export const router = t.router;
 
 /**
  * Merge multiple routers

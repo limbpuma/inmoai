@@ -250,7 +250,7 @@ export const priceHistory = pgTable(
 );
 
 // ============================================
-// USERS
+// USERS (NextAuth compatible)
 // ============================================
 
 export const users = pgTable(
@@ -261,7 +261,14 @@ export const users = pgTable(
     name: varchar('name', { length: 255 }),
     image: varchar('image', { length: 500 }),
     emailVerified: timestamp('email_verified', { withTimezone: true }),
+    hashedPassword: varchar('hashed_password', { length: 255 }),
     role: userRoleEnum('role').default('user'),
+
+    // Subscription info
+    stripeCustomerId: varchar('stripe_customer_id', { length: 255 }),
+    stripeSubscriptionId: varchar('stripe_subscription_id', { length: 255 }),
+    stripePriceId: varchar('stripe_price_id', { length: 255 }),
+    stripeCurrentPeriodEnd: timestamp('stripe_current_period_end', { withTimezone: true }),
 
     // Preferences
     preferences: jsonb('preferences').$type<{
@@ -281,6 +288,65 @@ export const users = pgTable(
     updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
   },
   (table) => [index('idx_users_email').on(table.email), index('idx_users_role').on(table.role)]
+);
+
+// ============================================
+// AUTH: ACCOUNTS (NextAuth)
+// ============================================
+
+export const accounts = pgTable(
+  'accounts',
+  {
+    id: uuid('id').defaultRandom().primaryKey(),
+    userId: uuid('user_id')
+      .references(() => users.id, { onDelete: 'cascade' })
+      .notNull(),
+    type: varchar('type', { length: 255 }).notNull(),
+    provider: varchar('provider', { length: 255 }).notNull(),
+    providerAccountId: varchar('provider_account_id', { length: 255 }).notNull(),
+    refresh_token: text('refresh_token'),
+    access_token: text('access_token'),
+    expires_at: integer('expires_at'),
+    token_type: varchar('token_type', { length: 255 }),
+    scope: varchar('scope', { length: 255 }),
+    id_token: text('id_token'),
+    session_state: varchar('session_state', { length: 255 }),
+  },
+  (table) => [
+    uniqueIndex('idx_accounts_provider').on(table.provider, table.providerAccountId),
+    index('idx_accounts_user').on(table.userId),
+  ]
+);
+
+// ============================================
+// AUTH: SESSIONS (NextAuth)
+// ============================================
+
+export const sessions = pgTable(
+  'sessions',
+  {
+    id: uuid('id').defaultRandom().primaryKey(),
+    sessionToken: varchar('session_token', { length: 255 }).notNull().unique(),
+    userId: uuid('user_id')
+      .references(() => users.id, { onDelete: 'cascade' })
+      .notNull(),
+    expires: timestamp('expires', { withTimezone: true }).notNull(),
+  },
+  (table) => [index('idx_sessions_user').on(table.userId)]
+);
+
+// ============================================
+// AUTH: VERIFICATION TOKENS (NextAuth)
+// ============================================
+
+export const verificationTokens = pgTable(
+  'verification_tokens',
+  {
+    identifier: varchar('identifier', { length: 255 }).notNull(),
+    token: varchar('token', { length: 255 }).notNull().unique(),
+    expires: timestamp('expires', { withTimezone: true }).notNull(),
+  },
+  (table) => [uniqueIndex('idx_verification_tokens').on(table.identifier, table.token)]
 );
 
 // ============================================
@@ -464,10 +530,26 @@ export const priceHistoryRelations = relations(priceHistory, ({ one }) => ({
 }));
 
 export const usersRelations = relations(users, ({ many }) => ({
+  accounts: many(accounts),
+  sessions: many(sessions),
   favorites: many(userFavorites),
   alerts: many(searchAlerts),
   leads: many(leads),
   apiKeys: many(apiKeys),
+}));
+
+export const accountsRelations = relations(accounts, ({ one }) => ({
+  user: one(users, {
+    fields: [accounts.userId],
+    references: [users.id],
+  }),
+}));
+
+export const sessionsRelations = relations(sessions, ({ one }) => ({
+  user: one(users, {
+    fields: [sessions.userId],
+    references: [users.id],
+  }),
 }));
 
 export const userFavoritesRelations = relations(userFavorites, ({ one }) => ({
@@ -504,6 +586,15 @@ export type NewPriceHistoryRecord = typeof priceHistory.$inferInsert;
 
 export type User = typeof users.$inferSelect;
 export type NewUser = typeof users.$inferInsert;
+
+export type Account = typeof accounts.$inferSelect;
+export type NewAccount = typeof accounts.$inferInsert;
+
+export type Session = typeof sessions.$inferSelect;
+export type NewSession = typeof sessions.$inferInsert;
+
+export type VerificationToken = typeof verificationTokens.$inferSelect;
+export type NewVerificationToken = typeof verificationTokens.$inferInsert;
 
 export type Lead = typeof leads.$inferSelect;
 export type NewLead = typeof leads.$inferInsert;
