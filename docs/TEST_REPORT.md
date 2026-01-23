@@ -1,147 +1,145 @@
 # InmoAI Portal - Test Report
 
-**Fecha:** 2026-01-13
-**Versión:** 0.1.0
+**Fecha:** 2026-01-23
+**Version:** 0.1.0
 **Entorno:** Development (localhost:3000)
+**Actualizado:** Post-implementacion de busqueda semantica y voice search
 
 ---
 
 ## Resumen Ejecutivo
 
-| Categoría | Estado |
+| Categoria | Estado |
 |-----------|--------|
 | Landing Page | ✅ Funcional |
 | Responsive Design | ✅ Funcional |
 | Search UI | ✅ Funcional |
 | Search Page | ✅ Funcional |
-| Navegación | ⚠️ Pricing pendiente |
-| Backend API | ⏳ No probado (requiere DB) |
+| Voice Search | ✅ Funcional |
+| Semantic Search | ✅ Funcional |
+| Legal Pages | ✅ Funcional |
+| Pricing Page | ✅ Funcional |
+| Backend API | ✅ Conectado |
+| Database | ✅ 30 listings seed |
 
 ---
 
-## Tests Realizados
+## Funcionalidades Implementadas
 
-### 1. Landing Page (✅ PASS)
+### v0.1.0 - Core Features
 
-- **Header:** Logo, navegación (Comprar, Alquilar, Precios), botones de sesión
-- **Hero Section:** Badge animado, título con gradiente, subtítulo
-- **Search Bar:** Input con placeholder, icono de micrófono, botón buscar
-- **Suggestion Chips:** "Piso en Madrid...", "Casa familiar..."
-- **Stats:** 2M+ propiedades, tiempo real, IA verificada
-- **Feature Cards:** 3 cards con iconos (Búsqueda Semántica, Anti-Fraude, Análisis)
-- **Footer:** Logo, links legales, copyright 2026
+#### 1. Landing Page (✅ COMPLETO)
+- Header con navegacion completa
+- Hero Section con busqueda
+- Stats y Feature Cards
+- Footer con links legales funcionales
 
-### 2. Search Functionality (✅ PASS)
+#### 2. Search Page (✅ COMPLETO)
+- Filtros laterales completos
+- Grid responsive de propiedades
+- Toggle grid/list view
+- Ordenacion por relevancia, precio, fecha
+- Mobile: Sheet lateral para filtros
 
-- **Input:** Acepta texto correctamente
-- **Suggestions Dropdown:** Aparece al escribir con:
-  - Header "Sugerencias"
-  - Opciones clickeables con iconos
-  - Instrucciones (Enter/Esc)
-- **Clear Button (X):** Aparece cuando hay texto
-- **Micrófono:** Botón presente (sin funcionalidad aún)
+#### 3. Busqueda Semantica (✅ COMPLETO)
+- Conexion con tRPC backend
+- Parsing de queries naturales con IA
+- Extraccion automatica de filtros
+- Banner de analisis IA
 
-### 3. Responsive Design (✅ PASS)
+#### 4. Voice Search (✅ COMPLETO)
+- Web Speech API integrado
+- Transcripcion en tiempo real
+- Indicador visual de estados
+- Busqueda automatica al finalizar
+- Soporte idioma: es-ES
 
-| Breakpoint | Viewport | Estado |
-|------------|----------|--------|
-| Mobile | 375x812 | ✅ Stack vertical, search compacto |
-| Tablet | 768x1024 | ✅ Grid 3 cols para features |
-| Desktop | 1280x800 | ✅ Layout completo |
+#### 5. Paginas Legales (✅ COMPLETO)
+- `/terms` - Terminos y condiciones
+- `/privacy` - Politica de privacidad (GDPR)
+- `/cookies` - Politica de cookies
+- Footer component reutilizable
 
-### 4. Search Page (✅ PASS)
+#### 6. Pricing Page (✅ COMPLETO)
+- 3 planes: Free, Pro, Agency
+- Comparativa de features
+- Toggle mensual/anual
+- UI lista para Stripe integration
 
-- **URL:** `/search`
-- **Filtros laterales:**
-  - Tipo de operación (Comprar/Alquilar)
-  - Tipo de inmueble (Select)
-  - Rango de precio (Slider dual: 50k€ - 2M€)
-  - Superficie (Slider dual: 20 - 500 m²)
-  - Habitaciones (1, 2, 3, 4, 5+)
-  - Baños (1, 2, 3, 4+)
-  - Verificación mínima (Slider: 0-100%)
-  - Características (Parking, Ascensor, Terraza, etc.)
-  - Fuentes (Idealista, Fotocasa, Habitaclia)
-- **Resultados:**
-  - Grid responsive de propiedades
-  - Toggle grid/list view
-  - Ordenar por relevancia, precio, fecha
-  - 6 mock listings con imágenes Unsplash
-  - Badge de autenticidad (72%-96%)
-  - Badge de fuente
-- **Mobile:** Sheet lateral para filtros
+#### 7. Database (✅ COMPLETO)
+- PostgreSQL con Drizzle ORM
+- 30 listings de seed
+- Ciudades: Madrid, Barcelona, Valencia
+- Mix de tipos y operaciones
 
 ---
 
-## Issues Encontrados
+## Pendiente de Implementacion
 
 ### Alta Prioridad
 
-1. ~~**[404] Página /search no existe**~~ ✅ RESUELTO
-   - Creado `apps/web/src/app/search/page.tsx`
-   - Filtros completos + grid de resultados
+1. **Autenticacion**
+   - NextAuth con Supabase provider
+   - Paginas /login, /register
+   - Middleware de proteccion
 
-2. **[404] Página /pricing no existe**
-   - Link "Precios" en nav → 404
-   - Requiere: Crear página de pricing
+2. **Stripe Integration**
+   - Checkout sessions
+   - Webhooks
+   - Gestion de suscripciones
 
-3. ~~**[404] Página /search?mode=rent no existe**~~ ✅ RESUELTO
-   - La página /search ahora soporta modo alquiler via filtros
+3. **User Dashboard**
+   - Favoritos
+   - Historial de busquedas
+   - Gestion de cuenta
 
 ### Media Prioridad
 
-4. **Backend no conectado**
-   - El frontend no consume el API de tRPC aún
-   - Requiere: Configurar tRPC client en web
+4. **Admin Panel**
+   - Dashboard de metricas
+   - Gestion de usuarios
+   - Gestion de listings
+   - AI Control Center
 
-5. **Sugerencias estáticas (mock)**
-   - Las sugerencias del SearchBar son hardcodeadas
-   - Requiere: Conectar a autocomplete del API
+5. **Sugerencias dinamicas**
+   - Autocomplete basado en historial
+   - Sugerencias personalizadas
 
 ### Baja Prioridad
 
-6. **Botón micrófono sin funcionalidad**
-   - UI presente pero sin implementación
-   - Considerar: Web Speech API o remover
-
-7. **Links footer (#)**
-   - Términos, Privacidad, Cookies apuntan a #
-   - Requiere: Crear páginas legales
-
-8. **Warning: lockfile duplicado**
-   - Turbopack muestra warning de lockfiles múltiples
-   - Considerar: Eliminar `apps/web/package-lock.json`
+6. **Optimizaciones**
+   - Cache de busquedas
+   - Lazy loading de imagenes
+   - PWA support
 
 ---
 
-## Próximos Pasos
+## Issues Conocidos
 
-1. **Crear página de búsqueda** (`/search`)
-   - Grid de ListingCards
-   - Filtros laterales
-   - Paginación
-
-2. **Conectar tRPC client**
-   - Configurar provider en layout
-   - Implementar hooks de búsqueda
-
-3. **Configurar base de datos**
-   - Crear DB en Neon/Supabase
-   - Ejecutar `npm run db:push`
-
-4. **Seed data de prueba**
-   - Insertar listings de ejemplo
-   - Probar flujo completo
+1. **Sugerencias estaticas** - SearchBar tiene sugerencias hardcodeadas
+2. **Sin autenticacion** - Rutas no protegidas
+3. **Mock data en algunos componentes** - Algunas stats son placeholder
 
 ---
 
-## Screenshots
+## Historial de Cambios
 
-- `landing-page.png` - Vista desktop completa
-- `search-suggestions.png` - Dropdown de sugerencias
-- `mobile-view.png` - Vista móvil (375px)
-- `tablet-view.png` - Vista tablet (768px)
+| Fecha | Commit | Descripcion |
+|-------|--------|-------------|
+| 2026-01-23 | feat(voice) | Voice search con Web Speech API |
+| 2026-01-23 | feat(search) | Busqueda semantica con tRPC |
+| 2026-01-23 | feat(legal) | Paginas terminos, privacidad, cookies |
+| 2026-01-23 | feat(db) | Seed ampliado a 30 listings |
+| 2026-01-22 | feat | Conexion frontend-tRPC |
+| 2026-01-13 | feat | Search page con filtros |
+| 2026-01-13 | init | Setup monorepo Turborepo |
 
 ---
 
-**Conclusión:** El frontend está bien implementado con diseño profesional y responsive. Faltan las páginas internas y la conexión con el backend.
+## Proximos Pasos
+
+Ver [ROADMAP.md](../ROADMAP.md) para el plan detallado de implementacion.
+
+---
+
+**Conclusion:** El MVP core esta completo con busqueda semantica, voice search, y paginas legales. Siguiente fase: autenticacion, pagos, y panel de administracion.
