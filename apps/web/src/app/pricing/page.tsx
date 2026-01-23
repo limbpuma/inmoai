@@ -1,11 +1,14 @@
 "use client";
 
 import { useState } from "react";
+import { useSession } from "next-auth/react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { Header } from "@/components/layout/Header";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
+import { useBilling } from "@/hooks/useBilling";
 import {
   Check,
   Sparkles,
@@ -14,11 +17,14 @@ import {
   Building2,
   Users,
   Crown,
+  Loader2,
+  CheckCircle,
+  XCircle,
 } from "lucide-react";
 
 const plans = [
   {
-    id: "free",
+    id: "free" as const,
     name: "Gratis",
     description: "Para compradores que empiezan su búsqueda",
     monthlyPrice: 0,
@@ -31,15 +37,15 @@ const plans = [
       "Score de autenticidad básico",
       "Acceso a listings públicos",
     ],
-    cta: "Empezar gratis",
+    cta: "Plan actual",
     popular: false,
   },
   {
-    id: "pro",
+    id: "pro" as const,
     name: "Pro",
     description: "Para compradores serios en búsqueda activa",
-    monthlyPrice: 19,
-    yearlyPrice: 190,
+    monthlyPrice: 9.99,
+    yearlyPrice: 99.99,
     icon: Zap,
     features: [
       "Búsquedas ilimitadas",
@@ -51,39 +57,81 @@ const plans = [
       "Comparador de propiedades",
       "Exportar a PDF",
     ],
-    cta: "Comenzar prueba gratis",
+    cta: "Suscribirse",
     popular: true,
   },
   {
-    id: "agency",
+    id: "agency" as const,
     name: "Agencia",
     description: "Para profesionales inmobiliarios",
-    monthlyPrice: 99,
-    yearlyPrice: 990,
+    monthlyPrice: 49.99,
+    yearlyPrice: 499.99,
     icon: Building2,
     features: [
       "Todo lo de Pro",
       "API de acceso completo",
-      "Hasta 10 usuarios",
+      "Hasta 5 usuarios",
       "Dashboard de analytics",
       "Integración CRM",
       "Informes personalizados",
       "Soporte prioritario 24/7",
-      "Marca blanca disponible",
+      "Exportación de datos",
     ],
-    cta: "Contactar ventas",
+    cta: "Suscribirse",
     popular: false,
   },
 ];
 
 export default function PricingPage() {
   const [isYearly, setIsYearly] = useState(false);
+  const { data: session } = useSession();
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const { subscribe, subscription, isSubscribing, openBillingPortal, isOpeningPortal } = useBilling();
+
+  const success = searchParams.get("success");
+  const canceled = searchParams.get("canceled");
+
+  const handleSubscribe = async (planId: "pro" | "agency") => {
+    if (!session) {
+      router.push(`/login?callbackUrl=/pricing`);
+      return;
+    }
+    await subscribe(planId);
+  };
+
+  const getCurrentPlan = () => {
+    if (!subscription?.isActive) return "free";
+    if (subscription.role === "agency") return "agency";
+    if (subscription.role === "premium") return "pro";
+    return "free";
+  };
+
+  const currentPlan = getCurrentPlan();
 
   return (
     <div className="min-h-screen bg-background">
       <Header />
 
       <main className="container mx-auto px-4 py-16">
+        {/* Success/Cancel Messages */}
+        {success && (
+          <div className="mb-8 p-4 rounded-lg bg-green-50 border border-green-200 flex items-center gap-3 max-w-2xl mx-auto">
+            <CheckCircle className="h-5 w-5 text-green-600" />
+            <p className="text-green-800">
+              ¡Suscripción activada con éxito! Ya puedes disfrutar de todas las funcionalidades.
+            </p>
+          </div>
+        )}
+        {canceled && (
+          <div className="mb-8 p-4 rounded-lg bg-amber-50 border border-amber-200 flex items-center gap-3 max-w-2xl mx-auto">
+            <XCircle className="h-5 w-5 text-amber-600" />
+            <p className="text-amber-800">
+              El proceso de pago fue cancelado. Puedes intentarlo de nuevo cuando quieras.
+            </p>
+          </div>
+        )}
+
         {/* Header */}
         <div className="text-center max-w-3xl mx-auto mb-12">
           <Badge variant="secondary" className="mb-4">
@@ -132,6 +180,9 @@ export default function PricingPage() {
             const Icon = plan.icon;
             const price = isYearly ? plan.yearlyPrice : plan.monthlyPrice;
             const period = isYearly ? "/año" : "/mes";
+            const isCurrentPlan = currentPlan === plan.id;
+            const canUpgrade = plan.id !== "free" && !isCurrentPlan;
+            const canManage = isCurrentPlan && plan.id !== "free";
 
             return (
               <div
@@ -140,12 +191,18 @@ export default function PricingPage() {
                   plan.popular
                     ? "border-primary shadow-lg shadow-primary/10 scale-105"
                     : "border-border"
-                }`}
+                } ${isCurrentPlan ? "ring-2 ring-primary" : ""}`}
               >
                 {plan.popular && (
                   <Badge className="absolute -top-3 left-1/2 -translate-x-1/2">
                     <Sparkles className="h-3 w-3 mr-1" />
                     Más popular
+                  </Badge>
+                )}
+
+                {isCurrentPlan && (
+                  <Badge variant="outline" className="absolute -top-3 right-4 bg-background">
+                    Tu plan actual
                   </Badge>
                 )}
 
@@ -180,17 +237,52 @@ export default function PricingPage() {
                   </div>
                   {isYearly && price > 0 && (
                     <p className="text-sm text-muted-foreground mt-1">
-                      {Math.round(price / 12)}€/mes facturado anualmente
+                      {(price / 12).toFixed(2)}€/mes facturado anualmente
                     </p>
                   )}
                 </div>
 
-                <Button
-                  className="w-full mb-6"
-                  variant={plan.popular ? "default" : "outline"}
-                >
-                  {plan.cta}
-                </Button>
+                {canManage ? (
+                  <Button
+                    className="w-full mb-6"
+                    variant="outline"
+                    onClick={() => openBillingPortal()}
+                    disabled={isOpeningPortal}
+                  >
+                    {isOpeningPortal ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        Abriendo...
+                      </>
+                    ) : (
+                      "Gestionar suscripción"
+                    )}
+                  </Button>
+                ) : canUpgrade ? (
+                  <Button
+                    className="w-full mb-6"
+                    variant={plan.popular ? "default" : "outline"}
+                    onClick={() => handleSubscribe(plan.id as "pro" | "agency")}
+                    disabled={isSubscribing}
+                  >
+                    {isSubscribing ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        Procesando...
+                      </>
+                    ) : (
+                      plan.cta
+                    )}
+                  </Button>
+                ) : (
+                  <Button
+                    className="w-full mb-6"
+                    variant="outline"
+                    disabled
+                  >
+                    {isCurrentPlan ? "Plan actual" : "Empezar gratis"}
+                  </Button>
+                )}
 
                 <div className="space-y-3">
                   {plan.features.map((feature, index) => (

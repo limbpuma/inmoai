@@ -1,5 +1,6 @@
 import { createTRPCRouter } from '../trpc';
 import { authRouter } from './auth.router';
+import { billingRouter } from './billing.router';
 import { searchRouter } from './search.router';
 import { listingsRouter } from './listings.router';
 
@@ -8,6 +9,7 @@ import { listingsRouter } from './listings.router';
  */
 export const appRouter = createTRPCRouter({
   auth: authRouter,
+  billing: billingRouter,
   search: searchRouter,
   listings: listingsRouter,
 });

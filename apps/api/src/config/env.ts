@@ -40,6 +40,13 @@ export const env = createEnv({
     // Email
     RESEND_API_KEY: z.string().optional(),
 
+    // Stripe
+    STRIPE_SECRET_KEY: z.string().min(1),
+    STRIPE_WEBHOOK_SECRET: z.string().min(1),
+    STRIPE_PRICE_ID_FREE: z.string().optional(),
+    STRIPE_PRICE_ID_PRO: z.string().min(1),
+    STRIPE_PRICE_ID_AGENCY: z.string().min(1),
+
     // Rate Limiting
     RATE_LIMIT_REQUESTS_PER_HOUR: z.coerce.number().default(100),
   },
@@ -69,6 +76,11 @@ export const env = createEnv({
     R2_SECRET_ACCESS_KEY: process.env.R2_SECRET_ACCESS_KEY,
     R2_BUCKET_NAME: process.env.R2_BUCKET_NAME,
     RESEND_API_KEY: process.env.RESEND_API_KEY,
+    STRIPE_SECRET_KEY: process.env.STRIPE_SECRET_KEY,
+    STRIPE_WEBHOOK_SECRET: process.env.STRIPE_WEBHOOK_SECRET,
+    STRIPE_PRICE_ID_FREE: process.env.STRIPE_PRICE_ID_FREE,
+    STRIPE_PRICE_ID_PRO: process.env.STRIPE_PRICE_ID_PRO,
+    STRIPE_PRICE_ID_AGENCY: process.env.STRIPE_PRICE_ID_AGENCY,
     RATE_LIMIT_REQUESTS_PER_HOUR: process.env.RATE_LIMIT_REQUESTS_PER_HOUR,
     NEXT_PUBLIC_APP_URL: process.env.NEXT_PUBLIC_APP_URL,
   },
