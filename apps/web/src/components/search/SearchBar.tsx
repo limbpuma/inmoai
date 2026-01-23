@@ -1,24 +1,34 @@
 "use client";
 
-import { useState } from "react";
-import { Search, Mic, Settings, X, ArrowRight } from "lucide-react";
+import { useState, useEffect } from "react";
+import { Search, Mic, Settings, X, ArrowRight, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
 interface SearchBarProps {
     onSearch?: (query: string) => void;
+    onQueryChange?: (query: string) => void;
     className?: string;
     variant?: "default" | "hero" | "minimal";
     placeholder?: string;
+    isLoading?: boolean;
+    defaultValue?: string;
 }
 
 export function SearchBar({
     onSearch,
+    onQueryChange,
     className,
     variant = "default",
-    placeholder = "Describe tu vivienda ideal..."
+    placeholder = "Describe tu vivienda ideal...",
+    isLoading = false,
+    defaultValue = "",
 }: SearchBarProps) {
-    const [query, setQuery] = useState("");
+    const [query, setQuery] = useState(defaultValue);
+
+    useEffect(() => {
+        setQuery(defaultValue);
+    }, [defaultValue]);
 
     const handleSearch = () => {
         onSearch?.(query);
@@ -43,8 +53,12 @@ export function SearchBar({
                     className="flex-1 bg-transparent outline-none placeholder:text-muted-foreground text-foreground w-full h-full"
                     placeholder={placeholder}
                     value={query}
-                    onChange={(e) => setQuery(e.target.value)}
+                    onChange={(e) => {
+                        setQuery(e.target.value);
+                        onQueryChange?.(e.target.value);
+                    }}
                     onKeyDown={handleKeyDown}
+                    disabled={isLoading}
                 />
 
                 {query && (
@@ -82,8 +96,16 @@ export function SearchBar({
                         <Button
                             className="rounded-full ml-2 h-12 px-8 shadow-md"
                             onClick={handleSearch}
+                            disabled={isLoading}
                         >
-                            Buscar
+                            {isLoading ? (
+                                <>
+                                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                    Buscando...
+                                </>
+                            ) : (
+                                "Buscar"
+                            )}
                         </Button>
                     )}
                 </div>

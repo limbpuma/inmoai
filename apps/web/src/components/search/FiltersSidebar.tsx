@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
@@ -15,15 +15,66 @@ import {
 } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { X, RotateCcw, ShieldCheck } from "lucide-react";
+import type { SearchFilters } from "@inmoai/shared";
 
 interface FiltersSidebarProps {
   onClose?: () => void;
+  initialFilters?: Partial<SearchFilters>;
+  onFiltersChange?: (filters: Partial<SearchFilters>) => void;
 }
 
-export function FiltersSidebar({ onClose }: FiltersSidebarProps) {
-  const [priceRange, setPriceRange] = useState([100000, 500000]);
-  const [sizeRange, setSizeRange] = useState([50, 200]);
-  const [minScore, setMinScore] = useState([70]);
+export function FiltersSidebar({ onClose, initialFilters, onFiltersChange }: FiltersSidebarProps) {
+  const [priceRange, setPriceRange] = useState([
+    initialFilters?.minPrice ?? 100000,
+    initialFilters?.maxPrice ?? 500000,
+  ]);
+  const [sizeRange, setSizeRange] = useState([
+    initialFilters?.minSize ?? 50,
+    initialFilters?.maxSize ?? 200,
+  ]);
+  const [minScore, setMinScore] = useState([initialFilters?.minAuthenticityScore ?? 70]);
+  const [selectedBedrooms, setSelectedBedrooms] = useState<number | null>(
+    initialFilters?.minBedrooms ?? null
+  );
+  const [selectedBathrooms, setSelectedBathrooms] = useState<number | null>(
+    initialFilters?.minBathrooms ?? null
+  );
+  const [operationType, setOperationType] = useState<"sale" | "rent">(
+    initialFilters?.operationType ?? "sale"
+  );
+  const [propertyType, setPropertyType] = useState<string>(
+    initialFilters?.propertyType ?? "all"
+  );
+
+  // Sync with initial filters when they change
+  useEffect(() => {
+    if (initialFilters) {
+      if (initialFilters.minPrice !== undefined || initialFilters.maxPrice !== undefined) {
+        setPriceRange([
+          initialFilters.minPrice ?? 100000,
+          initialFilters.maxPrice ?? 500000,
+        ]);
+      }
+      if (initialFilters.minSize !== undefined || initialFilters.maxSize !== undefined) {
+        setSizeRange([
+          initialFilters.minSize ?? 50,
+          initialFilters.maxSize ?? 200,
+        ]);
+      }
+      if (initialFilters.minBedrooms !== undefined) {
+        setSelectedBedrooms(initialFilters.minBedrooms);
+      }
+      if (initialFilters.minBathrooms !== undefined) {
+        setSelectedBathrooms(initialFilters.minBathrooms);
+      }
+      if (initialFilters.operationType) {
+        setOperationType(initialFilters.operationType);
+      }
+      if (initialFilters.propertyType) {
+        setPropertyType(initialFilters.propertyType);
+      }
+    }
+  }, [initialFilters]);
 
   const formatPrice = (value: number) => {
     if (value >= 1000000) {
@@ -36,6 +87,10 @@ export function FiltersSidebar({ onClose }: FiltersSidebarProps) {
     setPriceRange([100000, 500000]);
     setSizeRange([50, 200]);
     setMinScore([70]);
+    setSelectedBedrooms(null);
+    setSelectedBathrooms(null);
+    setOperationType("sale");
+    setPropertyType("all");
   };
 
   return (
@@ -62,10 +117,20 @@ export function FiltersSidebar({ onClose }: FiltersSidebarProps) {
       <div className="space-y-3">
         <Label className="text-sm font-medium">Tipo de operación</Label>
         <div className="flex gap-2">
-          <Button variant="secondary" size="sm" className="flex-1">
+          <Button
+            variant={operationType === "sale" ? "secondary" : "outline"}
+            size="sm"
+            className="flex-1"
+            onClick={() => setOperationType("sale")}
+          >
             Comprar
           </Button>
-          <Button variant="outline" size="sm" className="flex-1">
+          <Button
+            variant={operationType === "rent" ? "secondary" : "outline"}
+            size="sm"
+            className="flex-1"
+            onClick={() => setOperationType("rent")}
+          >
             Alquilar
           </Button>
         </div>
@@ -76,7 +141,7 @@ export function FiltersSidebar({ onClose }: FiltersSidebarProps) {
       {/* Property Type */}
       <div className="space-y-3">
         <Label className="text-sm font-medium">Tipo de inmueble</Label>
-        <Select defaultValue="all">
+        <Select value={propertyType} onValueChange={setPropertyType}>
           <SelectTrigger>
             <SelectValue placeholder="Todos los tipos" />
           </SelectTrigger>
@@ -138,14 +203,15 @@ export function FiltersSidebar({ onClose }: FiltersSidebarProps) {
       <div className="space-y-3">
         <Label className="text-sm font-medium">Habitaciones</Label>
         <div className="flex gap-2">
-          {["1", "2", "3", "4", "5+"].map((num) => (
+          {[1, 2, 3, 4, 5].map((num) => (
             <Button
               key={num}
-              variant="outline"
+              variant={selectedBedrooms === num ? "secondary" : "outline"}
               size="sm"
               className="flex-1 px-2"
+              onClick={() => setSelectedBedrooms(selectedBedrooms === num ? null : num)}
             >
-              {num}
+              {num === 5 ? "5+" : num}
             </Button>
           ))}
         </div>
@@ -157,14 +223,15 @@ export function FiltersSidebar({ onClose }: FiltersSidebarProps) {
       <div className="space-y-3">
         <Label className="text-sm font-medium">Baños</Label>
         <div className="flex gap-2">
-          {["1", "2", "3", "4+"].map((num) => (
+          {[1, 2, 3, 4].map((num) => (
             <Button
               key={num}
-              variant="outline"
+              variant={selectedBathrooms === num ? "secondary" : "outline"}
               size="sm"
               className="flex-1 px-2"
+              onClick={() => setSelectedBathrooms(selectedBathrooms === num ? null : num)}
             >
-              {num}
+              {num === 4 ? "4+" : num}
             </Button>
           ))}
         </div>
