@@ -43,20 +43,15 @@ export function useVoiceSearch(options: UseVoiceSearchOptions = {}) {
   const [transcript, setTranscript] = useState("");
   const [interimTranscript, setInterimTranscript] = useState("");
   const [error, setError] = useState<VoiceSearchError | null>(null);
-  const [isSupported, setIsSupported] = useState(false);
+
+  // Use lazy initializer to check support once during initial render
+  const [isSupported] = useState(() => {
+    if (typeof window === "undefined") return false;
+    return !!(window.SpeechRecognition || window.webkitSpeechRecognition);
+  });
 
   const recognitionRef = useRef<SpeechRecognition | null>(null);
   const finalTranscriptRef = useRef("");
-
-  // Check if Speech Recognition is supported
-  useEffect(() => {
-    const SpeechRecognitionAPI =
-      typeof window !== "undefined"
-        ? window.SpeechRecognition || window.webkitSpeechRecognition
-        : null;
-
-    setIsSupported(!!SpeechRecognitionAPI);
-  }, []);
 
   // Initialize Speech Recognition
   const initRecognition = useCallback(() => {

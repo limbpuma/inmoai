@@ -46,7 +46,7 @@ export interface AIAction {
   completedAt?: Date;
   result?: AIActionResult;
   error?: string;
-  metadata?: Record<string, any>;
+  metadata?: Record<string, unknown>;
 }
 
 // AI Action Result
@@ -56,7 +56,7 @@ export interface AIActionResult {
   itemsAffected: number;
   duration: number; // in ms
   details?: string;
-  data?: any;
+  data?: unknown;
 }
 
 // AI Event
@@ -67,7 +67,7 @@ export interface AIEvent {
   message: string;
   severity: 'info' | 'warning' | 'error' | 'success';
   timestamp: Date;
-  data?: any;
+  data?: unknown;
 }
 
 // AI Decision (requires admin approval in lazy mode)
@@ -82,7 +82,7 @@ export interface AIDecision {
   expiresAt: Date;
   approvedAt?: Date;
   approvedBy?: string;
-  data?: any;
+  data?: unknown;
 }
 
 // AI Metrics

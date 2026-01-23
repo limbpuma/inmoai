@@ -34,10 +34,10 @@ export default function LandingPage() {
                             <div className="mt-8 flex flex-wrap justify-center gap-4 text-sm text-muted-foreground">
                                 <span className="hidden sm:inline font-medium">Prueba con:</span>
                                 <button className="bg-muted/50 px-4 py-1.5 rounded-full cursor-pointer hover:bg-muted hover:text-foreground transition-all hover:scale-105 border border-transparent hover:border-border">
-                                    "Piso en Madrid con terraza por menos de 300k"
+                                    &ldquo;Piso en Madrid con terraza por menos de 300k&rdquo;
                                 </button>
                                 <button className="bg-muted/50 px-4 py-1.5 rounded-full cursor-pointer hover:bg-muted hover:text-foreground transition-all hover:scale-105 border border-transparent hover:border-border">
-                                    "Casa familiar cerca de colegios en Valencia"
+                                    &ldquo;Casa familiar cerca de colegios en Valencia&rdquo;
                                 </button>
                             </div>
                         </div>

@@ -15,6 +15,21 @@ export function useAIIntegration() {
   const reconnectAttempts = useRef(0);
   const maxReconnectAttempts = 5;
 
+  // Use ref to hold sync function for reconnect callback
+  const syncRef = useRef<(() => Promise<void>) | null>(null);
+
+  // Handle reconnection logic
+  const handleReconnect = useCallback(() => {
+    if (reconnectAttempts.current < maxReconnectAttempts) {
+      reconnectAttempts.current++;
+      const delay = Math.min(1000 * Math.pow(2, reconnectAttempts.current), 30000);
+
+      setTimeout(() => {
+        syncRef.current?.();
+      }, delay);
+    }
+  }, []);
+
   // Sync local state with backend
   const syncWithBackend = useCallback(async () => {
     try {
@@ -34,23 +49,16 @@ export function useAIIntegration() {
       setIsConnected(false);
       handleReconnect();
     }
-  }, []);
+  }, [handleReconnect]);
 
-  // Handle reconnection logic
-  const handleReconnect = useCallback(() => {
-    if (reconnectAttempts.current < maxReconnectAttempts) {
-      reconnectAttempts.current++;
-      const delay = Math.min(1000 * Math.pow(2, reconnectAttempts.current), 30000);
-
-      setTimeout(() => {
-        syncWithBackend();
-      }, delay);
-    }
+  // Keep sync ref updated in effect to avoid mutating during render
+  useEffect(() => {
+    syncRef.current = syncWithBackend;
   }, [syncWithBackend]);
 
   // Push action to backend
   const pushAction = useCallback(
-    async (func: AIFunction, params?: Record<string, any>) => {
+    async (func: AIFunction, _params?: Record<string, unknown>) => {
       try {
         // In real implementation:
         // const result = await trpc.ai.triggerFunction.mutate({
@@ -149,7 +157,7 @@ export function useAIWebSocket(options?: {
 
   const connect = useCallback(() => {
     // In real implementation, would connect to WebSocket server
-    const wsUrl = process.env.NEXT_PUBLIC_WS_URL || "ws://localhost:3001/ai";
+    // const wsUrl = process.env.NEXT_PUBLIC_WS_URL || "ws://localhost:3001/ai";
 
     try {
       // Simulated connection (WebSocket not implemented)
@@ -171,8 +179,10 @@ export function useAIWebSocket(options?: {
       //   setTimeout(connect, 5000);
       // };
 
-      // For demo, simulate connection
-      setIsConnected(true);
+      // For demo, simulate async connection (deferred to avoid sync setState in effect)
+      queueMicrotask(() => {
+        setIsConnected(true);
+      });
     } catch (error) {
       console.error("WebSocket connection failed:", error);
     }
@@ -186,22 +196,24 @@ export function useAIWebSocket(options?: {
     setIsConnected(false);
   }, []);
 
-  const handleMessage = useCallback(
-    (data: { type: string; payload: any }) => {
+  // Note: handleMessage is defined but will be used when WebSocket is implemented
+  const _handleMessage = useCallback(
+    (data: { type: string; payload: unknown }) => {
+      const payload = data.payload as Record<string, unknown>;
       switch (data.type) {
         case "EVENT":
-          store.addEvent(data.payload);
-          options?.onEvent?.(data.payload);
+          store.addEvent(payload as Parameters<typeof store.addEvent>[0]);
+          options?.onEvent?.(payload as AIEvent);
           break;
         case "ACTION_UPDATE":
-          store.updateAction(data.payload.id, data.payload);
-          options?.onActionUpdate?.(data.payload);
+          store.updateAction(payload.id as string, payload as Partial<AIAction>);
+          options?.onActionUpdate?.(payload as AIAction);
           break;
         case "DECISION_REQUIRED":
-          store.addDecision(data.payload);
+          store.addDecision(payload as Parameters<typeof store.addDecision>[0]);
           break;
         case "ALERT":
-          store.addAlert(data.payload);
+          store.addAlert(payload as Parameters<typeof store.addAlert>[0]);
           break;
         default:
           console.log("Unknown WebSocket message type:", data.type);

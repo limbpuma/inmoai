@@ -2,14 +2,14 @@
 
 import { useState, useCallback, useMemo } from "react";
 import { trpc } from "@/lib/trpc";
-import type { SearchFilters } from "@inmoai/shared";
+import type { SearchFilters, ListingSummary } from "@inmoai/shared";
 
 export interface SemanticSearchState {
   query: string;
   parsedFilters: Partial<SearchFilters> | null;
   isParsingQuery: boolean;
   isSearching: boolean;
-  results: any[];
+  results: ListingSummary[];
   error: string | null;
 }
 

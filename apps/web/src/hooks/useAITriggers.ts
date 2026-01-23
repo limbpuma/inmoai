@@ -241,7 +241,11 @@ export function useAutoTrigger(
     return () => clearInterval(interval);
   }, [func, enabled, checkInterval, status, config.functions, options, trigger]);
 
+  // Note: lastTriggered is a ref and should not be returned directly
+  // Use a callback to get the value when needed
+  const getLastTriggered = useCallback(() => lastTriggered.current, []);
+
   return {
-    lastTriggered: lastTriggered.current,
+    getLastTriggered,
   };
 }

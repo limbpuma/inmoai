@@ -1,4 +1,6 @@
+/* eslint-disable no-var */
 // Web Speech API TypeScript Definitions
+// Note: "declare var" is the standard for global type declarations in .d.ts files
 
 interface SpeechRecognitionEvent extends Event {
   readonly resultIndex: number;

@@ -46,7 +46,8 @@ export function FiltersSidebar({ onClose, initialFilters, onFiltersChange }: Fil
     initialFilters?.propertyType ?? "all"
   );
 
-  // Sync with initial filters when they change
+  // Sync with initial filters when they change (intentional state sync with props)
+  // eslint-disable-next-line react-hooks/set-state-in-effect
   useEffect(() => {
     if (initialFilters) {
       if (initialFilters.minPrice !== undefined || initialFilters.maxPrice !== undefined) {

@@ -61,7 +61,7 @@ export function VoiceIndicator({
               </p>
               {interimTranscript && (
                 <p className="text-sm text-muted-foreground truncate mt-0.5">
-                  "{interimTranscript}"
+                  &ldquo;{interimTranscript}&rdquo;
                 </p>
               )}
               {!interimTranscript && (

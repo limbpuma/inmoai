@@ -128,6 +128,8 @@ export function useAIEventNotifications(options?: {
   const enabled = options?.enabled ?? true;
   const severities = options?.severities ?? ["error", "warning"];
 
+  // Track and notify for new events (intentional state update in effect)
+  // eslint-disable-next-line react-hooks/set-state-in-effect
   useEffect(() => {
     if (!enabled || events.length === 0) return;
 

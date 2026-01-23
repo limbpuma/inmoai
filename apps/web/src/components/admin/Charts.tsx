@@ -45,12 +45,12 @@ const listingsByCity = [
 
 // Simple bar chart component
 function SimpleBarChart({ data, valueKey, labelKey, maxValue }: {
-  data: Record<string, any>[],
+  data: Record<string, string | number>[],
   valueKey: string,
   labelKey: string,
   maxValue?: number
 }) {
-  const max = maxValue || Math.max(...data.map(d => d[valueKey]));
+  const max = maxValue || Math.max(...data.map(d => Number(d[valueKey])));
 
   return (
     <div className="space-y-3">

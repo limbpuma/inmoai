@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useCallback } from "react";
+import { useRouter } from "next/navigation";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -71,6 +72,7 @@ const mockHistory = [
 ];
 
 export default function HistoryPage() {
+  const router = useRouter();
   const [searchQuery, setSearchQuery] = useState("");
   const [filterCity, setFilterCity] = useState("all");
   const [history, setHistory] = useState(mockHistory);
@@ -105,10 +107,10 @@ export default function HistoryPage() {
     setHistory([]);
   };
 
-  const handleRepeatSearch = (searchItem: typeof mockHistory[0]) => {
-    // In production, this would navigate to search with the saved filters
-    window.location.href = `/search?q=${encodeURIComponent(searchItem.query)}`;
-  };
+  const handleRepeatSearch = useCallback((searchItem: typeof mockHistory[0]) => {
+    // Navigate to search with the saved filters
+    router.push(`/search?q=${encodeURIComponent(searchItem.query)}`);
+  }, [router]);
 
   const renderFilterBadges = (filters: typeof mockHistory[0]["filters"]) => {
     const badges = [];

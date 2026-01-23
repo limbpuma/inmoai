@@ -11,6 +11,11 @@ export function useAIMetrics() {
   const { metrics, config, actionHistory, events, alerts, pendingDecisions } =
     useAdminAIStore();
 
+  // For time-based calculations, we need the current time.
+  // This is intentionally computed during render to ensure metrics are current.
+  // eslint-disable-next-line react-hooks/purity
+  const referenceTimestamp = Date.now();
+
   // Calculate overall system health (0-100)
   const systemHealth = useMemo(() => {
     let score = 100;
@@ -40,7 +45,7 @@ export function useAIMetrics() {
 
   // Get metrics per function
   const functionMetrics = useMemo(() => {
-    const result: Record<
+    const result = {} as Record<
       AIFunction,
       {
         totalActions: number;
@@ -49,16 +54,15 @@ export function useAIMetrics() {
         lastRun: Date | null;
         recentErrors: number;
       }
-    > = {} as any;
+    >;
 
     Object.keys(config.functions).forEach((func) => {
       const funcId = func as AIFunction;
       const funcActions = actionHistory.filter((a) => a.function === funcId);
       const completedActions = funcActions.filter((a) => a.status === "completed");
-      const failedActions = funcActions.filter((a) => a.status === "failed");
       const recentActions = funcActions.filter(
         (a) =>
-          new Date(a.startedAt).getTime() > Date.now() - 24 * 60 * 60 * 1000
+          new Date(a.startedAt).getTime() > referenceTimestamp - 24 * 60 * 60 * 1000
       );
 
       const totalDuration = completedActions.reduce(
@@ -83,7 +87,7 @@ export function useAIMetrics() {
     });
 
     return result;
-  }, [config.functions, actionHistory]);
+  }, [config.functions, actionHistory, referenceTimestamp]);
 
   // Time-based activity analysis
   const activityByHour = useMemo(() => {
@@ -167,7 +171,7 @@ export function useAIMetrics() {
 
   // Calculate trend (comparing last 7 days to previous 7 days)
   const actionTrend = useMemo(() => {
-    const now = Date.now();
+    const now = referenceTimestamp;
     const weekAgo = now - 7 * 24 * 60 * 60 * 1000;
     const twoWeeksAgo = now - 14 * 24 * 60 * 60 * 1000;
 
@@ -183,7 +187,7 @@ export function useAIMetrics() {
 
     if (lastWeek === 0) return thisWeek > 0 ? 100 : 0;
     return Math.round(((thisWeek - lastWeek) / lastWeek) * 100);
-  }, [actionHistory]);
+  }, [actionHistory, referenceTimestamp]);
 
   return {
     // Raw metrics

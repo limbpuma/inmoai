@@ -74,14 +74,14 @@ export default function SettingsPage() {
     setTimeout(() => setIsSaved(false), 2000);
   };
 
-  const updateSetting = (key: string, value: any) => {
+  const updateSetting = (key: string, value: string | number | boolean) => {
     setSettings((prev) => ({
       ...prev,
       [key]: value,
     }));
   };
 
-  const updateNestedSetting = (parent: string, key: string, value: any) => {
+  const updateNestedSetting = (parent: string, key: string, value: string | number | boolean) => {
     setSettings((prev) => ({
       ...prev,
       [parent]: {

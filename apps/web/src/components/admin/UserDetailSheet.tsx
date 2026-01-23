@@ -35,8 +35,38 @@ import {
   Activity,
 } from "lucide-react";
 
+interface UserActivity {
+  action: string;
+  details: string;
+  time: string;
+}
+
+interface UserSubscription {
+  plan: string;
+  status: string;
+  startDate: string;
+  nextBilling: string;
+}
+
+interface UserDetail {
+  id: string;
+  name: string;
+  email: string;
+  role: string;
+  status: string;
+  createdAt: string;
+  lastLogin: string;
+  location: string;
+  phone: string;
+  searches: number;
+  favorites: number;
+  alerts: number;
+  subscription: UserSubscription | null;
+  activity: UserActivity[];
+}
+
 // Mock user details
-const mockUserDetails: Record<string, any> = {
+const mockUserDetails: Record<string, UserDetail> = {
   "1": {
     id: "1",
     name: "Juan Garcia",
@@ -247,7 +277,7 @@ export function UserDetailSheet({ userId, open, onClose }: UserDetailSheetProps)
             </TabsList>
 
             <TabsContent value="activity" className="mt-4 space-y-3">
-              {user.activity.map((item: any, index: number) => (
+              {user.activity.map((item: UserActivity, index: number) => (
                 <div
                   key={index}
                   className="flex items-start gap-3 p-2 rounded-lg hover:bg-muted"
