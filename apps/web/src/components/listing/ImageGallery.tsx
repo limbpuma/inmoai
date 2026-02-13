@@ -2,11 +2,53 @@
 
 import { useState } from "react";
 import Image from "next/image";
-import { ChevronLeft, ChevronRight, X, Maximize2, Grid3X3 } from "lucide-react";
+import { ChevronLeft, ChevronRight, X, Maximize2, Grid3X3, ShieldCheck, ShieldAlert } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
+
+/**
+ * ImageAuthenticityBadge - Badge de autenticidad por imagen
+ */
+function ImageAuthenticityBadge({ score }: { score: number | null }) {
+  if (score === null) return null;
+
+  const getConfig = (score: number) => {
+    if (score >= 90) return {
+      color: "bg-green-500/90",
+      textColor: "text-white",
+      icon: ShieldCheck,
+      label: `${score}%`
+    };
+    if (score >= 70) return {
+      color: "bg-amber-500/90",
+      textColor: "text-white",
+      icon: ShieldCheck,
+      label: `${score}%`
+    };
+    return {
+      color: "bg-red-500/90",
+      textColor: "text-white",
+      icon: ShieldAlert,
+      label: `${score}%`
+    };
+  };
+
+  const config = getConfig(score);
+  const Icon = config.icon;
+
+  return (
+    <div className={cn(
+      "flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium backdrop-blur-sm",
+      config.color,
+      config.textColor
+    )}>
+      <Icon className="h-3 w-3" />
+      <span>{config.label}</span>
+    </div>
+  );
+}
 
 interface ListingImage {
   id: string;
@@ -98,6 +140,9 @@ export function ImageGallery({ images, title }: ImageGalleryProps) {
 
           {/* Image Info Badges */}
           <div className="absolute top-4 left-4 flex gap-2">
+            {currentImage?.authenticityScore !== null && (
+              <ImageAuthenticityBadge score={currentImage?.authenticityScore ?? null} />
+            )}
             {currentImage?.roomType && (
               <Badge variant="secondary" className="bg-background/90 backdrop-blur-sm">
                 {roomTypeLabels[currentImage.roomType] || currentImage.roomType}
@@ -294,14 +339,19 @@ export function ImageGallery({ images, title }: ImageGalleryProps) {
                   className="object-cover"
                   sizes="(max-width: 768px) 50vw, 33vw"
                 />
-                {image.roomType && (
-                  <Badge
-                    variant="secondary"
-                    className="absolute bottom-2 left-2 text-xs bg-background/90 backdrop-blur-sm"
-                  >
-                    {roomTypeLabels[image.roomType] || image.roomType}
-                  </Badge>
-                )}
+                <div className="absolute bottom-2 left-2 flex gap-1">
+                  {image.authenticityScore !== null && (
+                    <ImageAuthenticityBadge score={image.authenticityScore} />
+                  )}
+                  {image.roomType && (
+                    <Badge
+                      variant="secondary"
+                      className="text-xs bg-background/90 backdrop-blur-sm"
+                    >
+                      {roomTypeLabels[image.roomType] || image.roomType}
+                    </Badge>
+                  )}
+                </div>
               </button>
             ))}
           </div>

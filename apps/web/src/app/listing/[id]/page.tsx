@@ -4,9 +4,14 @@ import { use } from "react";
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import { Header } from "@/components/layout/Header";
-import { ImageGallery } from "@/components/listing/ImageGallery";
-import { PropertyFeatures } from "@/components/listing/PropertyFeatures";
-import { ContactForm } from "@/components/listing/ContactForm";
+import {
+  ImageGallery,
+  PropertyFeatures,
+  ContactForm,
+  PriceHistoryChart,
+  FraudAlertBanner,
+  PriceComparison,
+} from "@/components/listing";
 import { AuthenticityBadge } from "@/components/ui/AuthenticityBadge";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -110,6 +115,15 @@ export default function ListingPage({ params }: ListingPageProps) {
         </div>
       </div>
 
+      {/* Fraud Alert Banner - Shows at top if issues detected */}
+      <div className="container mx-auto px-4 pt-4">
+        <FraudAlertBanner
+          authenticityScore={listing.authenticityScore}
+          isAiGenerated={listing.images?.some((img: { isAiGenerated: boolean | null }) => img.isAiGenerated) ?? null}
+          aiIssues={listing.aiIssues}
+        />
+      </div>
+
       <main className="container mx-auto px-4 py-6">
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           {/* Main Content */}
@@ -127,7 +141,11 @@ export default function ListingPage({ params }: ListingPageProps) {
                   <Badge variant={listing.operationType === "sale" ? "default" : "outline"}>
                     {listing.operationType === "sale" ? "Venta" : "Alquiler"}
                   </Badge>
-                  <AuthenticityBadge score={listing.authenticityScore ?? 0} />
+                  <AuthenticityBadge
+                    score={listing.authenticityScore ?? 0}
+                    issues={listing.aiIssues}
+                    isAiGenerated={listing.images?.some((img: { isAiGenerated: boolean | null }) => img.isAiGenerated) ?? null}
+                  />
                 </div>
                 <h1 className="text-2xl md:text-3xl font-bold">{listing.title}</h1>
                 <div className="flex items-center gap-2 text-muted-foreground">
@@ -195,7 +213,7 @@ export default function ListingPage({ params }: ListingPageProps) {
                       Puntos destacados
                     </h3>
                     <ul className="space-y-1">
-                      {listing.aiHighlights.map((highlight, i) => (
+                      {listing.aiHighlights.map((highlight: string, i: number) => (
                         <li key={i} className="text-sm text-green-700 dark:text-green-300 flex items-start gap-2">
                           <span className="text-green-500 mt-1">•</span>
                           {highlight}
@@ -212,7 +230,7 @@ export default function ListingPage({ params }: ListingPageProps) {
                       Aspectos a considerar
                     </h3>
                     <ul className="space-y-2">
-                      {listing.aiIssues.map((issue, i) => (
+                      {listing.aiIssues.map((issue: { type: string; description: string; severity: "low" | "medium" | "high" }, i: number) => (
                         <li key={i} className="text-sm">
                           <span className={`inline-block px-2 py-0.5 rounded text-xs font-medium mr-2 ${
                             issue.severity === "high"
@@ -275,6 +293,14 @@ export default function ListingPage({ params }: ListingPageProps) {
                 )}
               </div>
             </div>
+
+            {/* Price History */}
+            {listing.priceHistory && listing.priceHistory.length > 0 && (
+              <PriceHistoryChart
+                priceHistory={listing.priceHistory}
+                currentPrice={listing.price}
+              />
+            )}
           </div>
 
           {/* Sidebar */}
@@ -301,27 +327,12 @@ export default function ListingPage({ params }: ListingPageProps) {
               {/* Contact Form */}
               <ContactForm listingId={listing.id} listingTitle={listing.title} />
 
-              {/* Valuation Estimate */}
-              {listing.valuationEstimate && (
-                <div className="p-4 rounded-xl border bg-card">
-                  <h3 className="font-semibold mb-2 flex items-center gap-2">
-                    <Sparkles className="h-4 w-4 text-primary" />
-                    Valoración IA
-                  </h3>
-                  <p className="text-2xl font-bold text-primary">
-                    {new Intl.NumberFormat("es-ES", {
-                      style: "currency",
-                      currency: "EUR",
-                      maximumFractionDigits: 0,
-                    }).format(listing.valuationEstimate)}
-                  </p>
-                  {listing.valuationConfidence && (
-                    <p className="text-sm text-muted-foreground">
-                      Confianza: {Math.round(listing.valuationConfidence * 100)}%
-                    </p>
-                  )}
-                </div>
-              )}
+              {/* Price Comparison - AI Valuation */}
+              <PriceComparison
+                currentPrice={listing.price}
+                valuationEstimate={listing.valuationEstimate}
+                valuationConfidence={listing.valuationConfidence}
+              />
             </div>
           </div>
         </div>
