@@ -209,6 +209,47 @@ const SAMPLE_PROVIDERS = [
   },
 ];
 
+// Portfolio images by category (using placeholder URLs - in production use real images)
+function getPortfolioImagesForCategory(category: ServiceCategory) {
+  const portfolioData: Record<ServiceCategory, Array<{ url: string; title: string; description: string; duration: string }>> = {
+    painting: [
+      { url: 'https://images.unsplash.com/photo-1562259949-e8e7689d7828?w=800', title: 'Salon moderno', description: 'Pintura decorativa en tonos neutros con acabado mate', duration: '3 dias' },
+      { url: 'https://images.unsplash.com/photo-1615529328331-f8917597711f?w=800', title: 'Dormitorio principal', description: 'Combinacion de colores relajantes para zona de descanso', duration: '2 dias' },
+      { url: 'https://images.unsplash.com/photo-1560185127-6ed189bf02f4?w=800', title: 'Fachada exterior', description: 'Rehabilitacion completa de fachada con pintura impermeabilizante', duration: '5 dias' },
+      { url: 'https://images.unsplash.com/photo-1556909114-f6e7ad7d3136?w=800', title: 'Cocina renovada', description: 'Pintura especial antihumedad para zona de cocina', duration: '2 dias' },
+    ],
+    renovation: [
+      { url: 'https://images.unsplash.com/photo-1484154218962-a197022b5858?w=800', title: 'Cocina integral', description: 'Reforma completa de cocina con isla central', duration: '3 semanas' },
+      { url: 'https://images.unsplash.com/photo-1552321554-5fefe8c9ef14?w=800', title: 'Bano de diseno', description: 'Bano moderno con ducha de obra y muebles suspendidos', duration: '2 semanas' },
+      { url: 'https://images.unsplash.com/photo-1600585154340-be6161a56a0c?w=800', title: 'Salon abierto', description: 'Integracion salon-cocina con vigas vistas', duration: '1 mes' },
+      { url: 'https://images.unsplash.com/photo-1600566753086-00f18fb6b3ea?w=800', title: 'Terraza cubierta', description: 'Cerramiento de terraza con sistema panoramico', duration: '10 dias' },
+    ],
+    electrical: [
+      { url: 'https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=800', title: 'Cuadro electrico', description: 'Instalacion de cuadro electrico con protecciones ICP', duration: '1 dia' },
+      { url: 'https://images.unsplash.com/photo-1621905252507-b35492cc74b4?w=800', title: 'Iluminacion LED', description: 'Sistema de iluminacion inteligente con control por app', duration: '3 dias' },
+      { url: 'https://images.unsplash.com/photo-1558618047-f4b511ee370b?w=800', title: 'Punto de carga', description: 'Instalacion de punto de recarga para vehiculo electrico', duration: '1 dia' },
+    ],
+    plumbing: [
+      { url: 'https://images.unsplash.com/photo-1585704032915-c3400ca199e7?w=800', title: 'Bano completo', description: 'Instalacion completa de sanitarios y griferias', duration: '4 dias' },
+      { url: 'https://images.unsplash.com/photo-1584622650111-993a426fbf0a?w=800', title: 'Cocina industrial', description: 'Fontaneria para cocina con sistema de osmosis', duration: '2 dias' },
+      { url: 'https://images.unsplash.com/photo-1564540586988-aa4e53c3d799?w=800', title: 'Caldera nueva', description: 'Sustitucion de caldera antigua por sistema de condensacion', duration: '1 dia' },
+    ],
+    garden: [
+      { url: 'https://images.unsplash.com/photo-1558904541-efa843a96f01?w=800', title: 'Jardin zen', description: 'Diseno de jardin minimalista con gravilla y plantas autoctonas', duration: '1 semana' },
+      { url: 'https://images.unsplash.com/photo-1585320806297-9794b3e4eeae?w=800', title: 'Riego automatico', description: 'Sistema de riego por goteo con programador inteligente', duration: '3 dias' },
+      { url: 'https://images.unsplash.com/photo-1416879595882-3373a0480b5b?w=800', title: 'Cesped artificial', description: 'Instalacion de cesped artificial de alta calidad', duration: '2 dias' },
+      { url: 'https://images.unsplash.com/photo-1598902108854-10e335adac99?w=800', title: 'Piscina natural', description: 'Construccion de piscina biologica sin cloro', duration: '1 mes' },
+    ],
+    general: [
+      { url: 'https://images.unsplash.com/photo-1600585154340-be6161a56a0c?w=800', title: 'Reforma integral', description: 'Proyecto completo de reforma de vivienda', duration: '2 meses' },
+      { url: 'https://images.unsplash.com/photo-1600566753190-17f0baa2a6c3?w=800', title: 'Local comercial', description: 'Adecuacion de local para actividad comercial', duration: '1 mes' },
+      { url: 'https://images.unsplash.com/photo-1600607687939-ce8a6c25118c?w=800', title: 'Oficina moderna', description: 'Diseno y ejecucion de espacio de trabajo colaborativo', duration: '3 semanas' },
+    ],
+  };
+
+  return portfolioData[category] || portfolioData.general;
+}
+
 async function seedMarketplace() {
   console.log('Starting marketplace seed...');
 
@@ -291,23 +332,70 @@ async function seedMarketplace() {
       // Add sample reviews for verified providers
       if (providerData.isVerified && providerData.totalReviews > 0) {
         const sampleReviews = [
-          { rating: 5, title: 'Excelente trabajo', content: 'Muy profesionales y puntuales. Recomendado.' },
-          { rating: 4, title: 'Buen servicio', content: 'Trabajo bien hecho, aunque tardaron un poco mas de lo esperado.' },
-          { rating: 5, title: 'Muy recomendable', content: 'Precio justo y resultado impecable.' },
+          {
+            rating: 5,
+            title: 'Excelente trabajo',
+            content: 'Muy profesionales y puntuales. Llegaron a la hora acordada y dejaron todo impecable. El precio fue exactamente el del presupuesto, sin sorpresas. Totalmente recomendados.',
+            authorName: 'Maria Garcia',
+          },
+          {
+            rating: 4,
+            title: 'Buen servicio',
+            content: 'Trabajo bien hecho, aunque tardaron un poco mas de lo esperado por un problema con el material. La comunicacion fue buena y el resultado final muy satisfactorio.',
+            authorName: 'Carlos Rodriguez',
+          },
+          {
+            rating: 5,
+            title: 'Muy recomendable',
+            content: 'Precio justo y resultado impecable. Ya es la segunda vez que trabajo con ellos y repetiria sin dudar. Muy atentos a los detalles.',
+            authorName: 'Ana Martinez',
+          },
+          {
+            rating: 5,
+            title: 'Profesionales de verdad',
+            content: 'Desde el primer contacto hasta la finalizacion del trabajo, todo perfecto. Resolvieron un problema que otras empresas no supieron solucionar.',
+            authorName: 'Jose Luis Fernandez',
+          },
+          {
+            rating: 4,
+            title: 'Calidad-precio excelente',
+            content: 'Muy contento con el trabajo realizado. Quiza la comunicacion podria mejorar un poco, pero el resultado compensa con creces.',
+            authorName: 'Laura Sanchez',
+          },
         ];
 
-        for (const review of sampleReviews.slice(0, Math.min(3, providerData.totalReviews))) {
+        for (const review of sampleReviews.slice(0, Math.min(5, providerData.totalReviews))) {
           await db.insert(providerReviews).values({
             providerId: provider.id,
             rating: review.rating,
             title: review.title,
             content: review.content,
-            authorName: 'Usuario verificado',
+            authorName: review.authorName,
             isVerified: true,
             isPublished: true,
           });
         }
         console.log(`    Added sample reviews`);
+      }
+
+      // Add sample portfolio for premium/enterprise providers
+      if (providerData.tier !== 'free') {
+        const portfolioImages = getPortfolioImagesForCategory(providerData.categories[0]);
+        for (let i = 0; i < portfolioImages.length; i++) {
+          await db.insert(providerPortfolio).values({
+            providerId: provider.id,
+            category: providerData.categories[0],
+            title: portfolioImages[i].title,
+            description: portfolioImages[i].description,
+            imageUrl: portfolioImages[i].url,
+            thumbnailUrl: portfolioImages[i].url,
+            position: i,
+            projectDate: new Date(Date.now() - Math.random() * 365 * 24 * 60 * 60 * 1000),
+            projectDuration: portfolioImages[i].duration,
+            isPublished: true,
+          });
+        }
+        console.log(`    Added ${portfolioImages.length} portfolio items`);
       }
     }
 

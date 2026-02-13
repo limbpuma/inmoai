@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import {
   PaintBucket,
   Wrench,
@@ -16,10 +17,22 @@ import {
   ChevronUp,
   Phone,
   ExternalLink,
+  Send,
   type LucideIcon,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
 import { trpc } from "@/lib/trpc/client";
 
@@ -111,11 +124,56 @@ export function ServiceProviders({
   className,
 }: ServiceProvidersProps) {
   const [expanded, setExpanded] = useState(false);
+  const [selectedProvider, setSelectedProvider] = useState<{
+    id: string;
+    name: string;
+    category: string;
+  } | null>(null);
+  const [quoteForm, setQuoteForm] = useState({
+    name: "",
+    email: "",
+    phone: "",
+    message: "",
+  });
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submitSuccess, setSubmitSuccess] = useState(false);
 
   const { data, isLoading, error } = trpc.marketplace.getRecommendedProviders.useQuery(
     { listingId, limit: 10, verifiedOnly: false },
     { enabled: !!listingId }
   );
+
+  const requestQuoteMutation = trpc.marketplace.requestQuote.useMutation({
+    onSuccess: () => {
+      setSubmitSuccess(true);
+      setQuoteForm({ name: "", email: "", phone: "", message: "" });
+      setTimeout(() => {
+        setSelectedProvider(null);
+        setSubmitSuccess(false);
+      }, 2000);
+    },
+    onError: (error) => {
+      console.error("Error requesting quote:", error);
+      setIsSubmitting(false);
+    },
+  });
+
+  const handleSubmitQuote = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedProvider) return;
+
+    setIsSubmitting(true);
+    requestQuoteMutation.mutate({
+      providerId: selectedProvider.id,
+      listingId,
+      category: selectedProvider.category as "painting" | "renovation" | "electrical" | "plumbing" | "garden" | "general",
+      title: `Solicitud de presupuesto - ${selectedProvider.name}`,
+      description: quoteForm.message,
+      clientName: quoteForm.name,
+      clientEmail: quoteForm.email,
+      clientPhone: quoteForm.phone,
+    });
+  };
 
   if (isLoading) {
     return (
@@ -337,13 +395,120 @@ export function ServiceProviders({
 
                   {/* Actions */}
                   <div className="flex gap-2 mt-3">
-                    <Button size="sm" variant="outline" className="flex-1" disabled>
-                      <Phone className="h-3.5 w-3.5 mr-1" />
-                      Contactar
-                    </Button>
-                    <Button size="sm" variant="default" className="flex-1" disabled>
-                      Pedir presupuesto
-                    </Button>
+                    {provider.contactPhone ? (
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="flex-1"
+                        asChild
+                      >
+                        <a href={`tel:${provider.contactPhone}`}>
+                          <Phone className="h-3.5 w-3.5 mr-1" />
+                          Llamar
+                        </a>
+                      </Button>
+                    ) : (
+                      <Button size="sm" variant="outline" className="flex-1" disabled>
+                        <Phone className="h-3.5 w-3.5 mr-1" />
+                        Sin teléfono
+                      </Button>
+                    )}
+                    <Dialog>
+                      <DialogTrigger asChild>
+                        <Button
+                          size="sm"
+                          variant="default"
+                          className="flex-1"
+                          onClick={() =>
+                            setSelectedProvider({
+                              id: provider.id,
+                              name: provider.businessName,
+                              category: services[0]?.category || "general",
+                            })
+                          }
+                        >
+                          <Send className="h-3.5 w-3.5 mr-1" />
+                          Presupuesto
+                        </Button>
+                      </DialogTrigger>
+                      <DialogContent className="sm:max-w-md">
+                        <DialogHeader>
+                          <DialogTitle>Solicitar presupuesto</DialogTitle>
+                          <DialogDescription>
+                            Envía tu solicitud a {provider.businessName}
+                          </DialogDescription>
+                        </DialogHeader>
+                        {submitSuccess ? (
+                          <div className="py-8 text-center">
+                            <div className="w-12 h-12 rounded-full bg-green-100 dark:bg-green-900/30 flex items-center justify-center mx-auto mb-4">
+                              <BadgeCheck className="h-6 w-6 text-green-600 dark:text-green-400" />
+                            </div>
+                            <p className="font-medium">¡Solicitud enviada!</p>
+                            <p className="text-sm text-muted-foreground mt-1">
+                              El profesional te contactará pronto
+                            </p>
+                          </div>
+                        ) : (
+                          <form onSubmit={handleSubmitQuote} className="space-y-4">
+                            <div className="space-y-2">
+                              <Label htmlFor="name">Nombre *</Label>
+                              <Input
+                                id="name"
+                                value={quoteForm.name}
+                                onChange={(e) =>
+                                  setQuoteForm({ ...quoteForm, name: e.target.value })
+                                }
+                                placeholder="Tu nombre"
+                                required
+                              />
+                            </div>
+                            <div className="space-y-2">
+                              <Label htmlFor="email">Email *</Label>
+                              <Input
+                                id="email"
+                                type="email"
+                                value={quoteForm.email}
+                                onChange={(e) =>
+                                  setQuoteForm({ ...quoteForm, email: e.target.value })
+                                }
+                                placeholder="tu@email.com"
+                                required
+                              />
+                            </div>
+                            <div className="space-y-2">
+                              <Label htmlFor="phone">Teléfono</Label>
+                              <Input
+                                id="phone"
+                                value={quoteForm.phone}
+                                onChange={(e) =>
+                                  setQuoteForm({ ...quoteForm, phone: e.target.value })
+                                }
+                                placeholder="+34 612 345 678"
+                              />
+                            </div>
+                            <div className="space-y-2">
+                              <Label htmlFor="message">Mensaje</Label>
+                              <Textarea
+                                id="message"
+                                value={quoteForm.message}
+                                onChange={(e) =>
+                                  setQuoteForm({ ...quoteForm, message: e.target.value })
+                                }
+                                placeholder="Describe brevemente lo que necesitas..."
+                                rows={3}
+                              />
+                            </div>
+                            <Button
+                              type="submit"
+                              className="w-full"
+                              disabled={isSubmitting || !quoteForm.name || !quoteForm.email}
+                            >
+                              {isSubmitting ? "Enviando..." : "Enviar solicitud"}
+                            </Button>
+                          </form>
+                        )}
+                      </DialogContent>
+                    </Dialog>
                   </div>
                 </div>
               </div>
@@ -380,11 +545,13 @@ export function ServiceProviders({
       <div className="p-4 border-t">
         <div className="rounded-lg bg-primary/5 border border-primary/20 p-3 text-center">
           <p className="text-xs text-muted-foreground mb-2">
-            Proximamente: Solicita presupuestos de profesionales verificados
+            Encuentra al profesional perfecto para tu proyecto
           </p>
-          <Button variant="outline" size="sm" disabled className="w-full">
-            <ExternalLink className="h-4 w-4 mr-2" />
-            Ver todos los profesionales
+          <Button variant="outline" size="sm" className="w-full" asChild>
+            <Link href={`/servicios?city=${city || ""}`}>
+              <ExternalLink className="h-4 w-4 mr-2" />
+              Ver todos los profesionales
+            </Link>
           </Button>
         </div>
       </div>
