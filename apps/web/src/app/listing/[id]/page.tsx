@@ -14,6 +14,7 @@ import {
   ExternalSourceCard,
   AvailabilityIndicator,
   ImprovementSuggestions,
+  ServiceProviders,
 } from "@/components/listing";
 import { AuthenticityBadge } from "@/components/ui/AuthenticityBadge";
 import { Badge } from "@/components/ui/badge";
@@ -363,6 +364,17 @@ export default function ListingPage({ params }: ListingPageProps) {
                   improvements={listing.improvements}
                   currentPrice={listing.price}
                   operationType={listing.operationType}
+                />
+              )}
+
+              {/* Service Providers - Recommended professionals based on improvements */}
+              {listing.improvements && listing.improvements.length > 0 && (
+                <ServiceProviders
+                  listingId={listing.id}
+                  improvements={listing.improvements}
+                  latitude={listing.latitude}
+                  longitude={listing.longitude}
+                  city={listing.city}
                 />
               )}
             </div>

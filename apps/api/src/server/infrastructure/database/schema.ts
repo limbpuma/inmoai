@@ -528,6 +528,7 @@ export const listingsRelations = relations(listings, ({ one, many }) => ({
   priceHistory: many(priceHistory),
   favorites: many(userFavorites),
   leads: many(leads),
+  serviceLeads: many(serviceLeads),
 }));
 
 export const listingImagesRelations = relations(listingImages, ({ one }) => ({
@@ -551,6 +552,7 @@ export const usersRelations = relations(users, ({ many }) => ({
   alerts: many(searchAlerts),
   leads: many(leads),
   apiKeys: many(apiKeys),
+  serviceProviders: many(serviceProviders),
 }));
 
 export const accountsRelations = relations(accounts, ({ one }) => ({
@@ -622,3 +624,407 @@ export type NewApiKey = typeof apiKeys.$inferInsert;
 
 export type ScrapingJob = typeof scrapingJobs.$inferSelect;
 export type NewScrapingJob = typeof scrapingJobs.$inferInsert;
+
+// ============================================
+// SERVICE MARKETPLACE ENUMS
+// ============================================
+
+export const serviceCategoryEnum = pgEnum('service_category', [
+  'painting',
+  'renovation',
+  'electrical',
+  'plumbing',
+  'garden',
+  'general',
+]);
+
+export const providerStatusEnum = pgEnum('provider_status', [
+  'pending',
+  'active',
+  'suspended',
+  'inactive',
+]);
+
+export const providerTierEnum = pgEnum('provider_tier', [
+  'free',
+  'premium',
+  'enterprise',
+]);
+
+export const serviceLeadStatusEnum = pgEnum('service_lead_status', [
+  'new',
+  'viewed',
+  'contacted',
+  'quoted',
+  'accepted',
+  'completed',
+  'cancelled',
+]);
+
+// ============================================
+// SERVICE PROVIDERS
+// ============================================
+
+export const serviceProviders = pgTable(
+  'service_providers',
+  {
+    id: uuid('id').defaultRandom().primaryKey(),
+    userId: uuid('user_id').references(() => users.id, { onDelete: 'set null' }),
+
+    // Business info
+    businessName: varchar('business_name', { length: 255 }).notNull(),
+    slug: varchar('slug', { length: 100 }).notNull().unique(),
+    description: text('description'),
+    logoUrl: varchar('logo_url', { length: 500 }),
+    coverImageUrl: varchar('cover_image_url', { length: 500 }),
+
+    // Contact
+    contactName: varchar('contact_name', { length: 255 }).notNull(),
+    contactEmail: varchar('contact_email', { length: 255 }).notNull(),
+    contactPhone: varchar('contact_phone', { length: 50 }).notNull(),
+    website: varchar('website', { length: 500 }),
+
+    // Location & coverage
+    address: varchar('address', { length: 500 }),
+    city: varchar('city', { length: 100 }).notNull(),
+    province: varchar('province', { length: 100 }),
+    postalCode: varchar('postal_code', { length: 20 }),
+    country: varchar('country', { length: 100 }).default('España'),
+    latitude: decimal('latitude', { precision: 10, scale: 7 }).notNull(),
+    longitude: decimal('longitude', { precision: 10, scale: 7 }).notNull(),
+    coverageRadiusKm: integer('coverage_radius_km').default(25).notNull(),
+
+    // Status & subscription
+    status: providerStatusEnum('status').default('pending').notNull(),
+    tier: providerTierEnum('tier').default('free').notNull(),
+
+    // Stripe
+    stripeCustomerId: varchar('stripe_customer_id', { length: 255 }),
+    stripeSubscriptionId: varchar('stripe_subscription_id', { length: 255 }),
+    stripeCurrentPeriodEnd: timestamp('stripe_current_period_end', { withTimezone: true }),
+
+    // Aggregated stats
+    totalReviews: integer('total_reviews').default(0),
+    averageRating: decimal('average_rating', { precision: 2, scale: 1 }).default('0'),
+    totalLeads: integer('total_leads').default(0),
+    leadsThisMonth: integer('leads_this_month').default(0),
+    responseTimeMinutes: integer('response_time_minutes'),
+
+    // Verification
+    isVerified: boolean('is_verified').default(false),
+    verifiedAt: timestamp('verified_at', { withTimezone: true }),
+
+    // Metadata
+    metadata: jsonb('metadata').$type<{
+      yearsInBusiness?: number;
+      employeeCount?: number;
+      certifications?: string[];
+      insuranceInfo?: string;
+      portfolioUrls?: string[];
+      socialMedia?: {
+        instagram?: string;
+        facebook?: string;
+        linkedin?: string;
+      };
+    }>(),
+
+    createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
+  },
+  (table) => [
+    index('idx_providers_user').on(table.userId),
+    index('idx_providers_city').on(table.city),
+    index('idx_providers_status').on(table.status),
+    index('idx_providers_tier').on(table.tier),
+    index('idx_providers_rating').on(table.averageRating),
+    index('idx_providers_verified').on(table.isVerified),
+    index('idx_providers_location').on(table.latitude, table.longitude),
+  ]
+);
+
+// ============================================
+// PROVIDER SERVICES (services offered by each provider)
+// ============================================
+
+export const providerServices = pgTable(
+  'provider_services',
+  {
+    id: uuid('id').defaultRandom().primaryKey(),
+    providerId: uuid('provider_id')
+      .references(() => serviceProviders.id, { onDelete: 'cascade' })
+      .notNull(),
+
+    category: serviceCategoryEnum('category').notNull(),
+    title: varchar('title', { length: 255 }).notNull(),
+    description: text('description'),
+
+    // Pricing
+    priceMin: decimal('price_min', { precision: 10, scale: 2 }),
+    priceMax: decimal('price_max', { precision: 10, scale: 2 }),
+    priceUnit: varchar('price_unit', { length: 50 }).default('proyecto'),
+
+    isActive: boolean('is_active').default(true),
+
+    createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
+  },
+  (table) => [
+    index('idx_provider_services_provider').on(table.providerId),
+    index('idx_provider_services_category').on(table.category),
+    uniqueIndex('idx_provider_services_unique').on(table.providerId, table.category),
+  ]
+);
+
+// ============================================
+// SERVICE LEADS (quote requests)
+// ============================================
+
+export const serviceLeads = pgTable(
+  'service_leads',
+  {
+    id: uuid('id').defaultRandom().primaryKey(),
+    providerId: uuid('provider_id')
+      .references(() => serviceProviders.id, { onDelete: 'cascade' })
+      .notNull(),
+    listingId: uuid('listing_id').references(() => listings.id, { onDelete: 'set null' }),
+    improvementId: varchar('improvement_id', { length: 100 }),
+    category: serviceCategoryEnum('category').notNull(),
+
+    // Client info
+    clientName: varchar('client_name', { length: 255 }).notNull(),
+    clientEmail: varchar('client_email', { length: 255 }).notNull(),
+    clientPhone: varchar('client_phone', { length: 50 }),
+
+    // Work location
+    workAddress: varchar('work_address', { length: 500 }),
+    workCity: varchar('work_city', { length: 100 }),
+    workLatitude: decimal('work_latitude', { precision: 10, scale: 7 }),
+    workLongitude: decimal('work_longitude', { precision: 10, scale: 7 }),
+
+    // Request details
+    title: varchar('title', { length: 255 }).notNull(),
+    description: text('description'),
+    budget: decimal('budget', { precision: 10, scale: 2 }),
+    urgency: varchar('urgency', { length: 20 }).default('normal'),
+    preferredDate: timestamp('preferred_date', { withTimezone: true }),
+
+    // Status tracking
+    status: serviceLeadStatusEnum('status').default('new').notNull(),
+    viewedAt: timestamp('viewed_at', { withTimezone: true }),
+    contactedAt: timestamp('contacted_at', { withTimezone: true }),
+    quotedAmount: decimal('quoted_amount', { precision: 10, scale: 2 }),
+    quotedAt: timestamp('quoted_at', { withTimezone: true }),
+    completedAt: timestamp('completed_at', { withTimezone: true }),
+
+    // Attribution
+    source: varchar('source', { length: 100 }).default('marketplace'),
+    utmSource: varchar('utm_source', { length: 100 }),
+    utmMedium: varchar('utm_medium', { length: 100 }),
+    utmCampaign: varchar('utm_campaign', { length: 100 }),
+
+    createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
+  },
+  (table) => [
+    index('idx_service_leads_provider').on(table.providerId),
+    index('idx_service_leads_listing').on(table.listingId),
+    index('idx_service_leads_category').on(table.category),
+    index('idx_service_leads_status').on(table.status),
+    index('idx_service_leads_created').on(table.createdAt),
+  ]
+);
+
+// ============================================
+// PROVIDER REVIEWS
+// ============================================
+
+export const providerReviews = pgTable(
+  'provider_reviews',
+  {
+    id: uuid('id').defaultRandom().primaryKey(),
+    providerId: uuid('provider_id')
+      .references(() => serviceProviders.id, { onDelete: 'cascade' })
+      .notNull(),
+    serviceLeadId: uuid('service_lead_id')
+      .references(() => serviceLeads.id, { onDelete: 'set null' }),
+    userId: uuid('user_id').references(() => users.id, { onDelete: 'set null' }),
+
+    // Author info
+    authorName: varchar('author_name', { length: 255 }),
+    authorEmail: varchar('author_email', { length: 255 }),
+
+    // Ratings
+    rating: integer('rating').notNull(),
+    title: varchar('title', { length: 255 }),
+    content: text('content'),
+
+    // Detailed ratings
+    qualityRating: integer('quality_rating'),
+    communicationRating: integer('communication_rating'),
+    timelinessRating: integer('timeliness_rating'),
+    valueRating: integer('value_rating'),
+
+    category: serviceCategoryEnum('category'),
+    isVerified: boolean('is_verified').default(false),
+    isPublished: boolean('is_published').default(true),
+
+    // Provider response
+    providerResponse: text('provider_response'),
+    providerRespondedAt: timestamp('provider_responded_at', { withTimezone: true }),
+
+    createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
+  },
+  (table) => [
+    index('idx_reviews_provider').on(table.providerId),
+    index('idx_reviews_rating').on(table.rating),
+    index('idx_reviews_lead').on(table.serviceLeadId),
+    index('idx_reviews_verified').on(table.isVerified),
+    uniqueIndex('idx_reviews_unique_lead').on(table.serviceLeadId),
+  ]
+);
+
+// ============================================
+// PROVIDER PORTFOLIO
+// ============================================
+
+export const providerPortfolio = pgTable(
+  'provider_portfolio',
+  {
+    id: uuid('id').defaultRandom().primaryKey(),
+    providerId: uuid('provider_id')
+      .references(() => serviceProviders.id, { onDelete: 'cascade' })
+      .notNull(),
+
+    category: serviceCategoryEnum('category').notNull(),
+    title: varchar('title', { length: 255 }).notNull(),
+    description: text('description'),
+
+    imageUrl: varchar('image_url', { length: 1000 }).notNull(),
+    thumbnailUrl: varchar('thumbnail_url', { length: 1000 }),
+    position: integer('position').default(0),
+
+    projectDate: timestamp('project_date', { withTimezone: true }),
+    projectDuration: varchar('project_duration', { length: 100 }),
+    projectCost: decimal('project_cost', { precision: 10, scale: 2 }),
+
+    isPublished: boolean('is_published').default(true),
+
+    createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+  },
+  (table) => [
+    index('idx_portfolio_provider').on(table.providerId),
+    index('idx_portfolio_category').on(table.category),
+    index('idx_portfolio_position').on(table.providerId, table.position),
+  ]
+);
+
+// ============================================
+// AREA CENTROIDS (fallback for proximity without exact coordinates)
+// ============================================
+
+export const areaCentroids = pgTable(
+  'area_centroids',
+  {
+    id: uuid('id').defaultRandom().primaryKey(),
+    city: varchar('city', { length: 100 }).notNull(),
+    neighborhood: varchar('neighborhood', { length: 100 }),
+    province: varchar('province', { length: 100 }),
+    country: varchar('country', { length: 100 }).default('España'),
+
+    latitude: decimal('latitude', { precision: 10, scale: 7 }).notNull(),
+    longitude: decimal('longitude', { precision: 10, scale: 7 }).notNull(),
+    areaRadiusKm: decimal('area_radius_km', { precision: 5, scale: 2 }).default('5'),
+
+    source: varchar('source', { length: 100 }),
+
+    createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
+  },
+  (table) => [
+    uniqueIndex('idx_area_centroids_unique').on(table.city, table.neighborhood),
+    index('idx_area_centroids_city').on(table.city),
+  ]
+);
+
+// ============================================
+// SERVICE MARKETPLACE RELATIONS
+// ============================================
+
+export const serviceProvidersRelations = relations(serviceProviders, ({ one, many }) => ({
+  user: one(users, {
+    fields: [serviceProviders.userId],
+    references: [users.id],
+  }),
+  services: many(providerServices),
+  leads: many(serviceLeads),
+  reviews: many(providerReviews),
+  portfolio: many(providerPortfolio),
+}));
+
+export const providerServicesRelations = relations(providerServices, ({ one }) => ({
+  provider: one(serviceProviders, {
+    fields: [providerServices.providerId],
+    references: [serviceProviders.id],
+  }),
+}));
+
+export const serviceLeadsRelations = relations(serviceLeads, ({ one }) => ({
+  provider: one(serviceProviders, {
+    fields: [serviceLeads.providerId],
+    references: [serviceProviders.id],
+  }),
+  listing: one(listings, {
+    fields: [serviceLeads.listingId],
+    references: [listings.id],
+  }),
+}));
+
+export const providerReviewsRelations = relations(providerReviews, ({ one }) => ({
+  provider: one(serviceProviders, {
+    fields: [providerReviews.providerId],
+    references: [serviceProviders.id],
+  }),
+  serviceLead: one(serviceLeads, {
+    fields: [providerReviews.serviceLeadId],
+    references: [serviceLeads.id],
+  }),
+  user: one(users, {
+    fields: [providerReviews.userId],
+    references: [users.id],
+  }),
+}));
+
+export const providerPortfolioRelations = relations(providerPortfolio, ({ one }) => ({
+  provider: one(serviceProviders, {
+    fields: [providerPortfolio.providerId],
+    references: [serviceProviders.id],
+  }),
+}));
+
+// ============================================
+// SERVICE MARKETPLACE TYPE EXPORTS
+// ============================================
+
+export type ServiceProvider = typeof serviceProviders.$inferSelect;
+export type NewServiceProvider = typeof serviceProviders.$inferInsert;
+
+export type ProviderService = typeof providerServices.$inferSelect;
+export type NewProviderService = typeof providerServices.$inferInsert;
+
+export type ServiceLead = typeof serviceLeads.$inferSelect;
+export type NewServiceLead = typeof serviceLeads.$inferInsert;
+
+export type ProviderReview = typeof providerReviews.$inferSelect;
+export type NewProviderReview = typeof providerReviews.$inferInsert;
+
+export type ProviderPortfolioItem = typeof providerPortfolio.$inferSelect;
+export type NewProviderPortfolioItem = typeof providerPortfolio.$inferInsert;
+
+export type AreaCentroid = typeof areaCentroids.$inferSelect;
+export type NewAreaCentroid = typeof areaCentroids.$inferInsert;
+
+export type ServiceCategory = (typeof serviceCategoryEnum.enumValues)[number];
+export type ProviderStatus = (typeof providerStatusEnum.enumValues)[number];
+export type ProviderTier = (typeof providerTierEnum.enumValues)[number];
+export type ServiceLeadStatus = (typeof serviceLeadStatusEnum.enumValues)[number];

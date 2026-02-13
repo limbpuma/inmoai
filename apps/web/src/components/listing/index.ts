@@ -7,3 +7,4 @@ export { PriceComparison } from "./PriceComparison";
 export { ExternalSourceCard } from "./ExternalSourceCard";
 export { AvailabilityIndicator } from "./AvailabilityIndicator";
 export { ImprovementSuggestions } from "./ImprovementSuggestions";
+export { ServiceProviders } from "./ServiceProviders";
