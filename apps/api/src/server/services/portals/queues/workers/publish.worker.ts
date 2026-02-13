@@ -77,11 +77,11 @@ async function processPublishJob(job: Job<PublishJobData>): Promise<void> {
     // Prepare listing data
     const portalListingData = listingToPortalData(listing);
 
-    // Add images
+    // Add images (use cdnUrl with fallback to originalUrl)
     portalListingData.images = (listing.images || []).map((img, idx): PortalImageData => ({
-      url: img.url,
-      caption: img.caption || undefined,
-      isMain: img.isPrimary || idx === 0,
+      url: img.cdnUrl || img.originalUrl,
+      caption: undefined, // listingImages schema doesn't have caption
+      isMain: img.position === 0 || idx === 0,
       order: img.position ?? idx,
     }));
 

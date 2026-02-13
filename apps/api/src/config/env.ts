@@ -40,15 +40,38 @@ export const env = createEnv({
     // Email
     RESEND_API_KEY: z.string().optional(),
 
-    // Stripe
-    STRIPE_SECRET_KEY: z.string().min(1),
-    STRIPE_WEBHOOK_SECRET: z.string().min(1),
+    // Stripe (optional in development)
+    STRIPE_SECRET_KEY: z.string().optional(),
+    STRIPE_WEBHOOK_SECRET: z.string().optional(),
     STRIPE_PRICE_ID_FREE: z.string().optional(),
-    STRIPE_PRICE_ID_PRO: z.string().min(1),
-    STRIPE_PRICE_ID_AGENCY: z.string().min(1),
+    STRIPE_PRICE_ID_PRO: z.string().optional(),
+    STRIPE_PRICE_ID_AGENCY: z.string().optional(),
 
     // Rate Limiting
     RATE_LIMIT_REQUESTS_PER_HOUR: z.coerce.number().default(100),
+
+    // Portals - Autoposting System
+    APP_URL: z.string().url().optional(),
+    PORTAL_ENCRYPTION_KEY: z.string().min(32).optional(),
+    JWT_SECRET: z.string().min(32).optional(),
+
+    // Redis for BullMQ
+    REDIS_HOST: z.string().optional(),
+    REDIS_PORT: z.string().optional(),
+    REDIS_PASSWORD: z.string().optional(),
+    REDIS_DB: z.string().optional(),
+
+    // Portal OAuth Credentials
+    IDEALISTA_CLIENT_ID: z.string().optional(),
+    IDEALISTA_CLIENT_SECRET: z.string().optional(),
+    FOTOCASA_CLIENT_ID: z.string().optional(),
+    FOTOCASA_CLIENT_SECRET: z.string().optional(),
+    HABITACLIA_CLIENT_ID: z.string().optional(),
+    HABITACLIA_CLIENT_SECRET: z.string().optional(),
+    PISOS_CLIENT_ID: z.string().optional(),
+    PISOS_CLIENT_SECRET: z.string().optional(),
+    MILANUNCIOS_CLIENT_ID: z.string().optional(),
+    MILANUNCIOS_CLIENT_SECRET: z.string().optional(),
   },
 
   client: {
@@ -83,6 +106,25 @@ export const env = createEnv({
     STRIPE_PRICE_ID_AGENCY: process.env.STRIPE_PRICE_ID_AGENCY,
     RATE_LIMIT_REQUESTS_PER_HOUR: process.env.RATE_LIMIT_REQUESTS_PER_HOUR,
     NEXT_PUBLIC_APP_URL: process.env.NEXT_PUBLIC_APP_URL,
+
+    // Portals
+    APP_URL: process.env.APP_URL,
+    PORTAL_ENCRYPTION_KEY: process.env.PORTAL_ENCRYPTION_KEY,
+    JWT_SECRET: process.env.JWT_SECRET,
+    REDIS_HOST: process.env.REDIS_HOST,
+    REDIS_PORT: process.env.REDIS_PORT,
+    REDIS_PASSWORD: process.env.REDIS_PASSWORD,
+    REDIS_DB: process.env.REDIS_DB,
+    IDEALISTA_CLIENT_ID: process.env.IDEALISTA_CLIENT_ID,
+    IDEALISTA_CLIENT_SECRET: process.env.IDEALISTA_CLIENT_SECRET,
+    FOTOCASA_CLIENT_ID: process.env.FOTOCASA_CLIENT_ID,
+    FOTOCASA_CLIENT_SECRET: process.env.FOTOCASA_CLIENT_SECRET,
+    HABITACLIA_CLIENT_ID: process.env.HABITACLIA_CLIENT_ID,
+    HABITACLIA_CLIENT_SECRET: process.env.HABITACLIA_CLIENT_SECRET,
+    PISOS_CLIENT_ID: process.env.PISOS_CLIENT_ID,
+    PISOS_CLIENT_SECRET: process.env.PISOS_CLIENT_SECRET,
+    MILANUNCIOS_CLIENT_ID: process.env.MILANUNCIOS_CLIENT_ID,
+    MILANUNCIOS_CLIENT_SECRET: process.env.MILANUNCIOS_CLIENT_SECRET,
   },
 
   skipValidation: !!process.env.SKIP_ENV_VALIDATION,

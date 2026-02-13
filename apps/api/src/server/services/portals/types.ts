@@ -97,7 +97,7 @@ export interface PortalListingData {
   energyRating?: string;
   yearBuilt?: number;
   images: PortalImageData[];
-  features?: string[];
+  // features are represented by boolean fields (hasElevator, hasParking, etc.)
   contactName?: string;
   contactPhone?: string;
   contactEmail?: string;
@@ -213,7 +213,7 @@ export function listingToPortalData(listing: Partial<Listing>): PortalListingDat
     energyRating: listing.energyRating || undefined,
     yearBuilt: listing.yearBuilt || undefined,
     images: [], // Must be populated separately from listingImages
-    features: listing.features as string[] | undefined,
+    // Features are represented by individual boolean fields (hasElevator, hasParking, etc.)
   };
 }
 
