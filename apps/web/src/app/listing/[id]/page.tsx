@@ -301,7 +301,6 @@ export default function ListingPage({ params }: ListingPageProps) {
             {listing.priceHistory && listing.priceHistory.length > 0 && (
               <PriceHistoryChart
                 priceHistory={listing.priceHistory}
-                currentPrice={listing.price}
               />
             )}
           </div>
