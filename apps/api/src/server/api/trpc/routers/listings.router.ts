@@ -101,11 +101,16 @@ export const listingsRouter = createTRPCRouter({
         externalUrl: listing.externalUrl,
         source: listing.source
           ? {
-              id: listing.source.id,
+              id: listing.source.slug, // Use slug as ID for InmoAI detection
               name: listing.source.name,
               slug: listing.source.slug,
+              website: listing.source.website,
             }
           : null,
+        firstSeenAt: listing.firstSeenAt,
+        lastSeenAt: listing.lastSeenAt,
+        status: listing.status,
+        improvements: listing.improvements,
         imageUrl: images[0]?.url ?? null,
         imageCount: images.length,
         images,

@@ -81,6 +81,7 @@ export const sources = pgTable('sources', {
   name: varchar('name', { length: 100 }).notNull().unique(),
   slug: varchar('slug', { length: 100 }).notNull().unique(),
   baseUrl: varchar('base_url', { length: 500 }),
+  website: varchar('website', { length: 500 }),
   logoUrl: varchar('logo_url', { length: 500 }),
   scrapingEnabled: boolean('scraping_enabled').default(true),
   scrapingIntervalHours: integer('scraping_interval_hours').default(24),
@@ -166,6 +167,20 @@ export const listings = pgTable(
     qualityScore: integer('quality_score'),
     valuationEstimate: decimal('valuation_estimate', { precision: 12, scale: 2 }),
     valuationConfidence: decimal('valuation_confidence', { precision: 3, scale: 2 }),
+
+    // AI-detected improvement suggestions (future marketplace feature)
+    improvements: jsonb('improvements').$type<
+      {
+        id: string;
+        category: 'painting' | 'renovation' | 'electrical' | 'plumbing' | 'garden' | 'general';
+        title: string;
+        description: string;
+        estimatedCost: { min: number; max: number };
+        potentialValueIncrease: number;
+        priority: 'low' | 'medium' | 'high';
+        detectedFrom?: string;
+      }[]
+    >(),
 
     // Vector embedding reference
     embeddingId: varchar('embedding_id', { length: 100 }),

@@ -20,12 +20,162 @@ const client = postgres(connectionString);
 const db = drizzle(client);
 
 const SOURCES_DATA = [
-  { name: 'Idealista', slug: 'idealista', baseUrl: 'https://www.idealista.com' },
-  { name: 'Fotocasa', slug: 'fotocasa', baseUrl: 'https://www.fotocasa.es' },
-  { name: 'Habitaclia', slug: 'habitaclia', baseUrl: 'https://www.habitaclia.com' },
+  { name: 'Idealista', slug: 'idealista', baseUrl: 'https://www.idealista.com', website: 'https://www.idealista.com' },
+  { name: 'Fotocasa', slug: 'fotocasa', baseUrl: 'https://www.fotocasa.es', website: 'https://www.fotocasa.es' },
+  { name: 'Habitaclia', slug: 'habitaclia', baseUrl: 'https://www.habitaclia.com', website: 'https://www.habitaclia.com' },
+  { name: 'InmoAI', slug: 'inmoai', baseUrl: 'https://www.inmoai.es', website: 'https://www.inmoai.es' },
+];
+
+// Helper to generate dates relative to now
+const daysAgo = (days: number) => {
+  const date = new Date();
+  date.setDate(date.getDate() - days);
+  return date;
+};
+
+// Helper to generate external URLs
+const generateExternalUrl = (sourceSlug: string, id: string) => {
+  const urls: Record<string, string> = {
+    idealista: `https://www.idealista.com/inmueble/${id}/`,
+    fotocasa: `https://www.fotocasa.es/es/comprar/vivienda/${id}`,
+    habitaclia: `https://www.habitaclia.com/comprar-piso/${id}.htm`,
+  };
+  return urls[sourceSlug] || null;
+};
+
+// Generate price history with potential drops for older listings
+const generatePriceHistory = (currentPrice: number, daysOnMarket: number): number[] => {
+  if (daysOnMarket < 30) return [currentPrice];
+
+  // Generate price drops for older listings (more drops = more motivated seller)
+  const drops = Math.min(Math.floor(daysOnMarket / 45), 3);
+  const prices: number[] = [currentPrice];
+  let price = currentPrice;
+
+  for (let i = 0; i < drops; i++) {
+    // Previous prices were 3-8% higher
+    price = Math.round(price * (1 + (Math.random() * 0.05 + 0.03)));
+    prices.unshift(price);
+  }
+
+  return prices;
+};
+
+// AI-detected improvements for the future marketplace feature
+// Structure matches ImprovementSuggestions component
+const SAMPLE_IMPROVEMENTS = [
+  {
+    id: 'imp-1',
+    category: 'renovation' as const,
+    title: 'Reforma de cocina completa',
+    description: 'La cocina muestra signos de antigüedad. Una reforma moderna aumentaría significativamente el valor.',
+    estimatedCost: { min: 6000, max: 10000 },
+    potentialValueIncrease: 8,
+    priority: 'high' as const,
+    detectedFrom: 'Análisis de imagen - Cocina',
+  },
+  {
+    id: 'imp-2',
+    category: 'plumbing' as const,
+    title: 'Actualización de baños',
+    description: 'Los baños presentan elementos antiguos que podrían modernizarse.',
+    estimatedCost: { min: 3500, max: 5500 },
+    potentialValueIncrease: 5,
+    priority: 'medium' as const,
+    detectedFrom: 'Análisis de imagen - Baño',
+  },
+  {
+    id: 'imp-3',
+    category: 'painting' as const,
+    title: 'Pintura integral',
+    description: 'Se detectan paredes con necesidad de repintado para mejorar la presentación.',
+    estimatedCost: { min: 1500, max: 2500 },
+    potentialValueIncrease: 3,
+    priority: 'low' as const,
+    detectedFrom: 'Análisis general de imágenes',
+  },
+  {
+    id: 'imp-4',
+    category: 'renovation' as const,
+    title: 'Cambio de suelos',
+    description: 'Los suelos actuales podrían reemplazarse por parquet o tarima flotante moderna.',
+    estimatedCost: { min: 4500, max: 7000 },
+    potentialValueIncrease: 6,
+    priority: 'medium' as const,
+    detectedFrom: 'Análisis de imagen - Salón',
+  },
+  {
+    id: 'imp-5',
+    category: 'general' as const,
+    title: 'Mejora de ventanas',
+    description: 'Ventanas antiguas detectadas. Cambio a doble acristalamiento mejora eficiencia energética.',
+    estimatedCost: { min: 4000, max: 6000 },
+    potentialValueIncrease: 4,
+    priority: 'high' as const,
+    detectedFrom: 'Análisis de certificación energética',
+  },
 ];
 
 const MOCK_LISTINGS = [
+  // ============ INMOAI NATIVE LISTINGS (para probar ContactForm) ============
+  {
+    title: 'Piso exclusivo InmoAI - Contacto directo',
+    description: 'Propiedad verificada y gestionada directamente por InmoAI. Contacta con nosotros para visitas.',
+    propertyType: 'apartment' as const,
+    operationType: 'sale' as const,
+    price: 285000,
+    city: 'Madrid',
+    neighborhood: 'Chamartín',
+    province: 'Madrid',
+    postalCode: '28002',
+    sizeSqm: 95,
+    rooms: 4,
+    bedrooms: 3,
+    bathrooms: 2,
+    floor: 4,
+    totalFloors: 7,
+    hasElevator: true,
+    hasBalcony: true,
+    hasAirConditioning: true,
+    authenticityScore: 100,
+    sourceSlug: 'inmoai', // NATIVE - shows ContactForm
+    daysOnMarket: 5,
+    priceHistory: [285000],
+    improvements: [SAMPLE_IMPROVEMENTS[0], SAMPLE_IMPROVEMENTS[2]], // kitchen + paint
+    images: [
+      'https://images.unsplash.com/photo-1600607687939-ce8a6c25118c?w=800&h=600&fit=crop',
+      'https://images.unsplash.com/photo-1600585154340-be6161a56a0c?w=800&h=600&fit=crop',
+    ],
+  },
+  {
+    title: 'Chalet InmoAI con gestión integral',
+    description: 'Chalet gestionado por InmoAI con servicio completo de visitas y negociación.',
+    propertyType: 'villa' as const,
+    operationType: 'sale' as const,
+    price: 650000,
+    city: 'Barcelona',
+    neighborhood: 'Pedralbes',
+    province: 'Barcelona',
+    postalCode: '08034',
+    sizeSqm: 280,
+    rooms: 6,
+    bedrooms: 5,
+    bathrooms: 3,
+    hasGarden: true,
+    hasPool: true,
+    hasParking: true,
+    hasAirConditioning: true,
+    authenticityScore: 100,
+    sourceSlug: 'inmoai', // NATIVE - shows ContactForm
+    daysOnMarket: 12,
+    priceHistory: [650000],
+    improvements: [SAMPLE_IMPROVEMENTS[4]], // windows
+    images: [
+      'https://images.unsplash.com/photo-1613490493576-7fde63acd811?w=800&h=600&fit=crop',
+      'https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?w=800&h=600&fit=crop',
+    ],
+  },
+  // ============ MADRID (10 listings) ============
   // ============ MADRID (10 listings) ============
   {
     title: 'Ático luminoso con terraza panorámica',
@@ -48,6 +198,8 @@ const MOCK_LISTINGS = [
     hasAirConditioning: true,
     authenticityScore: 94,
     sourceSlug: 'idealista',
+    daysOnMarket: 3, // Recién publicado
+    priceHistory: [425000], // Sin bajadas
     images: [
       'https://images.unsplash.com/photo-1502672260266-1c1ef2d93688?w=800&h=600&fit=crop',
       'https://images.unsplash.com/photo-1560448204-e02f11c3d0e2?w=800&h=600&fit=crop',
@@ -74,6 +226,8 @@ const MOCK_LISTINGS = [
     hasHeating: true,
     authenticityScore: 88,
     sourceSlug: 'fotocasa',
+    daysOnMarket: 45, // Medium time - for availability testing
+    improvements: [SAMPLE_IMPROVEMENTS[1], SAMPLE_IMPROVEMENTS[3]], // bathrooms + flooring
     images: [
       'https://images.unsplash.com/photo-1560448204-e02f11c3d0e2?w=800&h=600&fit=crop',
       'https://images.unsplash.com/photo-1600585154340-be6161a56a0c?w=800&h=600&fit=crop',
@@ -266,6 +420,9 @@ const MOCK_LISTINGS = [
     hasElevator: false,
     authenticityScore: 78,
     sourceSlug: 'habitaclia',
+    daysOnMarket: 120, // Old listing - low availability
+    priceHistory: [165000, 155000, 145000], // Multiple price drops = motivated seller
+    improvements: [SAMPLE_IMPROVEMENTS[0], SAMPLE_IMPROVEMENTS[1], SAMPLE_IMPROVEMENTS[2], SAMPLE_IMPROVEMENTS[3]], // Needs work
     images: [
       'https://images.unsplash.com/photo-1560448204-e02f11c3d0e2?w=800&h=600&fit=crop',
     ],
@@ -780,20 +937,31 @@ async function seed() {
 
     // Insert listings
     console.log('Inserting listings...');
+    let listingIndex = 0;
     for (const listing of MOCK_LISTINGS) {
-      const { images, sourceSlug, ...listingData } = listing;
+      const { images, sourceSlug, daysOnMarket, priceHistory: priceHist, ...listingData } = listing as typeof listing & { daysOnMarket?: number; priceHistory?: number[] };
       const sourceId = sourceMap.get(sourceSlug);
+      const externalId = `mock-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+
+      // Generate realistic dates based on listing index for variety
+      const marketDays = daysOnMarket ?? [2, 5, 15, 30, 45, 60, 90, 120, 180][listingIndex % 9];
+      const firstSeen = daysAgo(marketDays);
+      const lastSeen = daysAgo(Math.floor(Math.random() * 3)); // 0-2 days ago
 
       const [insertedListing] = await db
         .insert(listings)
         .values({
           ...listingData,
           sourceId,
-          externalId: `mock-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+          externalId,
+          externalUrl: generateExternalUrl(sourceSlug, externalId),
           status: 'active',
+          price: listingData.price?.toString() ?? null,
           pricePerSqm: listingData.price && listingData.sizeSqm
-            ? Math.round(listingData.price / listingData.sizeSqm)
+            ? Math.round(listingData.price / listingData.sizeSqm).toString()
             : null,
+          firstSeenAt: firstSeen,
+          lastSeenAt: lastSeen,
         })
         .returning();
 
@@ -809,13 +977,18 @@ async function seed() {
         );
       }
 
-      // Insert price history
-      await db.insert(priceHistory).values({
-        listingId: insertedListing.id,
-        price: listingData.price.toString(),
-      });
+      // Insert price history with potential drops for older listings
+      const prices = priceHist ?? generatePriceHistory(listingData.price, marketDays);
+      for (let i = 0; i < prices.length; i++) {
+        await db.insert(priceHistory).values({
+          listingId: insertedListing.id,
+          price: prices[i].toString(),
+          recordedAt: daysAgo(marketDays - (i * Math.floor(marketDays / prices.length))),
+        });
+      }
 
-      console.log(`  ✅ ${listingData.title}`);
+      console.log(`  ✅ ${listingData.title} (${marketDays} días en mercado, ${prices.length} precios)`);
+      listingIndex++;
     }
 
     console.log(`\n✅ Seed completed successfully!`);

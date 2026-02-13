@@ -117,6 +117,17 @@ export interface ListingSummary {
   createdAt: Date;
 }
 
+export interface ImprovementSuggestion {
+  id: string;
+  category: 'painting' | 'renovation' | 'electrical' | 'plumbing' | 'garden' | 'general';
+  title: string;
+  description: string;
+  estimatedCost: { min: number; max: number };
+  potentialValueIncrease: number;
+  priority: 'low' | 'medium' | 'high';
+  detectedFrom?: string;
+}
+
 export interface ListingDetail extends ListingSummary {
   description: string | null;
   aiDescription: string | null;
@@ -152,6 +163,18 @@ export interface ListingDetail extends ListingSummary {
   externalUrl: string | null;
   images: ListingImage[];
   priceHistory: PriceHistoryPoint[];
+  // New fields for availability and improvements
+  firstSeenAt: Date | null;
+  lastSeenAt: Date | null;
+  status: ListingStatus | null;
+  improvements: ImprovementSuggestion[] | null;
+  // Extended source with website
+  source: {
+    id: string;
+    name: string;
+    slug: string;
+    website?: string | null;
+  } | null;
 }
 
 export interface ListingImage {
