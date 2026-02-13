@@ -1,4 +1,5 @@
 import Image from "next/image";
+import Link from "next/link";
 import { Heart } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -22,6 +23,7 @@ export interface Listing {
 
 export function ListingCard({ listing }: { listing: Listing }) {
     return (
+        <Link href={`/listing/${listing.id}`} className="block h-full">
         <Card className="group overflow-hidden hover:shadow-xl transition-all duration-300 border-border/50 bg-background h-full flex flex-col rounded-xl cursor-pointer focus-within:ring-2 focus-within:ring-ring focus-within:ring-offset-2">
             <div className="relative aspect-[4/3] overflow-hidden bg-muted/10">
                 <Image
@@ -42,6 +44,11 @@ export function ListingCard({ listing }: { listing: Listing }) {
 
                 <button
                     aria-label={`Guardar ${listing.title} en favoritos`}
+                    onClick={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        // TODO: Implement favorite toggle
+                    }}
                     className="absolute top-3 right-3 p-2.5 rounded-full bg-background/80 hover:bg-white text-foreground/80 hover:text-red-500 backdrop-blur-md transition-all opacity-0 group-hover:opacity-100 translate-y-2 group-hover:translate-y-0 shadow-sm border border-transparent hover:border-border focus-visible:opacity-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
                 >
                     <Heart className="h-4 w-4" />
@@ -76,10 +83,11 @@ export function ListingCard({ listing }: { listing: Listing }) {
                     </span>
                     <span className="text-[10px] text-muted-foreground uppercase tracking-wider font-medium">Precio venta</span>
                 </div>
-                <Button variant="outline" size="sm" className="opacity-0 -translate-x-2 group-hover:translate-x-0 group-hover:opacity-100 transition-all duration-300 font-medium">
-                    Ver detalles
-                </Button>
+                <span className="text-sm text-primary font-medium opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                    Ver detalles →
+                </span>
             </CardFooter>
         </Card>
+        </Link>
     );
 }
