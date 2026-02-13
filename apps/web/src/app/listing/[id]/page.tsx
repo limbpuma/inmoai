@@ -11,6 +11,9 @@ import {
   PriceHistoryChart,
   FraudAlertBanner,
   PriceComparison,
+  ExternalSourceCard,
+  AvailabilityIndicator,
+  ImprovementSuggestions,
 } from "@/components/listing";
 import { AuthenticityBadge } from "@/components/ui/AuthenticityBadge";
 import { Badge } from "@/components/ui/badge";
@@ -314,18 +317,39 @@ export default function ListingPage({ params }: ListingPageProps) {
                 <Button variant="outline" size="icon" className="flex-shrink-0">
                   <Share2 className="h-4 w-4" />
                 </Button>
-                {listing.externalUrl && (
-                  <Button variant="outline" className="flex-1" asChild>
-                    <a href={listing.externalUrl} target="_blank" rel="noopener noreferrer">
-                      <ExternalLink className="h-4 w-4 mr-2" />
-                      Ver en {listing.source?.name || "origen"}
-                    </a>
-                  </Button>
-                )}
               </div>
 
-              {/* Contact Form */}
-              <ContactForm listingId={listing.id} listingTitle={listing.title} />
+              {/* Availability Indicator - KILLER FEATURE */}
+              <AvailabilityIndicator
+                firstSeenAt={listing.firstSeenAt}
+                lastSeenAt={listing.lastSeenAt}
+                priceHistory={listing.priceHistory}
+                authenticityScore={listing.authenticityScore}
+                status={listing.status}
+              />
+
+              {/* Contact/Source Card - Conditional based on source */}
+              {listing.source?.id === "inmoai" ? (
+                // Propiedad nativa de InmoAI - permitir contacto directo
+                <ContactForm listingId={listing.id} listingTitle={listing.title} />
+              ) : (
+                // Propiedad de terceros - mostrar link al portal original
+                <ExternalSourceCard
+                  sourceName={listing.source?.name || "Portal externo"}
+                  sourceUrl={listing.source?.website || null}
+                  externalUrl={listing.externalUrl}
+                  firstSeenAt={listing.firstSeenAt}
+                  lastSeenAt={listing.lastSeenAt}
+                  priceDropCount={
+                    listing.priceHistory
+                      ? listing.priceHistory.filter(
+                          (p: { price: number }, i: number, arr: { price: number }[]) =>
+                            i > 0 && p.price < arr[i - 1].price
+                        ).length
+                      : 0
+                  }
+                />
+              )}
 
               {/* Price Comparison - AI Valuation */}
               <PriceComparison
@@ -333,6 +357,14 @@ export default function ListingPage({ params }: ListingPageProps) {
                 valuationEstimate={listing.valuationEstimate}
                 valuationConfidence={listing.valuationConfidence}
               />
+
+              {/* Improvement Suggestions - Future Marketplace */}
+              {listing.improvements && listing.improvements.length > 0 && (
+                <ImprovementSuggestions
+                  improvements={listing.improvements}
+                  currentPrice={listing.price}
+                />
+              )}
             </div>
           </div>
         </div>

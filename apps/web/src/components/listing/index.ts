@@ -4,3 +4,6 @@ export { ContactForm } from "./ContactForm";
 export { PriceHistoryChart } from "./PriceHistoryChart";
 export { FraudAlertBanner } from "./FraudAlertBanner";
 export { PriceComparison } from "./PriceComparison";
+export { ExternalSourceCard } from "./ExternalSourceCard";
+export { AvailabilityIndicator } from "./AvailabilityIndicator";
+export { ImprovementSuggestions } from "./ImprovementSuggestions";
