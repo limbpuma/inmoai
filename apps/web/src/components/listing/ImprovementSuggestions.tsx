@@ -13,6 +13,11 @@ import {
   Euro,
   TrendingUp,
   Sparkles,
+  ClipboardCheck,
+  Scale,
+  FileText,
+  Home,
+  type LucideIcon,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -25,15 +30,17 @@ interface Improvement {
   estimatedCost: { min: number; max: number };
   potentialValueIncrease: number; // Porcentaje de incremento de valor estimado
   priority: "high" | "medium" | "low";
-  detectedFrom?: string; // Qué imagen/análisis lo detectó
+  detectedFrom?: string; // Que imagen/analisis lo detecto
 }
 
 interface ImprovementSuggestionsProps {
   improvements: Improvement[];
   currentPrice: number | null;
+  operationType: "sale" | "rent";
   className?: string;
 }
 
+// Configuracion por categoria (compartida entre modos)
 const categoryConfig = {
   painting: {
     icon: PaintBucket,
@@ -55,13 +62,13 @@ const categoryConfig = {
   },
   plumbing: {
     icon: Droplets,
-    label: "Fontanería",
+    label: "Fontaneria",
     color: "text-cyan-600 dark:text-cyan-400",
     bgColor: "bg-cyan-50 dark:bg-cyan-950/30",
   },
   garden: {
     icon: TreeDeciduous,
-    label: "Jardín/Exterior",
+    label: "Jardin/Exterior",
     color: "text-green-600 dark:text-green-400",
     bgColor: "bg-green-50 dark:bg-green-950/30",
   },
@@ -73,45 +80,122 @@ const categoryConfig = {
   },
 };
 
-const priorityConfig = {
-  high: {
-    label: "Alta prioridad",
-    color: "text-red-600",
-    bgColor: "bg-red-100 dark:bg-red-900/30",
+// Configuracion por modo de operacion (comprar vs alquilar)
+interface ModeConfig {
+  title: string;
+  subtitle: (count: number) => string;
+  headerIcon: LucideIcon;
+  headerBadgeLabel: string;
+  headerBadgeIcon: LucideIcon;
+  summaryLabel1: string;
+  summaryLabel2: string;
+  summaryIcon2: LucideIcon;
+  summaryBgColor2: string;
+  summaryTextColor2: string;
+  priorityLabels: Record<"high" | "medium" | "low", string>;
+  priorityColors: Record<"high" | "medium" | "low", { text: string; bg: string }>;
+  costLabel: string;
+  impactIcon: LucideIcon;
+  impactFormatter: (value: number) => string;
+  impactColor: string;
+  ctaTitle: string;
+  ctaButton: string;
+  ctaButtonIcon: LucideIcon;
+  ctaDescription: string;
+}
+
+const modeConfig: Record<"sale" | "rent", ModeConfig> = {
+  sale: {
+    title: "Sugerencias de Mejora IA",
+    subtitle: (count) => `${count} mejora${count !== 1 ? "s" : ""} detectada${count !== 1 ? "s" : ""}`,
+    headerIcon: Sparkles,
+    headerBadgeLabel: "valor potencial",
+    headerBadgeIcon: TrendingUp,
+    summaryLabel1: "Inversion estimada",
+    summaryLabel2: "Valor potencial",
+    summaryIcon2: TrendingUp,
+    summaryBgColor2: "bg-green-50 dark:bg-green-950/30",
+    summaryTextColor2: "text-green-600 dark:text-green-400",
+    priorityLabels: {
+      high: "Alta prioridad",
+      medium: "Media prioridad",
+      low: "Baja prioridad",
+    },
+    priorityColors: {
+      high: { text: "text-red-600", bg: "bg-red-100 dark:bg-red-900/30" },
+      medium: { text: "text-amber-600", bg: "bg-amber-100 dark:bg-amber-900/30" },
+      low: { text: "text-green-600", bg: "bg-green-100 dark:bg-green-900/30" },
+    },
+    costLabel: "",
+    impactIcon: TrendingUp,
+    impactFormatter: (value) => `+${value}% valor`,
+    impactColor: "text-green-600",
+    ctaTitle: "Proximamente: Conecta con profesionales verificados",
+    ctaButton: "Buscar profesionales",
+    ctaButtonIcon: Wrench,
+    ctaDescription: "Albaniles, pintores, electricistas y mas - ordenados por calidad y precio",
   },
-  medium: {
-    label: "Media prioridad",
-    color: "text-amber-600",
-    bgColor: "bg-amber-100 dark:bg-amber-900/30",
-  },
-  low: {
-    label: "Baja prioridad",
-    color: "text-green-600",
-    bgColor: "bg-green-100 dark:bg-green-900/30",
+  rent: {
+    title: "Condicion del Inmueble",
+    subtitle: (count) => `${count} aspecto${count !== 1 ? "s" : ""} a revisar`,
+    headerIcon: ClipboardCheck,
+    headerBadgeLabel: "puntos negociables",
+    headerBadgeIcon: Scale,
+    summaryLabel1: "Coste de reparaciones",
+    summaryLabel2: "Impacto en habitabilidad",
+    summaryIcon2: Home,
+    summaryBgColor2: "bg-amber-50 dark:bg-amber-950/30",
+    summaryTextColor2: "text-amber-600 dark:text-amber-400",
+    priorityLabels: {
+      high: "Urgente",
+      medium: "Importante",
+      low: "Menor",
+    },
+    priorityColors: {
+      high: { text: "text-red-600", bg: "bg-red-100 dark:bg-red-900/30" },
+      medium: { text: "text-amber-600", bg: "bg-amber-100 dark:bg-amber-900/30" },
+      low: { text: "text-blue-600", bg: "bg-blue-100 dark:bg-blue-900/30" },
+    },
+    costLabel: "(propietario)",
+    impactIcon: Home,
+    impactFormatter: (value) => value >= 8 ? "Impacto: Alto" : value >= 4 ? "Impacto: Medio" : "Impacto: Bajo",
+    impactColor: "text-amber-600",
+    ctaTitle: "Usa estos puntos en tu negociacion",
+    ctaButton: "Generar informe",
+    ctaButtonIcon: FileText,
+    ctaDescription: "Solicita reparaciones al arrendador o negocia reduccion de renta",
   },
 };
 
 /**
- * ImprovementSuggestions - Sugerencias de mejora basadas en análisis IA
+ * ImprovementSuggestions - Sugerencias de mejora basadas en analisis IA
  *
- * PROPUESTA DE VALOR FUTURA:
- * - Detecta áreas de mejora en las imágenes
- * - Estima costes y potencial incremento de valor
- * - Conectará con marketplace de profesionales (albañiles, pintores, etc.)
+ * MODO COMPRA (sale):
+ * - Enfoque en ROI e inversion
+ * - Muestra potencial incremento de valor
+ * - Conecta con marketplace de profesionales
  *
- * Modelo de negocio:
- * - Profesionales pagan por aparecer
- * - Algoritmo ordena por calidad/precio/valoraciones (no solo por pago)
- * - Leads cualificados para profesionales
+ * MODO ALQUILER (rent):
+ * - Enfoque en negociacion y habitabilidad
+ * - Muestra puntos para negociar con el arrendador
+ * - Genera informe de condicion para el inquilino
  */
 export function ImprovementSuggestions({
   improvements,
   currentPrice,
+  operationType,
   className,
 }: ImprovementSuggestionsProps) {
   const [expanded, setExpanded] = useState(false);
 
   if (!improvements || improvements.length === 0) return null;
+
+  const config = modeConfig[operationType];
+  const HeaderIcon = config.headerIcon;
+  const HeaderBadgeIcon = config.headerBadgeIcon;
+  const SummaryIcon2 = config.summaryIcon2;
+  const ImpactIcon = config.impactIcon;
+  const CtaButtonIcon = config.ctaButtonIcon;
 
   const formatCurrency = (amount: number) =>
     new Intl.NumberFormat("es-ES", {
@@ -125,9 +209,14 @@ export function ImprovementSuggestions({
   const totalMaxCost = improvements.reduce((sum, i) => sum + i.estimatedCost.max, 0);
   const totalValueIncrease = improvements.reduce((sum, i) => sum + i.potentialValueIncrease, 0);
 
-  const potentialNewValue = currentPrice
+  // Modo compra: valor potencial del inmueble
+  const potentialNewValue = currentPrice && operationType === "sale"
     ? currentPrice * (1 + totalValueIncrease / 100)
     : null;
+
+  // Modo alquiler: nivel de impacto general
+  const overallImpact = totalValueIncrease >= 15 ? "Alto" : totalValueIncrease >= 8 ? "Medio" : "Bajo";
+  const urgentIssues = improvements.filter(i => i.priority === "high").length;
 
   const displayedImprovements = expanded ? improvements : improvements.slice(0, 2);
 
@@ -138,23 +227,33 @@ export function ImprovementSuggestions({
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
             <div className="p-2 rounded-lg bg-primary/10">
-              <Sparkles className="h-5 w-5 text-primary" />
+              <HeaderIcon className="h-5 w-5 text-primary" />
             </div>
             <div>
-              <h3 className="font-semibold">Sugerencias de Mejora IA</h3>
+              <h3 className="font-semibold">{config.title}</h3>
               <p className="text-xs text-muted-foreground">
-                {improvements.length} mejora{improvements.length !== 1 ? "s" : ""} detectada{improvements.length !== 1 ? "s" : ""}
+                {config.subtitle(improvements.length)}
               </p>
             </div>
           </div>
 
-          {/* ROI Summary */}
+          {/* Badge Summary */}
           <div className="text-right">
-            <div className="flex items-center gap-1 text-green-600 dark:text-green-400">
-              <TrendingUp className="h-4 w-4" />
-              <span className="font-bold">+{totalValueIncrease.toFixed(1)}%</span>
+            <div className={cn(
+              "flex items-center gap-1",
+              operationType === "sale"
+                ? "text-green-600 dark:text-green-400"
+                : "text-amber-600 dark:text-amber-400"
+            )}>
+              <HeaderBadgeIcon className="h-4 w-4" />
+              <span className="font-bold">
+                {operationType === "sale"
+                  ? `+${totalValueIncrease.toFixed(1)}%`
+                  : `${improvements.length}`
+                }
+              </span>
             </div>
-            <p className="text-[10px] text-muted-foreground">valor potencial</p>
+            <p className="text-[10px] text-muted-foreground">{config.headerBadgeLabel}</p>
           </div>
         </div>
 
@@ -163,23 +262,36 @@ export function ImprovementSuggestions({
           <div className="rounded-lg bg-muted/50 p-2">
             <div className="flex items-center gap-1 text-muted-foreground">
               <Euro className="h-3 w-3" />
-              <span className="text-xs">Inversión estimada</span>
+              <span className="text-xs">{config.summaryLabel1}</span>
             </div>
             <p className="font-semibold">
               {formatCurrency(totalMinCost)} - {formatCurrency(totalMaxCost)}
             </p>
+            {operationType === "rent" && (
+              <p className="text-[10px] text-muted-foreground">Responsabilidad del arrendador</p>
+            )}
           </div>
-          {potentialNewValue && (
-            <div className="rounded-lg bg-green-50 dark:bg-green-950/30 p-2">
-              <div className="flex items-center gap-1 text-green-600 dark:text-green-400">
-                <TrendingUp className="h-3 w-3" />
-                <span className="text-xs">Valor potencial</span>
-              </div>
+
+          <div className={cn("rounded-lg p-2", config.summaryBgColor2)}>
+            <div className={cn("flex items-center gap-1", config.summaryTextColor2)}>
+              <SummaryIcon2 className="h-3 w-3" />
+              <span className="text-xs">{config.summaryLabel2}</span>
+            </div>
+            {operationType === "sale" && potentialNewValue ? (
               <p className="font-semibold text-green-700 dark:text-green-300">
                 {formatCurrency(potentialNewValue)}
               </p>
-            </div>
-          )}
+            ) : (
+              <p className={cn("font-semibold", config.summaryTextColor2)}>
+                {overallImpact}
+                {urgentIssues > 0 && (
+                  <span className="text-xs font-normal ml-1">
+                    ({urgentIssues} urgente{urgentIssues !== 1 ? "s" : ""})
+                  </span>
+                )}
+              </p>
+            )}
+          </div>
         </div>
       </div>
 
@@ -187,7 +299,8 @@ export function ImprovementSuggestions({
       <div className="divide-y">
         {displayedImprovements.map((improvement) => {
           const category = categoryConfig[improvement.category];
-          const priority = priorityConfig[improvement.priority];
+          const priorityLabel = config.priorityLabels[improvement.priority];
+          const priorityColor = config.priorityColors[improvement.priority];
           const CategoryIcon = category.icon;
 
           return (
@@ -203,11 +316,11 @@ export function ImprovementSuggestions({
                     <span
                       className={cn(
                         "text-[10px] px-1.5 py-0.5 rounded-full",
-                        priority.bgColor,
-                        priority.color
+                        priorityColor.bg,
+                        priorityColor.text
                       )}
                     >
-                      {priority.label}
+                      {priorityLabel}
                     </span>
                   </div>
 
@@ -221,11 +334,14 @@ export function ImprovementSuggestions({
                       <span>
                         {formatCurrency(improvement.estimatedCost.min)} -{" "}
                         {formatCurrency(improvement.estimatedCost.max)}
+                        {config.costLabel && (
+                          <span className="text-muted-foreground ml-1">{config.costLabel}</span>
+                        )}
                       </span>
                     </div>
-                    <div className="flex items-center gap-1 text-green-600">
-                      <TrendingUp className="h-3 w-3" />
-                      <span>+{improvement.potentialValueIncrease}% valor</span>
+                    <div className={cn("flex items-center gap-1", config.impactColor)}>
+                      <ImpactIcon className="h-3 w-3" />
+                      <span>{config.impactFormatter(improvement.potentialValueIncrease)}</span>
                     </div>
                   </div>
 
@@ -258,23 +374,23 @@ export function ImprovementSuggestions({
             ) : (
               <>
                 <ChevronDown className="h-4 w-4 mr-1" />
-                Ver {improvements.length - 2} más
+                Ver {improvements.length - 2} mas
               </>
             )}
           </Button>
         )}
 
-        {/* Future: Connect with professionals */}
+        {/* CTA Section */}
         <div className="rounded-lg bg-primary/5 border border-primary/20 p-3 text-center">
           <p className="text-xs text-muted-foreground mb-2">
-            Próximamente: Conecta con profesionales verificados
+            {config.ctaTitle}
           </p>
           <Button variant="outline" size="sm" disabled className="w-full">
-            <Wrench className="h-4 w-4 mr-2" />
-            Buscar profesionales
+            <CtaButtonIcon className="h-4 w-4 mr-2" />
+            {config.ctaButton}
           </Button>
           <p className="text-[10px] text-muted-foreground mt-2">
-            Albañiles, pintores, electricistas y más - ordenados por calidad y precio
+            {config.ctaDescription}
           </p>
         </div>
       </div>

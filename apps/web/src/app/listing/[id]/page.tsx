@@ -357,11 +357,12 @@ export default function ListingPage({ params }: ListingPageProps) {
                 valuationConfidence={listing.valuationConfidence}
               />
 
-              {/* Improvement Suggestions - Future Marketplace */}
+              {/* Improvement Suggestions - Contextual by operation type */}
               {listing.improvements && listing.improvements.length > 0 && (
                 <ImprovementSuggestions
                   improvements={listing.improvements}
                   currentPrice={listing.price}
+                  operationType={listing.operationType}
                 />
               )}
             </div>
