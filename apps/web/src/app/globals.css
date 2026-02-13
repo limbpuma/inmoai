@@ -44,16 +44,16 @@
 }
 
 :root {
-  /* Palette */
-  --primary-50: #eff6ff;
-  --primary-100: #dbeafe;
-  --primary-500: #3b82f6;
-  --primary-600: #2563eb;
-  --primary-700: #1d4ed8;
+  /* Real Estate Palette - Trust Teal + Professional Blue */
+  --primary-50: #f0fdfa;
+  --primary-100: #ccfbf1;
+  --primary-500: #14b8a6;
+  --primary-600: #0f766e;
+  --primary-700: #0d5d56;
 
-  --secondary-50: #f0fdf4;
-  --secondary-500: #22c55e;
-  --secondary-600: #16a34a;
+  --secondary-50: #f0f9ff;
+  --secondary-500: #0ea5e9;
+  --secondary-600: #0369a1;
 
   --warning-500: #f59e0b;
   --danger-500: #ef4444;
@@ -62,98 +62,98 @@
   --gray-100: #f3f4f6;
   --gray-200: #e5e7eb;
   --gray-500: #6b7280;
-  --gray-900: #111827;
+  --gray-900: #134e4a;
 
   /* Semantics */
-  --background: #ffffff;
-  --foreground: #111827;
+  --background: #fafffe;
+  --foreground: #134e4a;
 
   --card: #ffffff;
-  --card-foreground: #111827;
+  --card-foreground: #134e4a;
 
   --popover: #ffffff;
-  --popover-foreground: #111827;
+  --popover-foreground: #134e4a;
 
-  --primary: #2563eb;
+  --primary: #0f766e;
   --primary-foreground: #ffffff;
 
-  --secondary: #22c55e;
+  --secondary: #14b8a6;
   --secondary-foreground: #ffffff;
 
-  --muted: #f3f4f6;
-  --muted-foreground: #6b7280;
+  --muted: #f0fdfa;
+  --muted-foreground: #5f7a77;
 
-  --accent: #f9fafb;
-  --accent-foreground: #111827;
+  --accent: #ccfbf1;
+  --accent-foreground: #134e4a;
 
   --destructive: #ef4444;
   --destructive-foreground: #ffffff;
 
-  --border: #e5e7eb;
-  --input: #e5e7eb;
-  --ring: #2563eb;
+  --border: #d1e7e4;
+  --input: #d1e7e4;
+  --ring: #0f766e;
 
   --radius: 0.5rem;
 
-  --chart-1: #2563eb;
-  --chart-2: #22c55e;
-  --chart-3: #f59e0b;
-  --chart-4: #ef4444;
+  --chart-1: #0f766e;
+  --chart-2: #14b8a6;
+  --chart-3: #0369a1;
+  --chart-4: #f59e0b;
   --chart-5: #6b7280;
-  
-  --sidebar: #f9fafb;
-  --sidebar-foreground: #111827;
-  --sidebar-primary: #2563eb;
+
+  --sidebar: #f0fdfa;
+  --sidebar-foreground: #134e4a;
+  --sidebar-primary: #0f766e;
   --sidebar-primary-foreground: #ffffff;
-  --sidebar-accent: #f3f4f6;
-  --sidebar-accent-foreground: #111827;
-  --sidebar-border: #e5e7eb;
-  --sidebar-ring: #2563eb;
+  --sidebar-accent: #ccfbf1;
+  --sidebar-accent-foreground: #134e4a;
+  --sidebar-border: #d1e7e4;
+  --sidebar-ring: #0f766e;
 }
 
 .dark {
-  --background: #111827;
-  --foreground: #f9fafb;
+  --background: #0f1f1e;
+  --foreground: #e6f5f3;
 
-  --card: #1f2937;
-  --card-foreground: #f9fafb;
+  --card: #153331;
+  --card-foreground: #e6f5f3;
 
-  --popover: #1f2937;
-  --popover-foreground: #f9fafb;
+  --popover: #153331;
+  --popover-foreground: #e6f5f3;
 
-  --primary: #3b82f6;
-  --primary-foreground: #ffffff;
+  --primary: #14b8a6;
+  --primary-foreground: #0f1f1e;
 
-  --secondary: #22c55e;
-  --secondary-foreground: #ffffff;
+  --secondary: #2dd4bf;
+  --secondary-foreground: #0f1f1e;
 
-  --muted: #374151;
-  --muted-foreground: #9ca3af;
+  --muted: #1a3d3a;
+  --muted-foreground: #94b4b0;
 
-  --accent: #1f2937;
-  --accent-foreground: #f9fafb;
+  --accent: #1a3d3a;
+  --accent-foreground: #e6f5f3;
 
   --destructive: #ef4444;
   --destructive-foreground: #ffffff;
 
-  --border: #374151;
-  --input: #374151;
-  --ring: #3b82f6;
+  --border: #254542;
+  --input: #254542;
+  --ring: #14b8a6;
 
-  --chart-1: #3b82f6;
-  --chart-2: #22c55e;
-  --chart-3: #f59e0b;
-  --chart-4: #ef4444;
-  --chart-5: #9ca3af;
-  
-  --sidebar: #1f2937;
-  --sidebar-foreground: #f9fafb;
-  --sidebar-primary: #3b82f6;
-  --sidebar-primary-foreground: #ffffff;
-  --sidebar-accent: #374151;
-  --sidebar-accent-foreground: #f9fafb;
-  --sidebar-border: #374151;
-  --sidebar-ring: #3b82f6;
+  --chart-1: #14b8a6;
+  --chart-2: #2dd4bf;
+  --chart-3: #0ea5e9;
+  --chart-4: #f59e0b;
+  --chart-5: #94b4b0;
+
+  --sidebar: #153331;
+  --sidebar-foreground: #e6f5f3;
+  --sidebar-primary: #14b8a6;
+  --sidebar-primary-foreground: #0f1f1e;
+  --sidebar-accent: #1a3d3a;
+  --sidebar-accent-foreground: #e6f5f3;
+  --sidebar-border: #254542;
+  --sidebar-ring: #14b8a6;
 }
 
 @layer base {
@@ -162,5 +162,16 @@
   }
   body {
     @apply bg-background text-foreground;
+    font-family: var(--font-sans), system-ui, sans-serif;
+  }
+  h1, h2, h3, h4, h5, h6 {
+    font-family: var(--font-heading), var(--font-sans), serif;
+  }
+}
+
+/* Focus states for accessibility */
+@layer utilities {
+  .focus-ring {
+    @apply focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background;
   }
 }

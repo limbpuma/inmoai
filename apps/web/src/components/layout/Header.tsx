@@ -13,9 +13,9 @@ export function Header() {
                         <span className="font-bold text-xl tracking-tight">InmoAI</span>
                     </Link>
                     <nav className="hidden md:flex items-center gap-6 text-sm font-medium">
-                        <Link href="/search" className="transition-colors hover:text-primary text-muted-foreground">Comprar</Link>
-                        <Link href="/search?mode=rent" className="transition-colors hover:text-primary text-muted-foreground">Alquilar</Link>
-                        <Link href="/pricing" className="transition-colors hover:text-primary text-muted-foreground">Precios</Link>
+                        <Link href="/search" className="transition-colors hover:text-primary text-muted-foreground focus-visible:outline-none focus-visible:text-primary focus-visible:underline underline-offset-4">Comprar</Link>
+                        <Link href="/search?mode=rent" className="transition-colors hover:text-primary text-muted-foreground focus-visible:outline-none focus-visible:text-primary focus-visible:underline underline-offset-4">Alquilar</Link>
+                        <Link href="/pricing" className="transition-colors hover:text-primary text-muted-foreground focus-visible:outline-none focus-visible:text-primary focus-visible:underline underline-offset-4">Precios</Link>
                     </nav>
                 </div>
                 <div className="flex items-center gap-4">

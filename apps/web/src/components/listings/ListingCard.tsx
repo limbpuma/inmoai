@@ -22,11 +22,11 @@ export interface Listing {
 
 export function ListingCard({ listing }: { listing: Listing }) {
     return (
-        <Card className="group overflow-hidden hover:shadow-xl transition-all duration-300 border-border/50 bg-background h-full flex flex-col rounded-xl">
+        <Card className="group overflow-hidden hover:shadow-xl transition-all duration-300 border-border/50 bg-background h-full flex flex-col rounded-xl cursor-pointer focus-within:ring-2 focus-within:ring-ring focus-within:ring-offset-2">
             <div className="relative aspect-[4/3] overflow-hidden bg-muted/10">
                 <Image
                     src={listing.image}
-                    alt={listing.title}
+                    alt={`Imagen de ${listing.title} en ${listing.location}`}
                     fill
                     className="object-cover transition-transform duration-700 group-hover:scale-110"
                     sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
@@ -40,7 +40,10 @@ export function ListingCard({ listing }: { listing: Listing }) {
                     </Badge>
                 </div>
 
-                <button className="absolute top-3 right-3 p-2.5 rounded-full bg-background/80 hover:bg-white text-foreground/80 hover:text-red-500 backdrop-blur-md transition-all opacity-0 group-hover:opacity-100 translate-y-2 group-hover:translate-y-0 shadow-sm border border-transparent hover:border-border">
+                <button
+                    aria-label={`Guardar ${listing.title} en favoritos`}
+                    className="absolute top-3 right-3 p-2.5 rounded-full bg-background/80 hover:bg-white text-foreground/80 hover:text-red-500 backdrop-blur-md transition-all opacity-0 group-hover:opacity-100 translate-y-2 group-hover:translate-y-0 shadow-sm border border-transparent hover:border-border focus-visible:opacity-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                >
                     <Heart className="h-4 w-4" />
                 </button>
             </div>
