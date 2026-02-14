@@ -4,6 +4,10 @@ const nextConfig: NextConfig = {
   experimental: {
     typedRoutes: true,
   },
+  // Ignore ESLint warnings during build (handled separately in CI)
+  eslint: {
+    ignoreDuringBuilds: true,
+  },
   images: {
     remotePatterns: [
       {

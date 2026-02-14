@@ -65,6 +65,7 @@ export async function POST(req: NextRequest) {
         // Handle successful payment - log only safe identifiers
         if (process.env.NODE_ENV === 'development') {
           const invoice = event.data.object as Stripe.Invoice;
+          // eslint-disable-next-line no-console
           console.log('Payment succeeded:', { id: invoice.id, customerId: invoice.customer });
         }
         break;
@@ -73,12 +74,14 @@ export async function POST(req: NextRequest) {
         // Handle failed payment - log only safe identifiers
         if (process.env.NODE_ENV === 'development') {
           const invoice = event.data.object as Stripe.Invoice;
+          // eslint-disable-next-line no-console
           console.log('Payment failed:', { id: invoice.id, customerId: invoice.customer });
         }
         break;
 
       default:
         if (process.env.NODE_ENV === 'development') {
+          // eslint-disable-next-line no-console
           console.log(`Unhandled event type: ${event.type}`);
         }
     }

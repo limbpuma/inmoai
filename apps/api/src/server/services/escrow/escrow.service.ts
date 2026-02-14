@@ -270,7 +270,7 @@ class EscrowService {
    * Uses atomic update with status check to prevent race conditions
    */
   async refundEscrow(params: RefundEscrowParams): Promise<EscrowDetails> {
-    const validStatuses = ['pending', 'funded', 'disputed'] as const;
+    const validStatuses: string[] = ['pending', 'funded', 'disputed'];
 
     return await db.transaction(async (tx) => {
       // Atomic read-and-check: only select if status is valid for refund
