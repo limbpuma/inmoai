@@ -258,7 +258,7 @@ export default function ProviderPage({ params }: ProviderPageProps) {
                 <TabsTrigger value="services">Servicios</TabsTrigger>
                 <TabsTrigger value="portfolio">Portfolio</TabsTrigger>
                 <TabsTrigger value="reviews">
-                  Opiniones ({reviewsData?.reviews.length || 0})
+                  Opiniones ({reviewsData?.reviews?.length ?? 0})
                 </TabsTrigger>
               </TabsList>
 

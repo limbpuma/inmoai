@@ -3,6 +3,12 @@
  * Run with: npx tsx src/scripts/seed-marketplace.ts
  */
 
+// Load env before any other imports
+import { config } from 'dotenv';
+import { resolve } from 'path';
+config({ path: resolve(__dirname, '../../.env.local') });
+
+// Now import database
 import { db } from '../server/infrastructure/database';
 import {
   serviceProviders,
@@ -314,20 +320,22 @@ async function seedMarketplace() {
 
       console.log(`  Created provider: ${providerData.businessName}`);
 
-      // Create services for provider
-      for (const service of providerData.services) {
-        const category = providerData.categories[0]; // Use first category for now
+      // Create one service per category (constraint: unique provider_id + category)
+      for (let i = 0; i < providerData.categories.length; i++) {
+        const category = providerData.categories[i];
+        const service = providerData.services[i % providerData.services.length];
         await db.insert(providerServices).values({
           providerId: provider.id,
           category,
           title: service.title,
+          description: `Servicio profesional de ${category}`,
           priceMin: service.priceMin.toString(),
           priceMax: service.priceMax.toString(),
           priceUnit: service.priceUnit,
           isActive: true,
         });
       }
-      console.log(`    Added ${providerData.services.length} services`);
+      console.log(`    Added ${providerData.categories.length} services`);
 
       // Add sample reviews for verified providers
       if (providerData.isVerified && providerData.totalReviews > 0) {

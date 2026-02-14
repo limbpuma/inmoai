@@ -37,11 +37,11 @@ export async function getAdapter(portal: Portal): Promise<BasePortalAdapter> {
   }
 
   try {
-    const module = await loadAdapter();
-    const adapter = new module.default();
+    const adapterModule = await loadAdapter();
+    const adapter = new adapterModule.default();
     adapterCache.set(portal, adapter);
     return adapter;
-  } catch (error) {
+  } catch {
     // If adapter module doesn't exist yet, return a placeholder error
     throw new Error(`Adapter for ${portal} is not yet implemented`);
   }

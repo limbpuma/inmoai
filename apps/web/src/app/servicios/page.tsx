@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { Suspense, useState } from "react";
 import Link from "next/link";
 import { Header } from "@/components/layout/Header";
 import { Button } from "@/components/ui/button";
@@ -49,10 +49,7 @@ const tierConfig: Record<string, { label: string; color: string }> = {
   enterprise: { label: "Destacado", color: "bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300" },
 };
 
-export default function ServiciosPage() {
-  const searchParams = useSearchParams();
-  const initialCity = searchParams.get("city") || "";
-
+function ServiciosPageContent({ initialCity }: { initialCity: string }) {
   const [city, setCity] = useState(initialCity);
   const [category, setCategory] = useState<string>("");
   const [searchQuery, setSearchQuery] = useState("");
@@ -119,13 +116,13 @@ export default function ServiciosPage() {
                   className="pl-10"
                 />
               </div>
-              <Select value={category} onValueChange={setCategory}>
+              <Select value={category || "all"} onValueChange={(val) => setCategory(val === "all" ? "" : val)}>
                 <SelectTrigger className="w-full sm:w-[180px]">
                   <Filter className="h-4 w-4 mr-2" />
                   <SelectValue placeholder="Categoria" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">Todas</SelectItem>
+                  <SelectItem value="all">Todas</SelectItem>
                   {Object.entries(categoryConfig).map(([key, config]) => (
                     <SelectItem key={key} value={key}>
                       <span className="flex items-center gap-2">
@@ -145,13 +142,13 @@ export default function ServiciosPage() {
       <main className="container mx-auto px-4 py-8">
         {/* Results count */}
         <div className="flex items-center justify-between mb-6">
-          <p className="text-muted-foreground">
-            {isLoading ? (
-              <Skeleton className="h-5 w-40" />
-            ) : (
-              `${filteredProviders?.length || 0} profesionales encontrados`
-            )}
-          </p>
+          {isLoading ? (
+            <Skeleton className="h-5 w-40" />
+          ) : (
+            <p className="text-muted-foreground">
+              {`${filteredProviders?.length || 0} profesionales encontrados`}
+            </p>
+          )}
         </div>
 
         {/* Grid */}
@@ -302,5 +299,45 @@ export default function ServiciosPage() {
         )}
       </main>
     </div>
+  );
+}
+
+function ServiciosPageWrapper() {
+  const searchParams = useSearchParams();
+  const initialCity = searchParams.get("city") || "";
+  return <ServiciosPageContent initialCity={initialCity} />;
+}
+
+function LoadingSkeleton() {
+  return (
+    <div className="min-h-screen bg-background">
+      <Header />
+      <div className="bg-gradient-to-b from-primary/5 to-background border-b">
+        <div className="container mx-auto px-4 py-12">
+          <Skeleton className="h-10 w-96 mx-auto mb-4" />
+          <Skeleton className="h-6 w-2/3 mx-auto mb-8" />
+          <div className="max-w-3xl mx-auto flex flex-col sm:flex-row gap-3">
+            <Skeleton className="h-10 flex-1" />
+            <Skeleton className="h-10 w-[200px]" />
+            <Skeleton className="h-10 w-[180px]" />
+          </div>
+        </div>
+      </div>
+      <main className="container mx-auto px-4 py-8">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {[1, 2, 3, 4, 5, 6].map((i) => (
+            <Skeleton key={i} className="h-72 rounded-xl" />
+          ))}
+        </div>
+      </main>
+    </div>
+  );
+}
+
+export default function ServiciosPage() {
+  return (
+    <Suspense fallback={<LoadingSkeleton />}>
+      <ServiciosPageWrapper />
+    </Suspense>
   );
 }
