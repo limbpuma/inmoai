@@ -3,7 +3,7 @@
  * Manages secure payments and fund holding for property and service transactions
  */
 
-import { eq, and, desc, sql, gte, lte } from 'drizzle-orm';
+import { eq, and, desc, sql, gte, lte, inArray } from 'drizzle-orm';
 import { db } from '@/server/infrastructure/database';
 import { escrow, users, agentSessions, agentTransactions } from '@/server/infrastructure/database/schema';
 import Stripe from 'stripe';
@@ -90,64 +90,83 @@ class EscrowService {
 
   /**
    * Fund an escrow (process payment)
+   * Uses atomic update with status check to prevent race conditions
    */
   async fundEscrow(params: FundEscrowParams): Promise<EscrowDetails> {
-    const escrowRecord = await db.query.escrow.findFirst({
-      where: eq(escrow.id, params.escrowId),
+    return await db.transaction(async (tx) => {
+      // Atomic read-and-check: only select if status is 'pending'
+      const escrowRecord = await tx.query.escrow.findFirst({
+        where: and(
+          eq(escrow.id, params.escrowId),
+          eq(escrow.status, 'pending')
+        ),
+      });
+
+      if (!escrowRecord) {
+        // Check if escrow exists at all
+        const anyEscrow = await tx.query.escrow.findFirst({
+          where: eq(escrow.id, params.escrowId),
+        });
+        if (!anyEscrow) {
+          throw new Error('Escrow not found');
+        }
+        throw new Error(`Cannot fund escrow in ${anyEscrow.status} status`);
+      }
+
+      // Check expiration
+      if (escrowRecord.expiresAt && new Date(escrowRecord.expiresAt) < new Date()) {
+        throw new Error('Escrow has expired');
+      }
+
+      let stripePaymentIntentId = params.stripePaymentIntentId;
+
+      // If Stripe is configured and we have a payment method, create payment intent
+      if (this.stripe && params.paymentMethodId && !stripePaymentIntentId) {
+        const buyer = await tx.query.users.findFirst({
+          where: eq(users.id, escrowRecord.buyerId!),
+        });
+
+        const totalAmount = parseFloat(escrowRecord.amount) + parseFloat(escrowRecord.platformFee ?? '0');
+
+        const paymentIntent = await this.stripe.paymentIntents.create({
+          amount: Math.round(totalAmount * 100), // Stripe uses cents
+          currency: escrowRecord.currency ?? 'eur',
+          payment_method: params.paymentMethodId,
+          confirm: true,
+          customer: buyer?.stripeCustomerId ?? undefined,
+          metadata: {
+            escrowId: escrowRecord.id,
+            type: 'escrow_funding',
+          },
+          // Hold funds, don't capture immediately
+          capture_method: 'manual',
+        });
+
+        stripePaymentIntentId = paymentIntent.id;
+      }
+
+      // Atomic update with status condition (double-check)
+      const updated = await tx
+        .update(escrow)
+        .set({
+          status: 'funded',
+          stripePaymentIntentId,
+          fundedAt: new Date(),
+          updatedAt: new Date(),
+        })
+        .where(and(
+          eq(escrow.id, params.escrowId),
+          eq(escrow.status, 'pending') // Only update if still pending
+        ))
+        .returning({ id: escrow.id });
+
+      // Verify update succeeded (race condition protection)
+      if (updated.length === 0) {
+        throw new Error('Escrow was modified concurrently. Please try again.');
+      }
+
+      return this.getEscrowDetails(params.escrowId);
     });
-
-    if (!escrowRecord) {
-      throw new Error('Escrow not found');
-    }
-
-    if (escrowRecord.status !== 'pending') {
-      throw new Error(`Cannot fund escrow in ${escrowRecord.status} status`);
-    }
-
-    // Check expiration
-    if (escrowRecord.expiresAt && new Date(escrowRecord.expiresAt) < new Date()) {
-      throw new Error('Escrow has expired');
-    }
-
-    let stripePaymentIntentId = params.stripePaymentIntentId;
-
-    // If Stripe is configured and we have a payment method, create payment intent
-    if (this.stripe && params.paymentMethodId && !stripePaymentIntentId) {
-      const buyer = await db.query.users.findFirst({
-        where: eq(users.id, escrowRecord.buyerId!),
-      });
-
-      const totalAmount = parseFloat(escrowRecord.amount) + parseFloat(escrowRecord.platformFee ?? '0');
-
-      const paymentIntent = await this.stripe.paymentIntents.create({
-        amount: Math.round(totalAmount * 100), // Stripe uses cents
-        currency: escrowRecord.currency ?? 'eur',
-        payment_method: params.paymentMethodId,
-        confirm: true,
-        customer: buyer?.stripeCustomerId ?? undefined,
-        metadata: {
-          escrowId: escrowRecord.id,
-          type: 'escrow_funding',
-        },
-        // Hold funds, don't capture immediately
-        capture_method: 'manual',
-      });
-
-      stripePaymentIntentId = paymentIntent.id;
-    }
-
-    // Update escrow status
-    await db
-      .update(escrow)
-      .set({
-        status: 'funded',
-        stripePaymentIntentId,
-        fundedAt: new Date(),
-        updatedAt: new Date(),
-      })
-      .where(eq(escrow.id, params.escrowId));
-
-    return this.getEscrowDetails(params.escrowId);
   }
 
   // ============================================
@@ -156,116 +175,156 @@ class EscrowService {
 
   /**
    * Release funds to the seller
+   * Uses atomic update with status check to prevent race conditions
    */
   async releaseEscrow(params: ReleaseEscrowParams): Promise<EscrowDetails> {
-    const escrowRecord = await db.query.escrow.findFirst({
-      where: eq(escrow.id, params.escrowId),
-    });
-
-    if (!escrowRecord) {
-      throw new Error('Escrow not found');
-    }
-
-    if (escrowRecord.status !== 'funded') {
-      throw new Error(`Cannot release escrow in ${escrowRecord.status} status`);
-    }
-
-    // Verify conditions are met (or being manually overridden)
-    // In production, would check each condition
-
-    // Update evidence
-    const existingEvidence = (escrowRecord.evidence ?? {}) as EscrowEvidence;
-    const updatedEvidence: EscrowEvidence = {
-      ...existingEvidence,
-      ...params.evidence,
-    };
-
-    // If Stripe payment exists, capture and transfer funds
-    let stripeTransferId: string | undefined;
-
-    if (this.stripe && escrowRecord.stripePaymentIntentId) {
-      // Capture the payment
-      await this.stripe.paymentIntents.capture(escrowRecord.stripePaymentIntentId);
-
-      // Get seller's Stripe account
-      const seller = await db.query.users.findFirst({
-        where: eq(users.id, escrowRecord.sellerId!),
+    return await db.transaction(async (tx) => {
+      // Atomic read-and-check: only select if status is 'funded'
+      const escrowRecord = await tx.query.escrow.findFirst({
+        where: and(
+          eq(escrow.id, params.escrowId),
+          eq(escrow.status, 'funded')
+        ),
       });
 
-      if (seller?.stripeCustomerId) {
-        // Create transfer to seller (minus platform fee)
-        const transferAmount = Math.round(parseFloat(escrowRecord.amount) * 100);
-
-        // In production, would use Stripe Connect to transfer to connected account
-        // For now, we just record the transfer ID
-        // const transfer = await this.stripe.transfers.create({
-        //   amount: transferAmount,
-        //   currency: escrowRecord.currency ?? 'eur',
-        //   destination: seller.stripeConnectAccountId,
-        // });
-        // stripeTransferId = transfer.id;
+      if (!escrowRecord) {
+        // Check if escrow exists at all
+        const anyEscrow = await tx.query.escrow.findFirst({
+          where: eq(escrow.id, params.escrowId),
+        });
+        if (!anyEscrow) {
+          throw new Error('Escrow not found');
+        }
+        throw new Error(`Cannot release escrow in ${anyEscrow.status} status`);
       }
-    }
 
-    // Update escrow
-    await db
-      .update(escrow)
-      .set({
-        status: 'released',
-        conditionsMet: true,
-        releasedAt: new Date(),
-        stripeTransferId,
-        evidence: updatedEvidence,
-        notes: params.notes,
-        updatedAt: new Date(),
-      })
-      .where(eq(escrow.id, params.escrowId));
+      // Verify conditions are met (or being manually overridden)
+      // In production, would check each condition
 
-    // Create agent transaction for the platform fee
-    await this.createPlatformFeeTransaction(escrowRecord);
+      // Update evidence
+      const existingEvidence = (escrowRecord.evidence ?? {}) as EscrowEvidence;
+      const updatedEvidence: EscrowEvidence = {
+        ...existingEvidence,
+        ...params.evidence,
+      };
 
-    return this.getEscrowDetails(params.escrowId);
+      // If Stripe payment exists, capture and transfer funds
+      let stripeTransferId: string | undefined;
+
+      if (this.stripe && escrowRecord.stripePaymentIntentId) {
+        // Capture the payment
+        await this.stripe.paymentIntents.capture(escrowRecord.stripePaymentIntentId);
+
+        // Get seller's Stripe account
+        const seller = await tx.query.users.findFirst({
+          where: eq(users.id, escrowRecord.sellerId!),
+        });
+
+        if (seller?.stripeCustomerId) {
+          // Create transfer to seller (minus platform fee)
+          const transferAmount = Math.round(parseFloat(escrowRecord.amount) * 100);
+
+          // In production, would use Stripe Connect to transfer to connected account
+          // For now, we just record the transfer ID
+          // const transfer = await this.stripe.transfers.create({
+          //   amount: transferAmount,
+          //   currency: escrowRecord.currency ?? 'eur',
+          //   destination: seller.stripeConnectAccountId,
+          // });
+          // stripeTransferId = transfer.id;
+        }
+      }
+
+      // Atomic update with status condition (double-check)
+      const updated = await tx
+        .update(escrow)
+        .set({
+          status: 'released',
+          conditionsMet: true,
+          releasedAt: new Date(),
+          stripeTransferId,
+          evidence: updatedEvidence,
+          notes: params.notes,
+          updatedAt: new Date(),
+        })
+        .where(and(
+          eq(escrow.id, params.escrowId),
+          eq(escrow.status, 'funded') // Only update if still funded
+        ))
+        .returning({ id: escrow.id });
+
+      // Verify update succeeded (race condition protection)
+      if (updated.length === 0) {
+        throw new Error('Escrow was modified concurrently. Please try again.');
+      }
+
+      // Create agent transaction for the platform fee
+      await this.createPlatformFeeTransaction(escrowRecord);
+
+      return this.getEscrowDetails(params.escrowId);
+    });
   }
 
   /**
    * Refund escrow to buyer
+   * Uses atomic update with status check to prevent race conditions
    */
   async refundEscrow(params: RefundEscrowParams): Promise<EscrowDetails> {
-    const escrowRecord = await db.query.escrow.findFirst({
-      where: eq(escrow.id, params.escrowId),
-    });
+    const validStatuses = ['pending', 'funded', 'disputed'] as const;
 
-    if (!escrowRecord) {
-      throw new Error('Escrow not found');
-    }
-
-    if (!['pending', 'funded', 'disputed'].includes(escrowRecord.status)) {
-      throw new Error(`Cannot refund escrow in ${escrowRecord.status} status`);
-    }
-
-    const refundAmount = params.partialAmount ?? parseFloat(escrowRecord.amount);
-
-    // If Stripe payment exists, process refund
-    if (this.stripe && escrowRecord.stripePaymentIntentId) {
-      await this.stripe.refunds.create({
-        payment_intent: escrowRecord.stripePaymentIntentId,
-        amount: Math.round(refundAmount * 100),
-        reason: 'requested_by_customer',
+    return await db.transaction(async (tx) => {
+      // Atomic read-and-check: only select if status is valid for refund
+      const escrowRecord = await tx.query.escrow.findFirst({
+        where: and(
+          eq(escrow.id, params.escrowId),
+          inArray(escrow.status, validStatuses)
+        ),
       });
-    }
 
-    // Update escrow
-    await db
-      .update(escrow)
-      .set({
-        status: 'refunded',
-        refundedAt: new Date(),
-        notes: params.reason,
-        updatedAt: new Date(),
-      })
-      .where(eq(escrow.id, params.escrowId));
+      if (!escrowRecord) {
+        // Check if escrow exists at all
+        const anyEscrow = await tx.query.escrow.findFirst({
+          where: eq(escrow.id, params.escrowId),
+        });
+        if (!anyEscrow) {
+          throw new Error('Escrow not found');
+        }
+        throw new Error(`Cannot refund escrow in ${anyEscrow.status} status`);
+      }
 
-    return this.getEscrowDetails(params.escrowId);
+      const refundAmount = params.partialAmount ?? parseFloat(escrowRecord.amount);
+
+      // If Stripe payment exists, process refund
+      if (this.stripe && escrowRecord.stripePaymentIntentId) {
+        await this.stripe.refunds.create({
+          payment_intent: escrowRecord.stripePaymentIntentId,
+          amount: Math.round(refundAmount * 100),
+          reason: 'requested_by_customer',
+        });
+      }
+
+      // Atomic update with status condition (double-check)
+      const updated = await tx
+        .update(escrow)
+        .set({
+          status: 'refunded',
+          refundedAt: new Date(),
+          notes: params.reason,
+          updatedAt: new Date(),
+        })
+        .where(and(
+          eq(escrow.id, params.escrowId),
+          inArray(escrow.status, validStatuses) // Only update if still in valid status
+        ))
+        .returning({ id: escrow.id });
+
+      // Verify update succeeded (race condition protection)
+      if (updated.length === 0) {
+        throw new Error('Escrow was modified concurrently. Please try again.');
+      }
+
+      return this.getEscrowDetails(params.escrowId);
+    });
   }
 
   // ============================================
@@ -274,40 +333,60 @@ class EscrowService {
 
   /**
    * Open a dispute on an escrow
+   * Uses atomic update with status check to prevent race conditions
    */
   async disputeEscrow(params: DisputeEscrowParams): Promise<EscrowDetails> {
-    const escrowRecord = await db.query.escrow.findFirst({
-      where: eq(escrow.id, params.escrowId),
+    return await db.transaction(async (tx) => {
+      // Atomic read-and-check: only select if status is 'funded'
+      const escrowRecord = await tx.query.escrow.findFirst({
+        where: and(
+          eq(escrow.id, params.escrowId),
+          eq(escrow.status, 'funded')
+        ),
+      });
+
+      if (!escrowRecord) {
+        // Check if escrow exists at all
+        const anyEscrow = await tx.query.escrow.findFirst({
+          where: eq(escrow.id, params.escrowId),
+        });
+        if (!anyEscrow) {
+          throw new Error('Escrow not found');
+        }
+        throw new Error(`Cannot dispute escrow in ${anyEscrow.status} status`);
+      }
+
+      const existingEvidence = (escrowRecord.evidence ?? {}) as EscrowEvidence;
+      const updatedEvidence: EscrowEvidence = {
+        ...existingEvidence,
+        ...params.evidence,
+      };
+
+      // Atomic update with status condition (double-check)
+      const updated = await tx
+        .update(escrow)
+        .set({
+          status: 'disputed',
+          disputedAt: new Date(),
+          evidence: updatedEvidence,
+          notes: params.reason,
+          updatedAt: new Date(),
+        })
+        .where(and(
+          eq(escrow.id, params.escrowId),
+          eq(escrow.status, 'funded') // Only update if still funded
+        ))
+        .returning({ id: escrow.id });
+
+      // Verify update succeeded (race condition protection)
+      if (updated.length === 0) {
+        throw new Error('Escrow was modified concurrently. Please try again.');
+      }
+
+      // In production: notify admin, start dispute resolution process
+
+      return this.getEscrowDetails(params.escrowId);
     });
-
-    if (!escrowRecord) {
-      throw new Error('Escrow not found');
-    }
-
-    if (escrowRecord.status !== 'funded') {
-      throw new Error(`Cannot dispute escrow in ${escrowRecord.status} status`);
-    }
-
-    const existingEvidence = (escrowRecord.evidence ?? {}) as EscrowEvidence;
-    const updatedEvidence: EscrowEvidence = {
-      ...existingEvidence,
-      ...params.evidence,
-    };
-
-    await db
-      .update(escrow)
-      .set({
-        status: 'disputed',
-        disputedAt: new Date(),
-        evidence: updatedEvidence,
-        notes: params.reason,
-        updatedAt: new Date(),
-      })
-      .where(eq(escrow.id, params.escrowId));
-
-    // In production: notify admin, start dispute resolution process
-
-    return this.getEscrowDetails(params.escrowId);
   }
 
   // ============================================

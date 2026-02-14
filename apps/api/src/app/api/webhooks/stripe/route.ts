@@ -35,7 +35,12 @@ export async function POST(req: NextRequest) {
       env.STRIPE_WEBHOOK_SECRET
     );
   } catch (err) {
-    console.error('Webhook signature verification failed:', err);
+    // Security: Only log detailed errors in development
+    if (process.env.NODE_ENV === 'development') {
+      console.error('Webhook signature verification failed:', err);
+    } else {
+      console.error('Webhook signature verification failed');
+    }
     return NextResponse.json(
       { error: 'Webhook signature verification failed' },
       { status: 400 }
@@ -57,22 +62,35 @@ export async function POST(req: NextRequest) {
         break;
 
       case 'invoice.payment_succeeded':
-        // Handle successful payment
-        console.log('Payment succeeded:', event.data.object);
+        // Handle successful payment - log only safe identifiers
+        if (process.env.NODE_ENV === 'development') {
+          const invoice = event.data.object as Stripe.Invoice;
+          console.log('Payment succeeded:', { id: invoice.id, customerId: invoice.customer });
+        }
         break;
 
       case 'invoice.payment_failed':
-        // Handle failed payment
-        console.log('Payment failed:', event.data.object);
+        // Handle failed payment - log only safe identifiers
+        if (process.env.NODE_ENV === 'development') {
+          const invoice = event.data.object as Stripe.Invoice;
+          console.log('Payment failed:', { id: invoice.id, customerId: invoice.customer });
+        }
         break;
 
       default:
-        console.log(`Unhandled event type: ${event.type}`);
+        if (process.env.NODE_ENV === 'development') {
+          console.log(`Unhandled event type: ${event.type}`);
+        }
     }
 
     return NextResponse.json({ received: true });
   } catch (error) {
-    console.error('Error processing webhook:', error);
+    // Security: Only log detailed errors in development
+    if (process.env.NODE_ENV === 'development') {
+      console.error('Error processing webhook:', error);
+    } else {
+      console.error('Error processing webhook:', error instanceof Error ? error.message : 'Unknown error');
+    }
     return NextResponse.json(
       { error: 'Webhook processing failed' },
       { status: 500 }

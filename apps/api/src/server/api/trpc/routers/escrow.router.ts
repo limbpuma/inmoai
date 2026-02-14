@@ -101,6 +101,7 @@ export const escrowRouter = createTRPCRouter({
 
   /**
    * Fund an escrow
+   * Security: Only the buyer can fund their escrow
    */
   fund: protectedProcedure
     .input(z.object({
@@ -109,6 +110,16 @@ export const escrowRouter = createTRPCRouter({
     }))
     .mutation(async ({ input, ctx }) => {
       try {
+        // Security: Verify ownership before funding
+        const existingEscrow = await escrowService.getEscrowDetails(input.escrowId);
+
+        if (existingEscrow.buyer.id !== ctx.session.user.id && ctx.session.user.role !== 'admin') {
+          throw new TRPCError({
+            code: 'FORBIDDEN',
+            message: 'Only the buyer can fund this escrow',
+          });
+        }
+
         const escrowDetails = await escrowService.fundEscrow({
           escrowId: input.escrowId,
           paymentMethodId: input.paymentMethodId,
@@ -116,15 +127,17 @@ export const escrowRouter = createTRPCRouter({
 
         return escrowDetails;
       } catch (error) {
+        if (error instanceof TRPCError) throw error;
         throw new TRPCError({
           code: 'INTERNAL_SERVER_ERROR',
-          message: error instanceof Error ? error.message : 'Failed to fund escrow',
+          message: 'Failed to fund escrow',
         });
       }
     }),
 
   /**
    * Release escrow funds to seller
+   * Security: Only the buyer can authorize fund release (or admin in disputes)
    */
   release: protectedProcedure
     .input(z.object({
@@ -134,6 +147,27 @@ export const escrowRouter = createTRPCRouter({
     }))
     .mutation(async ({ input, ctx }) => {
       try {
+        // Security: Verify authorization before releasing funds
+        const existingEscrow = await escrowService.getEscrowDetails(input.escrowId);
+
+        const isBuyer = existingEscrow.buyer.id === ctx.session.user.id;
+        const isAdmin = ctx.session.user.role === 'admin';
+
+        if (!isBuyer && !isAdmin) {
+          throw new TRPCError({
+            code: 'FORBIDDEN',
+            message: 'Only the buyer can authorize fund release',
+          });
+        }
+
+        // Verify conditions are met (unless admin override)
+        if (!existingEscrow.conditionsMet && !isAdmin) {
+          throw new TRPCError({
+            code: 'PRECONDITION_FAILED',
+            message: 'Escrow conditions have not been met',
+          });
+        }
+
         const escrowDetails = await escrowService.releaseEscrow({
           escrowId: input.escrowId,
           releasedBy: ctx.session.user.id,
@@ -143,15 +177,17 @@ export const escrowRouter = createTRPCRouter({
 
         return escrowDetails;
       } catch (error) {
+        if (error instanceof TRPCError) throw error;
         throw new TRPCError({
           code: 'INTERNAL_SERVER_ERROR',
-          message: error instanceof Error ? error.message : 'Failed to release escrow',
+          message: 'Failed to release escrow',
         });
       }
     }),
 
   /**
    * Request refund
+   * Security: Only parties to the escrow or admin can request refund
    */
   refund: protectedProcedure
     .input(z.object({
@@ -161,6 +197,28 @@ export const escrowRouter = createTRPCRouter({
     }))
     .mutation(async ({ input, ctx }) => {
       try {
+        // Security: Verify user is party to escrow
+        const existingEscrow = await escrowService.getEscrowDetails(input.escrowId);
+
+        const isBuyer = existingEscrow.buyer.id === ctx.session.user.id;
+        const isSeller = existingEscrow.seller.id === ctx.session.user.id;
+        const isAdmin = ctx.session.user.role === 'admin';
+
+        if (!isBuyer && !isSeller && !isAdmin) {
+          throw new TRPCError({
+            code: 'FORBIDDEN',
+            message: 'Only parties to this escrow can request a refund',
+          });
+        }
+
+        // Validate partial amount doesn't exceed escrow amount
+        if (input.partialAmount && input.partialAmount > existingEscrow.amount) {
+          throw new TRPCError({
+            code: 'BAD_REQUEST',
+            message: 'Partial refund amount exceeds escrow amount',
+          });
+        }
+
         const escrowDetails = await escrowService.refundEscrow({
           escrowId: input.escrowId,
           refundedBy: ctx.session.user.id,
@@ -170,15 +228,17 @@ export const escrowRouter = createTRPCRouter({
 
         return escrowDetails;
       } catch (error) {
+        if (error instanceof TRPCError) throw error;
         throw new TRPCError({
           code: 'INTERNAL_SERVER_ERROR',
-          message: error instanceof Error ? error.message : 'Failed to refund escrow',
+          message: 'Failed to refund escrow',
         });
       }
     }),
 
   /**
    * Open a dispute
+   * Security: Only parties to the escrow can open a dispute
    */
   dispute: protectedProcedure
     .input(z.object({
@@ -188,6 +248,19 @@ export const escrowRouter = createTRPCRouter({
     }))
     .mutation(async ({ input, ctx }) => {
       try {
+        // Security: Verify user is party to escrow
+        const existingEscrow = await escrowService.getEscrowDetails(input.escrowId);
+
+        const isBuyer = existingEscrow.buyer.id === ctx.session.user.id;
+        const isSeller = existingEscrow.seller.id === ctx.session.user.id;
+
+        if (!isBuyer && !isSeller) {
+          throw new TRPCError({
+            code: 'FORBIDDEN',
+            message: 'Only parties to this escrow can open a dispute',
+          });
+        }
+
         const escrowDetails = await escrowService.disputeEscrow({
           escrowId: input.escrowId,
           disputedBy: ctx.session.user.id,
@@ -197,23 +270,39 @@ export const escrowRouter = createTRPCRouter({
 
         return escrowDetails;
       } catch (error) {
+        if (error instanceof TRPCError) throw error;
         throw new TRPCError({
           code: 'INTERNAL_SERVER_ERROR',
-          message: error instanceof Error ? error.message : 'Failed to open dispute',
+          message: 'Failed to open dispute',
         });
       }
     }),
 
   /**
    * Add evidence to an escrow
+   * Security: Only parties to the escrow can add evidence
    */
   addEvidence: protectedProcedure
     .input(z.object({
       escrowId: z.string().uuid(),
       evidence: evidenceSchema,
     }))
-    .mutation(async ({ input }) => {
+    .mutation(async ({ input, ctx }) => {
       try {
+        // Security: Verify user is party to escrow
+        const existingEscrow = await escrowService.getEscrowDetails(input.escrowId);
+
+        const isBuyer = existingEscrow.buyer.id === ctx.session.user.id;
+        const isSeller = existingEscrow.seller.id === ctx.session.user.id;
+        const isAdmin = ctx.session.user.role === 'admin';
+
+        if (!isBuyer && !isSeller && !isAdmin) {
+          throw new TRPCError({
+            code: 'FORBIDDEN',
+            message: 'Only parties to this escrow can add evidence',
+          });
+        }
+
         const escrowDetails = await escrowService.addEvidence(
           input.escrowId,
           input.evidence
@@ -221,9 +310,10 @@ export const escrowRouter = createTRPCRouter({
 
         return escrowDetails;
       } catch (error) {
+        if (error instanceof TRPCError) throw error;
         throw new TRPCError({
           code: 'INTERNAL_SERVER_ERROR',
-          message: error instanceof Error ? error.message : 'Failed to add evidence',
+          message: 'Failed to add evidence',
         });
       }
     }),
@@ -297,10 +387,25 @@ export const escrowRouter = createTRPCRouter({
 
   /**
    * Verify conditions
+   * Security: Only parties to the escrow can verify conditions
    */
   verifyConditions: protectedProcedure
     .input(z.object({ escrowId: z.string().uuid() }))
-    .query(async ({ input }) => {
+    .query(async ({ input, ctx }) => {
+      // Security: Verify user is party to escrow
+      const existingEscrow = await escrowService.getEscrowDetails(input.escrowId);
+
+      const isBuyer = existingEscrow.buyer.id === ctx.session.user.id;
+      const isSeller = existingEscrow.seller.id === ctx.session.user.id;
+      const isAdmin = ctx.session.user.role === 'admin';
+
+      if (!isBuyer && !isSeller && !isAdmin) {
+        throw new TRPCError({
+          code: 'FORBIDDEN',
+          message: 'You do not have access to this escrow',
+        });
+      }
+
       const conditionsMet = await escrowService.verifyConditions(input.escrowId);
       return { conditionsMet };
     }),

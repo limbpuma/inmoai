@@ -5,7 +5,7 @@
 
 import { z } from 'zod';
 import { TRPCError } from '@trpc/server';
-import { createTRPCRouter, publicProcedure, protectedProcedure } from '../trpc';
+import { createTRPCRouter, publicProcedure, protectedProcedure, rateLimitedPublicProcedure } from '../trpc';
 import { orchestrator, agentRegistry, type AgentRequest } from '@/server/services/agents';
 import { db } from '@/server/infrastructure/database';
 import { agentSessions, agentTransactions, agentApiKeys, agentUsage } from '@/server/infrastructure/database/schema';
@@ -102,8 +102,9 @@ export const agentsRouter = createTRPCRouter({
 
   /**
    * Send a message to an agent (creates or continues session)
+   * Rate-limited to prevent abuse (20 requests/minute per IP)
    */
-  chat: publicProcedure
+  chat: rateLimitedPublicProcedure
     .input(chatMessageSchema)
     .mutation(async ({ input, ctx }) => {
       const { sessionToken, agentType, message, context, metadata } = input;
@@ -150,7 +151,12 @@ export const agentsRouter = createTRPCRouter({
           },
         };
       } catch (error) {
-        console.error('[AgentsRouter] Chat error:', error);
+        // Security: Only log detailed errors in development
+        if (process.env.NODE_ENV === 'development') {
+          console.error('[AgentsRouter] Chat error:', error);
+        } else {
+          console.error('[AgentsRouter] Chat error:', error instanceof Error ? error.message : 'Unknown error');
+        }
 
         throw new TRPCError({
           code: 'INTERNAL_SERVER_ERROR',

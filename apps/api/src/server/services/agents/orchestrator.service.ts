@@ -3,7 +3,7 @@
  * Coordinates all specialized agents, manages sessions, tracks usage, and handles billing
  */
 
-import { randomBytes } from 'crypto';
+import { randomBytes, createHash, timingSafeEqual } from 'crypto';
 import { eq, and, desc, sql } from 'drizzle-orm';
 import { db } from '@/server/infrastructure/database';
 import {
@@ -276,7 +276,12 @@ class AgentOrchestrator {
         webhookSent,
       };
     } catch (error) {
-      console.error('B2B API error:', error);
+      // Security: Only log detailed errors in development
+      if (process.env.NODE_ENV === 'development') {
+        console.error('B2B API error:', error);
+      } else {
+        console.error('B2B API error:', error instanceof Error ? error.message : 'Unknown error');
+      }
 
       return {
         requestId,
@@ -478,12 +483,17 @@ class AgentOrchestrator {
       .where(eq(agentSessions.id, context.sessionId));
   }
 
+  // Dummy hash for constant-time comparison when key not found (prevents timing attacks)
+  private static readonly DUMMY_HASH = createHash('sha256').update('dummy-key-for-timing').digest('hex');
+
   private async validateApiKey(
     keyString: string,
     agentType: AgentType
   ): Promise<typeof agentApiKeys.$inferSelect | null> {
-    // Extract prefix and hash
-    const keyPrefix = keyString.slice(0, 16);
+    // Extract prefix (first 16 characters after 'inmo_agent_' prefix if present)
+    const keyPrefix = keyString.startsWith('inmo_agent_')
+      ? keyString.slice(0, 27) // 'inmo_agent_' (11) + 16 hex chars
+      : keyString.slice(0, 16);
 
     const apiKey = await db.query.agentApiKeys.findFirst({
       where: and(
@@ -492,11 +502,27 @@ class AgentOrchestrator {
       ),
     });
 
-    if (!apiKey) return null;
+    // Use dummy hash if key not found to prevent timing attacks
+    const storedHash = apiKey?.keyHash ?? AgentOrchestrator.DUMMY_HASH;
 
-    // Verify hash
-    // In production, use proper bcrypt comparison
-    // For now, just check if key exists
+    // Security: Verify the full key hash using constant-time comparison
+    const providedHash = createHash('sha256').update(keyString).digest('hex');
+
+    let hashMatch = false;
+    try {
+      hashMatch = timingSafeEqual(
+        Buffer.from(storedHash, 'hex'),
+        Buffer.from(providedHash, 'hex')
+      );
+    } catch {
+      // Buffer length mismatch - invalid hash
+      hashMatch = false;
+    }
+
+    // All validations AFTER constant-time comparison to prevent timing attacks
+    if (!apiKey || !hashMatch) {
+      return null;
+    }
 
     // Check if agent type is allowed
     const allowedAgents = (apiKey.allowedAgents ?? []) as AgentType[];
@@ -553,10 +579,122 @@ class AgentOrchestrator {
     return (tokens / 1_000_000) * 0.2;
   }
 
+  /**
+   * Security: Validate webhook URL to prevent SSRF attacks
+   * Blocks private IPs, localhost, cloud metadata endpoints
+   */
+  private validateWebhookUrl(url: string): { valid: boolean; error?: string } {
+    try {
+      const parsed = new URL(url);
+
+      // Only allow HTTPS in production
+      if (process.env.NODE_ENV === 'production' && parsed.protocol !== 'https:') {
+        return { valid: false, error: 'HTTPS required in production' };
+      }
+
+      // Block non-HTTP(S) protocols
+      if (!['http:', 'https:'].includes(parsed.protocol)) {
+        return { valid: false, error: 'Only HTTP/HTTPS protocols allowed' };
+      }
+
+      const hostname = parsed.hostname.toLowerCase();
+
+      // Block localhost variations
+      const localhostPatterns = [
+        'localhost',
+        '127.0.0.1',
+        '::1',
+        '0.0.0.0',
+        '[::1]',
+        '0177.0.0.1', // Octal
+        '2130706433', // Decimal
+        '0x7f.0x0.0x0.0x1', // Hex
+      ];
+
+      if (localhostPatterns.some(p => hostname === p || hostname.includes(p))) {
+        return { valid: false, error: 'Localhost URLs not allowed' };
+      }
+
+      // Check if hostname is an IP address
+      const ipv4Regex = /^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$/;
+      const ipMatch = hostname.match(ipv4Regex);
+
+      if (ipMatch) {
+        const octets = ipMatch.slice(1).map(Number);
+
+        // Block private IP ranges (RFC 1918)
+        if (octets[0] === 10) {
+          return { valid: false, error: 'Private IP range (10.x.x.x) not allowed' };
+        }
+        if (octets[0] === 172 && octets[1] >= 16 && octets[1] <= 31) {
+          return { valid: false, error: 'Private IP range (172.16-31.x.x) not allowed' };
+        }
+        if (octets[0] === 192 && octets[1] === 168) {
+          return { valid: false, error: 'Private IP range (192.168.x.x) not allowed' };
+        }
+
+        // Block loopback (127.x.x.x)
+        if (octets[0] === 127) {
+          return { valid: false, error: 'Loopback address not allowed' };
+        }
+
+        // Block link-local (169.254.x.x) - cloud metadata
+        if (octets[0] === 169 && octets[1] === 254) {
+          return { valid: false, error: 'Link-local/metadata endpoint not allowed' };
+        }
+
+        // Block carrier-grade NAT (100.64-127.x.x)
+        if (octets[0] === 100 && octets[1] >= 64 && octets[1] <= 127) {
+          return { valid: false, error: 'Carrier-grade NAT range not allowed' };
+        }
+
+        // Block multicast (224-239.x.x.x)
+        if (octets[0] >= 224 && octets[0] <= 239) {
+          return { valid: false, error: 'Multicast address not allowed' };
+        }
+
+        // Block reserved (240-255.x.x.x)
+        if (octets[0] >= 240) {
+          return { valid: false, error: 'Reserved IP range not allowed' };
+        }
+      }
+
+      // Block cloud metadata hostnames
+      const blockedHostnames = [
+        'metadata.google.internal',
+        'metadata.google.com',
+        'instance-data',
+        'metadata',
+        'metadata.azure.internal',
+      ];
+
+      if (blockedHostnames.some(h => hostname === h || hostname.endsWith('.' + h))) {
+        return { valid: false, error: 'Cloud metadata endpoint not allowed' };
+      }
+
+      // Block AWS metadata by path as well
+      if (parsed.pathname.includes('/latest/meta-data') ||
+          parsed.pathname.includes('/computeMetadata')) {
+        return { valid: false, error: 'Metadata path not allowed' };
+      }
+
+      return { valid: true };
+    } catch {
+      return { valid: false, error: 'Invalid URL format' };
+    }
+  }
+
   private async sendWebhook(
     url: string,
     payload: Record<string, unknown>
   ): Promise<boolean> {
+    // Security: Validate URL to prevent SSRF
+    const validation = this.validateWebhookUrl(url);
+    if (!validation.valid) {
+      console.error(`SSRF protection blocked webhook: ${validation.error}`);
+      return false;
+    }
+
     try {
       const response = await fetch(url, {
         method: 'POST',
