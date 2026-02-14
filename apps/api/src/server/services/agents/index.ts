@@ -40,6 +40,6 @@ export type {
 
 // Specialized agents
 export { SearchAgent, searchAgent } from './specialized/search.agent';
-// export { VerifyAgent } from './specialized/verify.agent';
-// export { ValuationAgent } from './specialized/valuation.agent';
-// export { ServiceMatchAgent } from './specialized/service-match.agent';
+export { VerifyAgent, verifyAgent } from './specialized/verify.agent';
+export { ValuationAgent, valuationAgent } from './specialized/valuation.agent';
+export { ServiceMatchAgent, serviceMatchAgent } from './specialized/service-match.agent';
