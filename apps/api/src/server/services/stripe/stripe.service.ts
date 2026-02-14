@@ -16,86 +16,133 @@ export const stripe = env.STRIPE_SECRET_KEY
 export const isStripeEnabled = (): boolean => stripe !== null;
 
 /**
- * PRICING MODEL v2 - Post-SaaSpocalypse
+ * PRICING MODEL v3 - Agentic Anti-Fragile
  *
- * Migración de per-seat a outcome-based:
- * - Pro: Créditos IA mensuales (evita margen negativo)
- * - Agency: Sin límite de usuarios, basado en volumen de operaciones
- * - B2B: Ya usa créditos (tabla agentApiKeys)
+ * PRINCIPIOS ESTRATÉGICOS:
+ * 1. Regalar lo que IA commoditiza (búsqueda, análisis básico)
+ * 2. Cobrar por OUTCOMES, no por acceso (transacciones, no créditos)
+ * 3. El valor está en el TRUST LAYER (Escrow, Reviews verificados)
+ * 4. Los agentes IA son CLIENTES de nuestra API, no competidores
+ *
+ * REVENUE MIX OBJETIVO:
+ * - 50% Transaction Fees (Escrow + Marketplace)
+ * - 25% Subscriptions (Pro + Agency)
+ * - 25% B2B API (Agentes externos)
  */
 export const PLANS = {
   free: {
     name: 'Free',
-    description: 'Para empezar a explorar',
+    description: 'IA incluida. Sin límites artificiales.',
     priceId: env.STRIPE_PRICE_ID_FREE || null,
     price: 0,
     features: [
-      '10 búsquedas al día',
-      'Filtros básicos',
-      'Alertas por email (1)',
+      'Búsqueda ilimitada con IA',
+      'Detección de fraude incluida',
+      'Alertas ilimitadas',
+      'Análisis de mercado básico',
+      'Historial de precios (30 días)',
     ],
     limits: {
-      searchesPerDay: 10,
-      aiCreditsPerMonth: 0,
-      alerts: 1,
+      searchesPerDay: -1, // UNLIMITED - eliminar fricción
+      aiCreditsPerMonth: 100, // Generoso pero con límite anti-abuse
+      alerts: -1, // unlimited
+      priceHistoryDays: 30,
     },
+    // Monetización: Transaction fees cuando cierran operación
   },
   pro: {
     name: 'Pro',
-    description: 'Para búsquedas serias',
+    description: 'Herramientas avanzadas para decisiones informadas',
     priceId: env.STRIPE_PRICE_ID_PRO,
-    price: 9.99,
+    price: 4.99, // Reducido de €9.99 - valor en features, no en IA
     features: [
-      '500 créditos IA/mes',
-      'Todos los filtros',
-      'Alertas ilimitadas',
-      'Análisis de fraude IA',
-      'Historial completo',
+      'Todo de Free',
+      'Historial de precios completo',
+      'Exportar a PDF/Excel',
+      'Comparador de propiedades',
       'Soporte prioritario',
+      'Sin anuncios',
     ],
     limits: {
-      searchesPerDay: -1, // unlimited
+      searchesPerDay: -1,
       aiCreditsPerMonth: 500,
-      alerts: -1, // unlimited
+      alerts: -1,
+      priceHistoryDays: -1, // unlimited
+      exports: -1,
     },
+    // Valor: productividad y datos históricos, no IA
   },
   agency: {
     name: 'Agency',
-    description: 'Para profesionales',
+    description: 'Automatización para profesionales inmobiliarios',
     priceId: env.STRIPE_PRICE_ID_AGENCY,
-    price: 49.99,
+    price: 29, // Reducido de €49.99 - valor en autoposting
     features: [
       'Todo de Pro',
-      'API Access completo',
-      'Usuarios ilimitados', // Changed from per-seat
-      '5,000 créditos IA/mes',
-      'Autoposting multi-portal',
-      'Analytics avanzados',
-      'Soporte dedicado 24/7',
+      'Autoposting en 5 portales',
+      'Dashboard de analytics',
+      'Gestión de leads centralizada',
+      'Usuarios ilimitados del equipo',
+      'API Access básico',
+      'Soporte 24/7',
     ],
     limits: {
-      searchesPerDay: -1, // unlimited
-      aiCreditsPerMonth: 5000,
-      alerts: -1, // unlimited
-      users: -1, // unlimited - NO PER-SEAT
+      searchesPerDay: -1,
+      aiCreditsPerMonth: 2000,
+      alerts: -1,
+      priceHistoryDays: -1,
+      exports: -1,
+      users: -1, // NO PER-SEAT - el valor es el autoposting
       portals: 5,
+      apiRequestsPerDay: 1000,
     },
+    // Valor: automatización de publicación, no IA ni seats
   },
 } as const;
 
 /**
- * AI Credit costs per operation
- * Used to calculate usage and enforce limits
+ * TRANSACTION FEES - Core Revenue Model
+ *
+ * Este es el modelo anti-frágil: cobramos por OUTCOMES, no por acceso.
+ * Un cierre de venta (€600) = 120 meses de suscripción Pro.
  */
-export const AI_CREDIT_COSTS = {
-  search_basic: 1,
-  search_ai_enhanced: 5,
-  fraud_detection: 10,
-  valuation_estimate: 15,
-  listing_improvement: 20,
-  market_analysis: 25,
-  agent_conversation: 3, // per message
+export const TRANSACTION_FEES = {
+  // Escrow - Trust Layer
+  property_sale: 0.003, // 0.3% → €600 en venta de €200K
+  property_rent: 0.005, // 0.5% renta anual → €60 en alquiler €1K/mes
+
+  // Marketplace - Network Effects
+  service_completion: 0.10, // 10% → €500 en reforma de €5K
+  lead_fee: 5, // €5 por lead cualificado a proveedor
+
+  // Custom/Enterprise
+  custom: 0.05, // 5% negociable
 } as const;
+
+/**
+ * AI Operation Costs (interno, no expuesto a usuarios)
+ *
+ * Post-paradigma: estos costos son NUESTROS, no del usuario.
+ * La IA es un COST CENTER que habilita transacciones (PROFIT CENTER).
+ */
+export const AI_OPERATION_COSTS = {
+  // Bajo costo - incluir gratis
+  search_basic: 1,
+  search_ai_enhanced: 3,
+  fraud_detection: 5,
+
+  // Medio costo - incluir en Free con límite
+  valuation_estimate: 10,
+  market_analysis: 15,
+
+  // Alto costo - incluir en Pro/Agency
+  listing_improvement: 20,
+  agent_conversation: 3,
+  document_analysis: 25,
+} as const;
+
+// Backwards compatibility alias
+export const AI_CREDIT_COSTS = AI_OPERATION_COSTS;
 
 export type PlanType = keyof typeof PLANS;
 

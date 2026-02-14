@@ -52,67 +52,67 @@ function PricingMessages() {
 }
 
 /**
- * PRICING v2 - Modelo Anti-SaaSpocalypse
+ * PRICING v3 - Modelo Agentic Anti-Frágil
  *
- * Cambios clave:
- * - Pro: Créditos IA mensuales (500) en lugar de "ilimitado"
- * - Agency: Usuarios ILIMITADOS (no per-seat), 5,000 créditos IA
- * - Todos: Basado en outcome/usage, no en seats
+ * PRINCIPIOS:
+ * 1. Free generoso → elimina fricción → monetiza transacciones
+ * 2. Pro bajo precio → valor en herramientas, no en IA
+ * 3. Agency → valor en automatización (autoposting), no en seats
+ * 4. Revenue real viene de TRANSACTION FEES (Escrow 0.3-10%)
+ *
+ * Un cierre de venta (€600) = 120 meses de Pro
  */
 const plans = [
   {
     id: "free" as const,
     name: "Gratis",
-    description: "Para compradores que empiezan su búsqueda",
+    description: "IA incluida. Sin límites artificiales.",
     monthlyPrice: 0,
     yearlyPrice: 0,
     icon: Users,
     features: [
-      "Búsqueda básica de propiedades",
-      "Hasta 10 búsquedas al día",
-      "Alertas por email (máx. 3)",
-      "Score de autenticidad básico",
-      "Acceso a listings públicos",
+      "Búsqueda ilimitada con IA",
+      "Detección de fraude incluida",
+      "Alertas ilimitadas",
+      "Análisis de mercado",
+      "Historial de precios (30 días)",
     ],
-    cta: "Plan actual",
-    popular: false,
+    cta: "Empezar gratis",
+    popular: true, // Free es el hero ahora
   },
   {
     id: "pro" as const,
     name: "Pro",
-    description: "Para compradores serios en búsqueda activa",
-    monthlyPrice: 9.99,
-    yearlyPrice: 99.99,
+    description: "Herramientas avanzadas para decisiones informadas",
+    monthlyPrice: 4.99,
+    yearlyPrice: 49.99,
     icon: Zap,
     features: [
-      "500 créditos IA/mes incluidos",
-      "Alertas ilimitadas en tiempo real",
-      "Score de autenticidad avanzado",
-      "Análisis de precios de mercado",
+      "Todo de Free",
       "Historial de precios completo",
-      "Detección de fraude con IA",
+      "Exportar a PDF y Excel",
       "Comparador de propiedades",
-      "Exportar a PDF",
+      "Soporte prioritario",
+      "Sin anuncios",
     ],
     cta: "Suscribirse",
-    popular: true,
+    popular: false,
   },
   {
     id: "agency" as const,
     name: "Agencia",
-    description: "Para profesionales inmobiliarios",
-    monthlyPrice: 49.99,
-    yearlyPrice: 499.99,
+    description: "Automatización para profesionales",
+    monthlyPrice: 29,
+    yearlyPrice: 290,
     icon: Building2,
     features: [
-      "Todo lo de Pro",
-      "5,000 créditos IA/mes",
-      "Usuarios ilimitados de tu equipo",
+      "Todo de Pro",
       "Autoposting en 5 portales",
-      "Dashboard de analytics avanzado",
-      "Integración CRM + webhooks",
-      "Soporte prioritario 24/7",
-      "API completa + exportación",
+      "Dashboard de analytics",
+      "Gestión de leads centralizada",
+      "Usuarios ilimitados",
+      "API Access",
+      "Soporte 24/7",
     ],
     cta: "Suscribirse",
     popular: false,
