@@ -217,7 +217,10 @@ export const agentsRouter = createTRPCRouter({
     .input(b2bRequestSchema)
     .mutation(async ({ input, ctx }) => {
       // Extract API key from header
-      const apiKey = ctx.req?.headers?.['x-api-key'] as string;
+      const headers = ctx.req?.headers;
+      const apiKey = (headers && typeof headers.get === 'function'
+        ? headers.get('x-api-key')
+        : (headers as unknown as Record<string, string>)?.['x-api-key']) as string | undefined;
 
       if (!apiKey) {
         throw new TRPCError({

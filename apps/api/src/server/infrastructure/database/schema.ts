@@ -1608,6 +1608,8 @@ export const agentTransactions = pgTable('agent_transactions', {
     verificationResults?: Record<string, unknown>;
     valuationData?: { estimate: number; confidence: number };
     portalIds?: string[];
+    escrowId?: string;
+    type?: string;
   }>(),
 
   // Billing
@@ -1767,7 +1769,7 @@ export const escrow = pgTable('escrow', {
 
   // Conditions
   conditions: jsonb('conditions').$type<{
-    type: 'property_sale' | 'service_completion' | 'custom';
+    type: 'property_sale' | 'property_rent' | 'service_completion' | 'custom';
     description: string;
     deadline?: string;
     verificationRequired?: boolean;

@@ -29,7 +29,7 @@ class EscrowService {
   constructor() {
     if (env.STRIPE_SECRET_KEY) {
       this.stripe = new Stripe(env.STRIPE_SECRET_KEY, {
-        apiVersion: '2024-12-18.acacia',
+        apiVersion: '2025-12-15.clover',
       });
     }
   }
@@ -58,6 +58,14 @@ class EscrowService {
     const expiresAt = params.expiresAt ||
       new Date(Date.now() + ESCROW_LIMITS.maxDurationDays * 24 * 60 * 60 * 1000);
 
+    // Convert conditions for database storage (Date -> string)
+    const dbConditions = params.conditions.map(c => ({
+      type: c.type,
+      description: c.description,
+      deadline: c.deadline?.toISOString(),
+      verificationRequired: c.verificationRequired,
+    }));
+
     // Create escrow record
     const [newEscrow] = await db
       .insert(escrow)
@@ -70,7 +78,7 @@ class EscrowService {
         currency: params.currency || 'EUR',
         platformFee: String(platformFee),
         status: 'pending',
-        conditions: params.conditions,
+        conditions: dbConditions,
         conditionsMet: false,
         expiresAt,
         metadata: params.metadata,

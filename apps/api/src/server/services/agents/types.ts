@@ -71,6 +71,13 @@ export interface ToolResult {
   billableAmount?: number;
 }
 
+/** Record of a tool call made during agent execution */
+export interface ToolCallRecord {
+  name: string;
+  args: Record<string, unknown>;
+  result: string | undefined;
+}
+
 // ============================================
 // AGENT CONTEXT
 // ============================================
@@ -167,7 +174,7 @@ export interface AgentResponse {
   data?: AgentResponseData;
 
   /** Tool calls made in this turn */
-  toolCalls?: ToolCallResult[];
+  toolCalls?: ToolCallRecord[];
 
   /** Suggestions for user's next action */
   suggestions?: string[];

@@ -4,7 +4,7 @@
  */
 
 import { randomBytes } from 'crypto';
-import { eq, and, desc } from 'drizzle-orm';
+import { eq, and, desc, sql } from 'drizzle-orm';
 import { db } from '@/server/infrastructure/database';
 import {
   agentSessions,
@@ -219,7 +219,7 @@ class AgentOrchestrator {
           },
           usage: {
             creditsUsed: 0,
-            creditsRemaining: apiKey.monthlyCredits - apiKey.usedCreditsThisMonth,
+            creditsRemaining: (apiKey.monthlyCredits ?? 0) - (apiKey.usedCreditsThisMonth ?? 0),
           },
         };
       }
@@ -271,7 +271,7 @@ class AgentOrchestrator {
         data: response.data,
         usage: {
           creditsUsed,
-          creditsRemaining: apiKey.monthlyCredits - apiKey.usedCreditsThisMonth - creditsUsed,
+          creditsRemaining: (apiKey.monthlyCredits ?? 0) - (apiKey.usedCreditsThisMonth ?? 0) - creditsUsed,
         },
         webhookSent,
       };
@@ -529,7 +529,7 @@ class AgentOrchestrator {
     await db
       .update(agentApiKeys)
       .set({
-        usedCreditsThisMonth: (agentApiKeys.usedCreditsThisMonth ?? 0) + creditsUsed,
+        usedCreditsThisMonth: sql<number>`COALESCE(used_credits_this_month, 0) + ${creditsUsed}`,
         updatedAt: new Date(),
       })
       .where(eq(agentApiKeys.id, apiKeyId));

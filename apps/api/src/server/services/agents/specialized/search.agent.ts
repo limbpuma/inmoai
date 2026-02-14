@@ -46,10 +46,10 @@ const searchListingsTool: AgentTool = {
         conditions.push(ilike(listings.neighborhood, `%${params.neighborhood}%`));
       }
       if (params.propertyType) {
-        conditions.push(eq(listings.propertyType, params.propertyType as string));
+        conditions.push(sql`${listings.propertyType} = ${params.propertyType}`);
       }
       if (params.operationType) {
-        conditions.push(eq(listings.operationType, params.operationType as string));
+        conditions.push(sql`${listings.operationType} = ${params.operationType}`);
       }
       if (params.priceMin) {
         conditions.push(gte(listings.price, String(params.priceMin)));

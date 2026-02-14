@@ -21,7 +21,9 @@ import {
   providerServices,
   serviceLeads,
   listings,
+  type ServiceCategory,
 } from '@/server/infrastructure/database/schema';
+import type { RankedProvider } from '@/server/services/marketplace/types';
 import { eq, and, gte, desc, sql } from 'drizzle-orm';
 import { proximityService } from '@/server/services/marketplace';
 
@@ -53,25 +55,25 @@ const searchProvidersTool: AgentTool = {
 
       // Use proximity service if available
       if (lat && lng) {
-        const results = await proximityService.searchProvidersByProximity({
+        const searchResult = await proximityService.searchProviders({
           latitude: lat,
           longitude: lng,
-          categoryIds: [category],
+          categoryIds: [category as ServiceCategory],
           maxDistanceKm: maxDistance,
           limit,
         });
 
-        const providers: ProviderMatch[] = results.map((r, index) => ({
+        const providers: ProviderMatch[] = searchResult.providers.map((r: RankedProvider, index: number) => ({
           id: r.provider.id,
           businessName: r.provider.businessName,
           slug: r.provider.slug,
           category,
-          rating: parseFloat(r.provider.averageRating ?? '0'),
+          rating: r.provider.averageRating ?? 0,
           reviewCount: r.provider.totalReviews ?? 0,
           distanceKm: r.distanceKm ?? 0,
           priceRange: {
-            min: r.services[0]?.priceMin ? parseFloat(r.services[0].priceMin) : 0,
-            max: r.services[0]?.priceMax ? parseFloat(r.services[0].priceMax) : 0,
+            min: r.services[0]?.priceMin ?? 0,
+            max: r.services[0]?.priceMax ?? 0,
           },
           matchScore: 100 - index * 5,
           highlights: [
@@ -79,7 +81,7 @@ const searchProvidersTool: AgentTool = {
             r.provider.tier === 'premium' ? 'Premium' : r.provider.tier === 'enterprise' ? 'Destacado' : '',
             r.provider.responseTimeMinutes ? `Responde en ${r.provider.responseTimeMinutes < 60 ? `${r.provider.responseTimeMinutes}min` : `${Math.round(r.provider.responseTimeMinutes / 60)}h`}` : '',
           ].filter(Boolean),
-          isVerified: r.provider.isVerified,
+          isVerified: r.provider.isVerified ?? false,
           tier: r.provider.tier,
         }));
 
@@ -108,7 +110,7 @@ const searchProvidersTool: AgentTool = {
           providerServices,
           and(
             eq(providerServices.providerId, serviceProviders.id),
-            eq(providerServices.category, category)
+            eq(providerServices.category, category as ServiceCategory)
           )
         )
         .where(and(...conditions))
@@ -138,7 +140,7 @@ const searchProvidersTool: AgentTool = {
             p.provider.isVerified ? 'Verificado' : '',
             p.provider.tier === 'premium' ? 'Premium' : p.provider.tier === 'enterprise' ? 'Destacado' : '',
           ].filter(Boolean),
-          isVerified: p.provider.isVerified,
+          isVerified: p.provider.isVerified ?? false,
           tier: p.provider.tier,
         }));
 

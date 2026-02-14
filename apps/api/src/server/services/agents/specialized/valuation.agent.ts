@@ -372,7 +372,7 @@ const getMarketTrendsTool: AgentTool = {
           and(
             sql`LOWER(${listings.city}) = LOWER(${city})`,
             gte(listings.createdAt, startDate),
-            params.propertyType ? eq(listings.propertyType, params.propertyType as string) : sql`1=1`
+            params.propertyType ? sql`${listings.propertyType} = ${params.propertyType}` : sql`1=1`
           )
         )
         .orderBy(desc(listings.createdAt))
