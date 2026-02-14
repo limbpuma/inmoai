@@ -10,6 +10,7 @@ import { aiRouter } from './ai.router';
 import { marketplaceRouter } from './marketplace.router';
 import { portalsRouter } from './portals.router';
 import { agentsRouter } from './agents.router';
+import { escrowRouter } from './escrow.router';
 
 /**
  * Root router combining all sub-routers
@@ -26,6 +27,7 @@ export const appRouter = createTRPCRouter({
   marketplace: marketplaceRouter,
   portals: portalsRouter,
   agents: agentsRouter,
+  escrow: escrowRouter,
 });
 
 export type AppRouter = typeof appRouter;
