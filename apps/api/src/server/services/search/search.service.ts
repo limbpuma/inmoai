@@ -81,7 +81,7 @@ class SearchServiceImpl implements SearchService {
     const total = totalResult[0]?.count ?? 0;
 
     // Get first image for each listing
-    const listingIds = results.map((r) => r.id);
+    const listingIds = results.map((r: typeof results[number]) => r.id);
     const images = listingIds.length > 0
       ? await db
           .select({
@@ -119,7 +119,7 @@ class SearchServiceImpl implements SearchService {
     );
 
     // Map to ListingSummary
-    const listingSummaries: ListingSummary[] = results.map((r) => ({
+    const listingSummaries: ListingSummary[] = results.map((r: typeof results[number]) => ({
       id: r.id,
       title: r.title,
       price: r.price ? Number(r.price) : null,

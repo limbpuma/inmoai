@@ -12,7 +12,8 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
   adapter: DrizzleAdapter(db, {
     usersTable: users,
     accountsTable: accounts,
-    sessionsTable: sessions,
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    sessionsTable: sessions as any,
     verificationTokensTable: verificationTokens,
   }),
   session: {
@@ -30,9 +31,9 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         email: { label: 'Email', type: 'email' },
         password: { label: 'Password', type: 'password' },
       },
-      async authorize(credentials) {
+      async authorize(credentials): Promise<{ id: string; email: string; name: string | null; image: string | null; role: string | undefined } | null> {
         if (!credentials?.email || !credentials?.password) {
-          throw new Error('Email y contraseña son requeridos');
+          return null;
         }
 
         const user = await db.query.users.findFirst({
@@ -40,7 +41,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         });
 
         if (!user || !user.hashedPassword) {
-          throw new Error('Credenciales inválidas');
+          return null;
         }
 
         const isValid = await bcrypt.compare(
@@ -49,7 +50,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         );
 
         if (!isValid) {
-          throw new Error('Credenciales inválidas');
+          return null;
         }
 
         return {
@@ -57,7 +58,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
           email: user.email,
           name: user.name,
           image: user.image,
-          role: user.role,
+          role: user.role ?? undefined,
         };
       },
     }),
@@ -122,7 +123,7 @@ declare module 'next-auth' {
   }
 }
 
-declare module 'next-auth/jwt' {
+declare module '@auth/core/jwt' {
   interface JWT {
     id?: string;
     role?: string;

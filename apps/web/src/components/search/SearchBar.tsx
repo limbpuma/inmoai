@@ -28,6 +28,12 @@ export function SearchBar({
 }: SearchBarProps) {
     const [query, setQuery] = useState(defaultValue);
     const [showSuggestions, setShowSuggestions] = useState(false);
+    // Track if component is mounted to avoid hydration mismatch
+    const [isMounted, setIsMounted] = useState(false);
+
+    useEffect(() => {
+        setIsMounted(true);
+    }, []);
 
     // Voice search hook
     const {
@@ -101,7 +107,7 @@ export function SearchBar({
     };
 
     const isHero = variant === "hero";
-    const showVoiceIndicator = voiceStatus !== "idle" || voiceError;
+    const showVoiceIndicator = isMounted && (voiceStatus !== "idle" || voiceError);
 
     return (
         <div className={cn("relative w-full mx-auto", isHero ? "max-w-3xl" : "max-w-2xl", className)}>
@@ -138,7 +144,7 @@ export function SearchBar({
                 )}
 
                 <div className="flex items-center gap-1 pl-2 border-l border-border/50">
-                    {voiceSupported && (
+                    {isMounted && voiceSupported && (
                         <Button
                             variant="ghost"
                             size="icon"

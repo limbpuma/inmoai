@@ -1,22 +1,8 @@
 import type { Metadata } from 'next';
-import { Inter } from 'next/font/google';
-import './globals.css';
-
-const inter = Inter({ subsets: ['latin'] });
 
 export const metadata: Metadata = {
-  title: 'InmoAI Portal - Búsqueda Inmobiliaria Inteligente',
-  description:
-    'Portal inmobiliario con inteligencia artificial. Análisis de imágenes, detección de fraudes y búsqueda semántica.',
-  keywords: [
-    'inmobiliaria',
-    'pisos',
-    'casas',
-    'alquiler',
-    'compra',
-    'IA',
-    'inteligencia artificial',
-  ],
+  title: 'InmoAI API',
+  description: 'API backend for InmoAI',
 };
 
 export default function RootLayout({
@@ -26,7 +12,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="es">
-      <body className={inter.className}>{children}</body>
+      <body>{children}</body>
     </html>
   );
 }

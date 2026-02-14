@@ -14,8 +14,8 @@ interface SpeechRecognitionResultList {
 }
 
 interface SpeechRecognitionResult {
-  readonly length: number;
   readonly isFinal: boolean;
+  readonly length: number;
   item(index: number): SpeechRecognitionAlternative;
   [index: number]: SpeechRecognitionAlternative;
 }
@@ -50,7 +50,9 @@ interface SpeechRecognition extends EventTarget {
   onerror:
     | ((this: SpeechRecognition, ev: SpeechRecognitionErrorEvent) => void)
     | null;
-  onnomatch: ((this: SpeechRecognition, ev: SpeechRecognitionEvent) => void) | null;
+  onnomatch:
+    | ((this: SpeechRecognition, ev: SpeechRecognitionEvent) => void)
+    | null;
   onresult:
     | ((this: SpeechRecognition, ev: SpeechRecognitionEvent) => void)
     | null;

@@ -12,7 +12,7 @@
     }
   },
   "scripts": {
-    "dev": "next dev",
+    "dev": "next dev -p 9091",
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
@@ -69,6 +69,7 @@
     "eslint-plugin-prettier": "^5.2.1",
     "prettier": "^3.4.2",
     "prettier-plugin-tailwindcss": "^0.6.9",
+    "tailwindcss": "^4.1.18",
     "tsx": "^4.19.2",
     "typescript": "^5.7.2",
     "vitest": "^2.1.8"

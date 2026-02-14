@@ -3,6 +3,7 @@
  * Abstract class that all portal adapters must extend
  */
 
+import crypto from 'crypto';
 import type { Portal } from '../../infrastructure/database/schema';
 import type {
   AdapterContext,
@@ -18,6 +19,7 @@ import type {
   PublishResult,
   UpdateResult,
 } from './types';
+import { PortalValidationError } from './types';
 
 export abstract class BasePortalAdapter {
   abstract readonly portal: Portal;
@@ -179,7 +181,6 @@ export abstract class BasePortalAdapter {
     }
 
     if (Object.keys(errors).length > 0) {
-      const { PortalValidationError } = require('./types');
       throw new PortalValidationError(
         'Listing validation failed',
         this.portal,
@@ -192,7 +193,6 @@ export abstract class BasePortalAdapter {
    * Generate a content hash for change detection
    */
   generateContentHash(listing: PortalListingData): string {
-    const crypto = require('crypto');
     const normalized = JSON.stringify({
       title: listing.title,
       description: listing.description,

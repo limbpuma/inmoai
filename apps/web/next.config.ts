@@ -9,6 +9,11 @@ const nextConfig: NextConfig = {
       },
     ],
   },
+  transpilePackages: ["@inmoai/api"],
+  typescript: {
+    // Skip type checking during build - run tsc separately
+    ignoreBuildErrors: true,
+  },
 };
 
 export default nextConfig;

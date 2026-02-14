@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo, useEffect } from "react";
+import { Suspense, useState, useMemo, useEffect } from "react";
 import { useSearchParams } from "next/navigation";
 import { Header } from "@/components/layout/Header";
 import { SearchBar } from "@/components/search/SearchBar";
@@ -20,9 +20,7 @@ import { useRecentListings } from "@/hooks/useSearch";
 import { useSemanticSearchFlow } from "@/hooks/useSemanticSearchFlow";
 import { Skeleton } from "@/components/ui/skeleton";
 
-export default function SearchPage() {
-  const searchParams = useSearchParams();
-  const initialQuery = searchParams.get("q") ?? "";
+function SearchPageContent({ initialQuery }: { initialQuery: string }) {
 
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
   const [sortBy, setSortBy] = useState("relevance");
@@ -266,5 +264,35 @@ export default function SearchPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+function SearchPageWrapper() {
+  const searchParams = useSearchParams();
+  const initialQuery = searchParams.get("q") ?? "";
+  return <SearchPageContent initialQuery={initialQuery} />;
+}
+
+export default function SearchPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-background">
+        <Header />
+        <div className="container mx-auto px-4 py-6">
+          <Skeleton className="h-12 w-full mb-6" />
+          <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-6">
+            {Array.from({ length: 6 }).map((_, i) => (
+              <div key={i} className="space-y-3">
+                <Skeleton className="h-48 w-full rounded-xl" />
+                <Skeleton className="h-4 w-3/4" />
+                <Skeleton className="h-4 w-1/2" />
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+    }>
+      <SearchPageWrapper />
+    </Suspense>
   );
 }

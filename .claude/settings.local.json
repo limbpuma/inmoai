@@ -1,0 +1,41 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(timeout:*)",
+      "Bash(findstr:*)",
+      "Bash(docker:*)",
+      "Bash(docker-compose up:*)",
+      "Bash($env:PYTHONIOENCODING='utf-8')",
+      "Bash(PYTHONIOENCODING=utf-8 python:*)",
+      "Bash(git add:*)",
+      "Bash(netstat:*)",
+      "Bash(lsof:*)",
+      "Bash(powershell -Command:*)",
+      "Bash(tasklist:*)",
+      "Bash(PORT=3000 npm run dev:*)",
+      "Bash(ping:*)",
+      "Bash(curl:*)",
+      "Bash(Start-Sleep -Seconds 10)",
+      "Bash(Get-Process -Name node -ErrorAction SilentlyContinue)",
+      "Bash(Stop-Process -Force -ErrorAction SilentlyContinue)",
+      "Bash(Write-Host \"Node processes killed\")",
+      "Bash(git status:*)",
+      "Bash(git -C \"c:\\\\Users\\\\limbp\\\\Documents\\\\AI_FIRST\\\\inmoai\" status)",
+      "Bash(git -C \"c:\\\\Users\\\\limbp\\\\Documents\\\\AI_FIRST\\\\inmoai\" diff --stat apps/web/src/components/listing/ServiceProviders.tsx apps/api/src/scripts/seed-marketplace.ts)",
+      "Bash(git -C \"c:\\\\Users\\\\limbp\\\\Documents\\\\AI_FIRST\\\\inmoai\" add apps/api/src/scripts/seed-marketplace.ts apps/web/src/components/listing/ServiceProviders.tsx apps/web/src/app/servicios/)",
+      "Bash(git -C \"c:\\\\Users\\\\limbp\\\\Documents\\\\AI_FIRST\\\\inmoai\" diff --cached --stat)",
+      "Bash(git -C \"c:\\\\Users\\\\limbp\\\\Documents\\\\AI_FIRST\\\\inmoai\" log --oneline -5)",
+      "Bash(git -C \"c:\\\\Users\\\\limbp\\\\Documents\\\\AI_FIRST\\\\inmoai\" commit -m \"$\\(cat <<''EOF''\nfeat\\(marketplace\\): add service directory UI with provider detail pages\n\n- Enable quote request functionality in ServiceProviders component\n- Add /servicios search page with filters by city, category, and search\n- Add /servicios/[slug] provider detail page with tabs \\(services, portfolio, reviews\\)\n- Enhance seed script with realistic reviews and portfolio images from Unsplash\n- Include contact sidebar, statistics card, and quote request form in detail view\nEOF\n\\)\")",
+      "Bash(git -C \"c:\\\\Users\\\\limbp\\\\Documents\\\\AI_FIRST\\\\inmoai\" add apps/api/src/config/env.ts apps/api/src/server/services/portals/types.ts apps/api/src/server/services/portals/queues/workers/publish.worker.ts)",
+      "Bash(git -C \"c:\\\\Users\\\\limbp\\\\Documents\\\\AI_FIRST\\\\inmoai\" commit -m \"$\\(cat <<''EOF''\nfix\\(portals\\): add env variables and fix schema mismatches\n\n- Add portal-related environment variables to env.ts \\(Redis, OAuth, encryption\\)\n- Fix listingImages field names \\(cdnUrl/originalUrl instead of url\\)\n- Remove non-existent features field from PortalListingData type\nEOF\n\\)\")",
+      "Bash(git -C \"c:\\\\Users\\\\limbp\\\\Documents\\\\AI_FIRST\\\\inmoai\" status --short)",
+      "Bash(git -C \"c:\\\\Users\\\\limbp\\\\Documents\\\\AI_FIRST\\\\inmoai\" add apps/web/src/components/ui/textarea.tsx apps/web/src/components/ui/alert-dialog.tsx apps/web/src/components/ui/avatar.tsx apps/web/src/components/ui/dropdown-menu.tsx apps/web/src/components/ui/table.tsx apps/web/package.json package-lock.json)",
+      "Bash(git -C \"c:\\\\Users\\\\limbp\\\\Documents\\\\AI_FIRST\\\\inmoai\" commit -m \"$\\(cat <<''EOF''\nfix\\(ui\\): add missing shadcn/ui components\n\n- Add Textarea component for form inputs\n- Add AlertDialog component for confirmations\n- Add Avatar component for user profiles\n- Add DropdownMenu component for context menus\n- Add Table component for data display\n- Install radix-ui dependencies\nEOF\n\\)\")",
+      "Bash(printf:*)",
+      "Bash(DATABASE_URL=\"postgresql://postgres:postgres@localhost:5432/inmoai\" NEXTAUTH_URL=\"http://localhost:9091\" NEXTAUTH_SECRET=\"inmoai-development-secret-key-32chars\" NEXT_PUBLIC_APP_URL=\"http://localhost:9091\" SKIP_ENV_VALIDATION=\"true\" npx tsx:*)",
+      "Bash(yes:*)",
+      "Bash(CI=true npx drizzle-kit push:*)",
+      "Bash(cmd /c \"cd /d c:\\\\Users\\\\limbp\\\\Documents\\\\AI_FIRST\\\\inmoai\\\\apps\\\\api && npx drizzle-kit generate\")"
+    ]
+  }
+}

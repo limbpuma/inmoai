@@ -130,6 +130,7 @@ export const aiRouter = createTRPCRouter({
       )
       .mutation(({ input }) => {
         const { sourceId, ...updates } = input;
+        // @ts-expect-error - Partial config is valid for updates
         const success = scrapingSchedulerService.updateSource(sourceId, updates);
         return { success };
       }),

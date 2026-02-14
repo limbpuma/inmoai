@@ -23,9 +23,9 @@ export function TRPCProvider({ children }: { children: React.ReactNode }) {
     trpc.createClient({
       links: [
         httpBatchLink({
-          url: process.env.NEXT_PUBLIC_API_URL
-            ? `${process.env.NEXT_PUBLIC_API_URL}/api/trpc`
-            : "http://localhost:3001/api/trpc",
+          // Use relative URL - requests go to /api/trpc on same origin
+          // Next.js rewrites will proxy to the API server
+          url: "/api/trpc",
           transformer: superjson,
         }),
       ],

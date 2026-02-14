@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { Suspense, useState } from "react";
 import { useSession } from "next-auth/react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Header } from "@/components/layout/Header";
@@ -21,6 +21,35 @@ import {
   CheckCircle,
   XCircle,
 } from "lucide-react";
+
+function PricingMessages() {
+  const searchParams = useSearchParams();
+  const success = searchParams.get("success");
+  const canceled = searchParams.get("canceled");
+
+  if (!success && !canceled) return null;
+
+  return (
+    <>
+      {success && (
+        <div className="mb-8 p-4 rounded-lg bg-green-50 border border-green-200 flex items-center gap-3 max-w-2xl mx-auto">
+          <CheckCircle className="h-5 w-5 text-green-600" />
+          <p className="text-green-800">
+            ¡Suscripción activada con éxito! Ya puedes disfrutar de todas las funcionalidades.
+          </p>
+        </div>
+      )}
+      {canceled && (
+        <div className="mb-8 p-4 rounded-lg bg-amber-50 border border-amber-200 flex items-center gap-3 max-w-2xl mx-auto">
+          <XCircle className="h-5 w-5 text-amber-600" />
+          <p className="text-amber-800">
+            El proceso de pago fue cancelado. Puedes intentarlo de nuevo cuando quieras.
+          </p>
+        </div>
+      )}
+    </>
+  );
+}
 
 const plans = [
   {
@@ -86,11 +115,7 @@ export default function PricingPage() {
   const [isYearly, setIsYearly] = useState(false);
   const { data: session } = useSession();
   const router = useRouter();
-  const searchParams = useSearchParams();
   const { subscribe, subscription, isSubscribing, openBillingPortal, isOpeningPortal } = useBilling();
-
-  const success = searchParams.get("success");
-  const canceled = searchParams.get("canceled");
 
   const handleSubscribe = async (planId: "pro" | "agency") => {
     if (!session) {
@@ -115,22 +140,9 @@ export default function PricingPage() {
 
       <main className="container mx-auto px-4 py-16">
         {/* Success/Cancel Messages */}
-        {success && (
-          <div className="mb-8 p-4 rounded-lg bg-green-50 border border-green-200 flex items-center gap-3 max-w-2xl mx-auto">
-            <CheckCircle className="h-5 w-5 text-green-600" />
-            <p className="text-green-800">
-              ¡Suscripción activada con éxito! Ya puedes disfrutar de todas las funcionalidades.
-            </p>
-          </div>
-        )}
-        {canceled && (
-          <div className="mb-8 p-4 rounded-lg bg-amber-50 border border-amber-200 flex items-center gap-3 max-w-2xl mx-auto">
-            <XCircle className="h-5 w-5 text-amber-600" />
-            <p className="text-amber-800">
-              El proceso de pago fue cancelado. Puedes intentarlo de nuevo cuando quieras.
-            </p>
-          </div>
-        )}
+        <Suspense fallback={null}>
+          <PricingMessages />
+        </Suspense>
 
         {/* Header */}
         <div className="text-center max-w-3xl mx-auto mb-12">
