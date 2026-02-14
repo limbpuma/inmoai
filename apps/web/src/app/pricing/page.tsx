@@ -51,6 +51,14 @@ function PricingMessages() {
   );
 }
 
+/**
+ * PRICING v2 - Modelo Anti-SaaSpocalypse
+ *
+ * Cambios clave:
+ * - Pro: Créditos IA mensuales (500) en lugar de "ilimitado"
+ * - Agency: Usuarios ILIMITADOS (no per-seat), 5,000 créditos IA
+ * - Todos: Basado en outcome/usage, no en seats
+ */
 const plans = [
   {
     id: "free" as const,
@@ -77,12 +85,12 @@ const plans = [
     yearlyPrice: 99.99,
     icon: Zap,
     features: [
-      "Búsquedas ilimitadas",
+      "500 créditos IA/mes incluidos",
       "Alertas ilimitadas en tiempo real",
       "Score de autenticidad avanzado",
       "Análisis de precios de mercado",
-      "Historial de precios",
-      "Detección de fraude IA",
+      "Historial de precios completo",
+      "Detección de fraude con IA",
       "Comparador de propiedades",
       "Exportar a PDF",
     ],
@@ -98,13 +106,13 @@ const plans = [
     icon: Building2,
     features: [
       "Todo lo de Pro",
-      "API de acceso completo",
-      "Hasta 5 usuarios",
-      "Dashboard de analytics",
-      "Integración CRM",
-      "Informes personalizados",
+      "5,000 créditos IA/mes",
+      "Usuarios ilimitados de tu equipo",
+      "Autoposting en 5 portales",
+      "Dashboard de analytics avanzado",
+      "Integración CRM + webhooks",
       "Soporte prioritario 24/7",
-      "Exportación de datos",
+      "API completa + exportación",
     ],
     cta: "Suscribirse",
     popular: false,

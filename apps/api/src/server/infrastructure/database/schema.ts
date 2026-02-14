@@ -285,6 +285,11 @@ export const users = pgTable(
     stripePriceId: varchar('stripe_price_id', { length: 255 }),
     stripeCurrentPeriodEnd: timestamp('stripe_current_period_end', { withTimezone: true }),
 
+    // AI Credits - Anti-SaaSpocalypse: outcome-based pricing
+    // Tracks monthly AI usage to enforce plan limits
+    aiCreditsUsedThisMonth: integer('ai_credits_used_this_month').default(0),
+    aiCreditsResetDate: timestamp('ai_credits_reset_date', { withTimezone: true }),
+
     // Preferences
     preferences: jsonb('preferences').$type<{
       defaultCity?: string;

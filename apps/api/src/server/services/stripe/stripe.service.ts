@@ -15,6 +15,14 @@ export const stripe = env.STRIPE_SECRET_KEY
 
 export const isStripeEnabled = (): boolean => stripe !== null;
 
+/**
+ * PRICING MODEL v2 - Post-SaaSpocalypse
+ *
+ * Migración de per-seat a outcome-based:
+ * - Pro: Créditos IA mensuales (evita margen negativo)
+ * - Agency: Sin límite de usuarios, basado en volumen de operaciones
+ * - B2B: Ya usa créditos (tabla agentApiKeys)
+ */
 export const PLANS = {
   free: {
     name: 'Free',
@@ -26,6 +34,11 @@ export const PLANS = {
       'Filtros básicos',
       'Alertas por email (1)',
     ],
+    limits: {
+      searchesPerDay: 10,
+      aiCreditsPerMonth: 0,
+      alerts: 1,
+    },
   },
   pro: {
     name: 'Pro',
@@ -33,13 +46,18 @@ export const PLANS = {
     priceId: env.STRIPE_PRICE_ID_PRO,
     price: 9.99,
     features: [
-      'Búsquedas ilimitadas',
+      '500 créditos IA/mes',
       'Todos los filtros',
       'Alertas ilimitadas',
       'Análisis de fraude IA',
       'Historial completo',
       'Soporte prioritario',
     ],
+    limits: {
+      searchesPerDay: -1, // unlimited
+      aiCreditsPerMonth: 500,
+      alerts: -1, // unlimited
+    },
   },
   agency: {
     name: 'Agency',
@@ -48,13 +66,35 @@ export const PLANS = {
     price: 49.99,
     features: [
       'Todo de Pro',
-      'API Access',
-      'Multi-usuario (5)',
-      'Exportación de datos',
-      'Integraciones CRM',
-      'Soporte dedicado',
+      'API Access completo',
+      'Usuarios ilimitados', // Changed from per-seat
+      '5,000 créditos IA/mes',
+      'Autoposting multi-portal',
+      'Analytics avanzados',
+      'Soporte dedicado 24/7',
     ],
+    limits: {
+      searchesPerDay: -1, // unlimited
+      aiCreditsPerMonth: 5000,
+      alerts: -1, // unlimited
+      users: -1, // unlimited - NO PER-SEAT
+      portals: 5,
+    },
   },
+} as const;
+
+/**
+ * AI Credit costs per operation
+ * Used to calculate usage and enforce limits
+ */
+export const AI_CREDIT_COSTS = {
+  search_basic: 1,
+  search_ai_enhanced: 5,
+  fraud_detection: 10,
+  valuation_estimate: 15,
+  listing_improvement: 20,
+  market_analysis: 25,
+  agent_conversation: 3, // per message
 } as const;
 
 export type PlanType = keyof typeof PLANS;
