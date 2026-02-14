@@ -1440,3 +1440,476 @@ export type NewPortalLead = typeof portalLeads.$inferInsert;
 
 export type Notification = typeof notifications.$inferSelect;
 export type NewNotification = typeof notifications.$inferInsert;
+
+// ============================================
+// AI AGENT SYSTEM - ENUMS
+// ============================================
+
+/**
+ * Specialized agent types - each with specific capabilities and pricing
+ */
+export const agentTypeEnum = pgEnum('agent_type', [
+  'search',       // Property search agent - finds listings based on criteria
+  'verify',       // Verification agent - validates listings, detects issues
+  'negotiate',    // Negotiation agent - suggests offers, counter-offers
+  'service_match', // Service matching - connects with providers
+  'valuation',    // Valuation agent - estimates property values
+  'alert',        // Alert agent - monitors for new listings/changes
+  'publish',      // Publishing agent - auto-posts to portals
+  'transaction',  // Transaction agent - manages full sale/rent process
+]);
+
+/**
+ * Agent session status
+ */
+export const agentSessionStatusEnum = pgEnum('agent_session_status', [
+  'active',       // Session in progress
+  'completed',    // Successfully completed
+  'abandoned',    // User left without completing
+  'error',        // Technical error
+  'timeout',      // Session timed out
+]);
+
+/**
+ * Transaction status for outcome-based billing
+ */
+export const agentTransactionStatusEnum = pgEnum('agent_transaction_status', [
+  'pending',      // Transaction initiated
+  'processing',   // Being processed
+  'completed',    // Successfully completed - billable
+  'failed',       // Failed - not billable
+  'refunded',     // Refunded to customer
+  'disputed',     // Under dispute
+]);
+
+/**
+ * Transaction types with associated pricing
+ */
+export const agentTransactionTypeEnum = pgEnum('agent_transaction_type', [
+  'search_result',     // Delivered search results
+  'verification',      // Property verification completed
+  'valuation',         // Valuation delivered
+  'service_booking',   // Service provider booked (10% fee)
+  'lead_generated',    // Lead sent to agent/provider
+  'property_sold',     // Property transaction completed (0.3-0.5%)
+  'property_rented',   // Rental transaction completed
+  'portal_published',  // Published to external portal
+  'api_call',          // B2B API consumption
+]);
+
+// ============================================
+// AI AGENT SYSTEM - TABLES
+// ============================================
+
+/**
+ * Agent Sessions - Tracks conversations with AI agents
+ * Each session represents an interaction with a specialized agent
+ */
+export const agentSessions = pgTable('agent_sessions', {
+  id: uuid('id').defaultRandom().primaryKey(),
+
+  // User context (null for B2B API calls)
+  userId: uuid('user_id').references(() => users.id, { onDelete: 'set null' }),
+  apiKeyId: uuid('api_key_id').references(() => agentApiKeys.id, { onDelete: 'set null' }),
+
+  // Agent configuration
+  agentType: agentTypeEnum('agent_type').notNull(),
+  sessionToken: varchar('session_token', { length: 64 }).notNull().unique(),
+
+  // Status
+  status: agentSessionStatusEnum('status').default('active').notNull(),
+
+  // Context & conversation
+  initialContext: jsonb('initial_context').$type<{
+    listingId?: string;
+    searchCriteria?: Record<string, unknown>;
+    providerId?: string;
+    intent?: string;
+    referrer?: string;
+    locale?: string;
+  }>(),
+  conversationHistory: jsonb('conversation_history').$type<{
+    role: 'user' | 'agent' | 'system';
+    content: string;
+    timestamp: string;
+    toolCalls?: { name: string; args: Record<string, unknown>; result?: unknown }[];
+  }[]>(),
+
+  // Outcomes & billing
+  outcomesGenerated: integer('outcomes_generated').default(0),
+  totalTokensUsed: integer('total_tokens_used').default(0),
+  estimatedCost: decimal('estimated_cost', { precision: 10, scale: 4 }).default('0'),
+
+  // Timing
+  startedAt: timestamp('started_at', { withTimezone: true }).defaultNow().notNull(),
+  lastActivityAt: timestamp('last_activity_at', { withTimezone: true }).defaultNow(),
+  completedAt: timestamp('completed_at', { withTimezone: true }),
+
+  // Metadata
+  metadata: jsonb('metadata').$type<{
+    userAgent?: string;
+    ipAddress?: string;
+    geoLocation?: { city?: string; country?: string };
+    deviceType?: 'mobile' | 'desktop' | 'tablet';
+    source?: 'web' | 'api' | 'widget' | 'mobile_app';
+  }>(),
+
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
+}, (table) => ({
+  userIdx: index('idx_agent_sessions_user').on(table.userId),
+  apiKeyIdx: index('idx_agent_sessions_api_key').on(table.apiKeyId),
+  typeIdx: index('idx_agent_sessions_type').on(table.agentType),
+  statusIdx: index('idx_agent_sessions_status').on(table.status),
+  tokenIdx: uniqueIndex('idx_agent_sessions_token').on(table.sessionToken),
+  startedIdx: index('idx_agent_sessions_started').on(table.startedAt),
+}));
+
+/**
+ * Agent Transactions - Outcome ledger for billing
+ * Each row represents a billable outcome from an agent session
+ */
+export const agentTransactions = pgTable('agent_transactions', {
+  id: uuid('id').defaultRandom().primaryKey(),
+
+  // References
+  sessionId: uuid('session_id').references(() => agentSessions.id, { onDelete: 'set null' }),
+  userId: uuid('user_id').references(() => users.id, { onDelete: 'set null' }),
+  apiKeyId: uuid('api_key_id').references(() => agentApiKeys.id, { onDelete: 'set null' }),
+
+  // Transaction details
+  transactionType: agentTransactionTypeEnum('transaction_type').notNull(),
+  status: agentTransactionStatusEnum('status').default('pending').notNull(),
+
+  // Pricing (outcome-based)
+  baseAmount: decimal('base_amount', { precision: 12, scale: 2 }).notNull(),
+  platformFee: decimal('platform_fee', { precision: 12, scale: 2 }).default('0'),
+  totalAmount: decimal('total_amount', { precision: 12, scale: 2 }).notNull(),
+  currency: varchar('currency', { length: 3 }).default('EUR'),
+
+  // For percentage-based fees (property transactions)
+  referenceAmount: decimal('reference_amount', { precision: 12, scale: 2 }),
+  feePercentage: decimal('fee_percentage', { precision: 5, scale: 4 }),
+
+  // Related entities
+  listingId: uuid('listing_id').references(() => listings.id, { onDelete: 'set null' }),
+  serviceProviderId: uuid('service_provider_id').references(() => serviceProviders.id, { onDelete: 'set null' }),
+  serviceLeadId: uuid('service_lead_id').references(() => serviceLeads.id, { onDelete: 'set null' }),
+
+  // Stripe integration
+  stripePaymentIntentId: varchar('stripe_payment_intent_id', { length: 255 }),
+  stripeTransferId: varchar('stripe_transfer_id', { length: 255 }),
+
+  // Outcome description
+  description: text('description'),
+  outcomeData: jsonb('outcome_data').$type<{
+    resultCount?: number;
+    matchScore?: number;
+    verificationResults?: Record<string, unknown>;
+    valuationData?: { estimate: number; confidence: number };
+    portalIds?: string[];
+  }>(),
+
+  // Billing
+  invoiceId: varchar('invoice_id', { length: 100 }),
+  billedAt: timestamp('billed_at', { withTimezone: true }),
+  paidAt: timestamp('paid_at', { withTimezone: true }),
+
+  // Metadata
+  metadata: jsonb('metadata').$type<Record<string, unknown>>(),
+
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
+}, (table) => ({
+  sessionIdx: index('idx_agent_transactions_session').on(table.sessionId),
+  userIdx: index('idx_agent_transactions_user').on(table.userId),
+  apiKeyIdx: index('idx_agent_transactions_api_key').on(table.apiKeyId),
+  typeIdx: index('idx_agent_transactions_type').on(table.transactionType),
+  statusIdx: index('idx_agent_transactions_status').on(table.status),
+  listingIdx: index('idx_agent_transactions_listing').on(table.listingId),
+  createdIdx: index('idx_agent_transactions_created').on(table.createdAt),
+  stripeIdx: index('idx_agent_transactions_stripe').on(table.stripePaymentIntentId),
+}));
+
+/**
+ * Agent API Keys - B2B authentication for external AI agents
+ * More specialized than generic apiKeys for agent-specific scopes
+ */
+export const agentApiKeys = pgTable('agent_api_keys', {
+  id: uuid('id').defaultRandom().primaryKey(),
+  userId: uuid('user_id').references(() => users.id, { onDelete: 'cascade' }).notNull(),
+
+  // Key identification
+  name: varchar('name', { length: 255 }).notNull(),
+  keyPrefix: varchar('key_prefix', { length: 16 }).notNull(), // inmo_agent_xxx
+  keyHash: varchar('key_hash', { length: 255 }).notNull(),
+
+  // Agent-specific scopes
+  allowedAgents: jsonb('allowed_agents').$type<(typeof agentTypeEnum.enumValues)[number][]>().default([]),
+  scopes: jsonb('scopes').$type<string[]>().default([]), // 'read:listings', 'write:bookings', etc.
+
+  // Rate limiting
+  rateLimit: integer('rate_limit').default(1000), // requests per hour
+  dailyLimit: integer('daily_limit').default(10000), // requests per day
+  monthlyCredits: integer('monthly_credits').default(100000), // outcome credits
+  usedCreditsThisMonth: integer('used_credits_this_month').default(0),
+
+  // Pricing tier
+  tier: varchar('tier', { length: 50 }).default('developer'), // developer, business, enterprise
+  customPricing: jsonb('custom_pricing').$type<{
+    searchResultPrice?: number;
+    verificationPrice?: number;
+    valuationPrice?: number;
+    transactionFeePercent?: number;
+  }>(),
+
+  // Webhook configuration
+  webhookUrl: varchar('webhook_url', { length: 1000 }),
+  webhookSecret: varchar('webhook_secret', { length: 255 }),
+  webhookEvents: jsonb('webhook_events').$type<string[]>().default([]),
+
+  // Status
+  isActive: boolean('is_active').default(true),
+  lastUsedAt: timestamp('last_used_at', { withTimezone: true }),
+  expiresAt: timestamp('expires_at', { withTimezone: true }),
+
+  // Metadata
+  metadata: jsonb('metadata').$type<{
+    companyName?: string;
+    contactEmail?: string;
+    useCase?: string;
+    ipAllowlist?: string[];
+  }>(),
+
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
+}, (table) => ({
+  userIdx: index('idx_agent_api_keys_user').on(table.userId),
+  prefixIdx: uniqueIndex('idx_agent_api_keys_prefix').on(table.keyPrefix),
+  activeIdx: index('idx_agent_api_keys_active').on(table.isActive),
+  tierIdx: index('idx_agent_api_keys_tier').on(table.tier),
+}));
+
+/**
+ * Agent Usage - Detailed usage tracking for billing and analytics
+ */
+export const agentUsage = pgTable('agent_usage', {
+  id: uuid('id').defaultRandom().primaryKey(),
+
+  // References
+  sessionId: uuid('session_id').references(() => agentSessions.id, { onDelete: 'cascade' }),
+  apiKeyId: uuid('api_key_id').references(() => agentApiKeys.id, { onDelete: 'set null' }),
+  userId: uuid('user_id').references(() => users.id, { onDelete: 'set null' }),
+
+  // Usage details
+  agentType: agentTypeEnum('agent_type').notNull(),
+  operationType: varchar('operation_type', { length: 100 }).notNull(), // search, verify, etc.
+
+  // Token usage
+  inputTokens: integer('input_tokens').default(0),
+  outputTokens: integer('output_tokens').default(0),
+  totalTokens: integer('total_tokens').default(0),
+
+  // Compute metrics
+  durationMs: integer('duration_ms'),
+  modelUsed: varchar('model_used', { length: 100 }),
+
+  // Cost calculation
+  tokenCost: decimal('token_cost', { precision: 10, scale: 6 }).default('0'),
+  computeCost: decimal('compute_cost', { precision: 10, scale: 6 }).default('0'),
+  totalCost: decimal('total_cost', { precision: 10, scale: 6 }).default('0'),
+
+  // Request details
+  requestPayload: jsonb('request_payload').$type<Record<string, unknown>>(),
+  responsePayload: jsonb('response_payload').$type<Record<string, unknown>>(),
+
+  // Error tracking
+  isError: boolean('is_error').default(false),
+  errorCode: varchar('error_code', { length: 50 }),
+  errorMessage: text('error_message'),
+
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+}, (table) => ({
+  sessionIdx: index('idx_agent_usage_session').on(table.sessionId),
+  apiKeyIdx: index('idx_agent_usage_api_key').on(table.apiKeyId),
+  userIdx: index('idx_agent_usage_user').on(table.userId),
+  typeIdx: index('idx_agent_usage_type').on(table.agentType),
+  createdIdx: index('idx_agent_usage_created').on(table.createdAt),
+  errorIdx: index('idx_agent_usage_error').on(table.isError),
+}));
+
+/**
+ * Escrow - Trust layer for property transactions
+ * Holds funds until conditions are met
+ */
+export const escrow = pgTable('escrow', {
+  id: uuid('id').defaultRandom().primaryKey(),
+
+  // Transaction parties
+  buyerId: uuid('buyer_id').references(() => users.id, { onDelete: 'set null' }),
+  sellerId: uuid('seller_id').references(() => users.id, { onDelete: 'set null' }),
+  agentSessionId: uuid('agent_session_id').references(() => agentSessions.id, { onDelete: 'set null' }),
+
+  // Related entities
+  listingId: uuid('listing_id').references(() => listings.id, { onDelete: 'set null' }),
+
+  // Funds
+  amount: decimal('amount', { precision: 12, scale: 2 }).notNull(),
+  currency: varchar('currency', { length: 3 }).default('EUR'),
+  platformFee: decimal('platform_fee', { precision: 12, scale: 2 }).default('0'),
+
+  // Stripe
+  stripePaymentIntentId: varchar('stripe_payment_intent_id', { length: 255 }),
+  stripeTransferId: varchar('stripe_transfer_id', { length: 255 }),
+
+  // Status
+  status: varchar('status', { length: 50 }).default('pending').notNull(), // pending, funded, released, refunded, disputed
+
+  // Conditions
+  conditions: jsonb('conditions').$type<{
+    type: 'property_sale' | 'service_completion' | 'custom';
+    description: string;
+    deadline?: string;
+    verificationRequired?: boolean;
+  }[]>(),
+  conditionsMet: boolean('conditions_met').default(false),
+
+  // Timeline
+  fundedAt: timestamp('funded_at', { withTimezone: true }),
+  releasedAt: timestamp('released_at', { withTimezone: true }),
+  refundedAt: timestamp('refunded_at', { withTimezone: true }),
+  disputedAt: timestamp('disputed_at', { withTimezone: true }),
+  expiresAt: timestamp('expires_at', { withTimezone: true }),
+
+  // Notes & evidence
+  notes: text('notes'),
+  evidence: jsonb('evidence').$type<{
+    documentUrls?: string[];
+    verificationIds?: string[];
+    signatures?: { partyId: string; signedAt: string; signatureUrl: string }[];
+  }>(),
+
+  metadata: jsonb('metadata').$type<Record<string, unknown>>(),
+
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
+}, (table) => ({
+  buyerIdx: index('idx_escrow_buyer').on(table.buyerId),
+  sellerIdx: index('idx_escrow_seller').on(table.sellerId),
+  listingIdx: index('idx_escrow_listing').on(table.listingId),
+  statusIdx: index('idx_escrow_status').on(table.status),
+  stripeIdx: index('idx_escrow_stripe').on(table.stripePaymentIntentId),
+}));
+
+// ============================================
+// AI AGENT SYSTEM - RELATIONS
+// ============================================
+
+export const agentSessionsRelations = relations(agentSessions, ({ one, many }) => ({
+  user: one(users, {
+    fields: [agentSessions.userId],
+    references: [users.id],
+  }),
+  apiKey: one(agentApiKeys, {
+    fields: [agentSessions.apiKeyId],
+    references: [agentApiKeys.id],
+  }),
+  transactions: many(agentTransactions),
+  usage: many(agentUsage),
+  escrows: many(escrow),
+}));
+
+export const agentTransactionsRelations = relations(agentTransactions, ({ one }) => ({
+  session: one(agentSessions, {
+    fields: [agentTransactions.sessionId],
+    references: [agentSessions.id],
+  }),
+  user: one(users, {
+    fields: [agentTransactions.userId],
+    references: [users.id],
+  }),
+  apiKey: one(agentApiKeys, {
+    fields: [agentTransactions.apiKeyId],
+    references: [agentApiKeys.id],
+  }),
+  listing: one(listings, {
+    fields: [agentTransactions.listingId],
+    references: [listings.id],
+  }),
+  serviceProvider: one(serviceProviders, {
+    fields: [agentTransactions.serviceProviderId],
+    references: [serviceProviders.id],
+  }),
+  serviceLead: one(serviceLeads, {
+    fields: [agentTransactions.serviceLeadId],
+    references: [serviceLeads.id],
+  }),
+}));
+
+export const agentApiKeysRelations = relations(agentApiKeys, ({ one, many }) => ({
+  user: one(users, {
+    fields: [agentApiKeys.userId],
+    references: [users.id],
+  }),
+  sessions: many(agentSessions),
+  transactions: many(agentTransactions),
+  usage: many(agentUsage),
+}));
+
+export const agentUsageRelations = relations(agentUsage, ({ one }) => ({
+  session: one(agentSessions, {
+    fields: [agentUsage.sessionId],
+    references: [agentSessions.id],
+  }),
+  apiKey: one(agentApiKeys, {
+    fields: [agentUsage.apiKeyId],
+    references: [agentApiKeys.id],
+  }),
+  user: one(users, {
+    fields: [agentUsage.userId],
+    references: [users.id],
+  }),
+}));
+
+export const escrowRelations = relations(escrow, ({ one }) => ({
+  buyer: one(users, {
+    fields: [escrow.buyerId],
+    references: [users.id],
+  }),
+  seller: one(users, {
+    fields: [escrow.sellerId],
+    references: [users.id],
+  }),
+  listing: one(listings, {
+    fields: [escrow.listingId],
+    references: [listings.id],
+  }),
+  agentSession: one(agentSessions, {
+    fields: [escrow.agentSessionId],
+    references: [agentSessions.id],
+  }),
+}));
+
+// ============================================
+// AI AGENT SYSTEM - TYPE EXPORTS
+// ============================================
+
+export type AgentType = (typeof agentTypeEnum.enumValues)[number];
+export type AgentSessionStatus = (typeof agentSessionStatusEnum.enumValues)[number];
+export type AgentTransactionStatus = (typeof agentTransactionStatusEnum.enumValues)[number];
+export type AgentTransactionType = (typeof agentTransactionTypeEnum.enumValues)[number];
+
+export type AgentSession = typeof agentSessions.$inferSelect;
+export type NewAgentSession = typeof agentSessions.$inferInsert;
+
+export type AgentTransaction = typeof agentTransactions.$inferSelect;
+export type NewAgentTransaction = typeof agentTransactions.$inferInsert;
+
+export type AgentApiKey = typeof agentApiKeys.$inferSelect;
+export type NewAgentApiKey = typeof agentApiKeys.$inferInsert;
+
+export type AgentUsage = typeof agentUsage.$inferSelect;
+export type NewAgentUsage = typeof agentUsage.$inferInsert;
+
+export type Escrow = typeof escrow.$inferSelect;
+export type NewEscrow = typeof escrow.$inferInsert;
