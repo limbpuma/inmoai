@@ -11,9 +11,16 @@ import { marketplaceRouter } from './marketplace.router';
 import { portalsRouter } from './portals.router';
 import { agentsRouter } from './agents.router';
 import { escrowRouter } from './escrow.router';
+import { cadastreRouter } from './cadastre.router';
 
 /**
  * Root router combining all sub-routers
+ *
+ * KEY DIFFERENTIATORS (what makes InmoAI indispensable):
+ * - cadastre: Official Spanish property registry integration
+ * - escrow: Regulated transaction trust layer
+ * - marketplace: Verified service provider network
+ * - agents: AI orchestration for external agents
  */
 export const appRouter = createTRPCRouter({
   auth: authRouter,
@@ -28,6 +35,7 @@ export const appRouter = createTRPCRouter({
   portals: portalsRouter,
   agents: agentsRouter,
   escrow: escrowRouter,
+  cadastre: cadastreRouter, // NEW: Official property verification
 });
 
 export type AppRouter = typeof appRouter;

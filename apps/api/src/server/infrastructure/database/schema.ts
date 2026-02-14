@@ -185,6 +185,19 @@ export const listings = pgTable(
     // Vector embedding reference
     embeddingId: varchar('embedding_id', { length: 100 }),
 
+    // Cadastral verification (KEY DIFFERENTIATOR)
+    cadastralRef: varchar('cadastral_ref', { length: 20 }),
+    cadastralVerified: boolean('cadastral_verified').default(false),
+    cadastralVerifiedAt: timestamp('cadastral_verified_at', { withTimezone: true }),
+    cadastralSurface: integer('cadastral_surface'), // Official m²
+    cadastralUse: varchar('cadastral_use', { length: 50 }),
+    cadastralConstructionYear: integer('cadastral_construction_year'),
+    cadastralMismatch: jsonb('cadastral_mismatch').$type<{
+      fields: string[];
+      details: string;
+      severity: 'low' | 'medium' | 'high';
+    }>(),
+
     // Estado y fechas
     status: listingStatusEnum('status').default('active'),
     firstSeenAt: timestamp('first_seen_at', { withTimezone: true }).defaultNow(),
@@ -202,6 +215,8 @@ export const listings = pgTable(
     index('idx_listings_authenticity').on(table.authenticityScore),
     index('idx_listings_property_type').on(table.propertyType),
     index('idx_listings_operation_type').on(table.operationType),
+    index('idx_listings_cadastral_ref').on(table.cadastralRef),
+    index('idx_listings_cadastral_verified').on(table.cadastralVerified),
   ]
 );
 
