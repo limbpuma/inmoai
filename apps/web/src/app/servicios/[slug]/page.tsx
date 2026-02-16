@@ -142,8 +142,53 @@ export default function ProviderPage({ params }: ProviderPageProps) {
       maximumFractionDigits: 0,
     }).format(amount);
 
+  // Structured data for SEO
+  const jsonLd = {
+    "@context": "https://schema.org",
+    "@type": "LocalBusiness",
+    name: provider.businessName,
+    description: provider.description,
+    address: {
+      "@type": "PostalAddress",
+      streetAddress: provider.address,
+      addressLocality: provider.city,
+      addressRegion: provider.province,
+      addressCountry: "ES",
+    },
+    geo: {
+      "@type": "GeoCoordinates",
+      latitude: provider.latitude,
+      longitude: provider.longitude,
+    },
+    telephone: provider.contactPhone,
+    email: provider.contactEmail,
+    url: provider.website,
+    image: provider.logoUrl,
+    aggregateRating: provider.totalReviews > 0
+      ? {
+          "@type": "AggregateRating",
+          ratingValue: provider.averageRating.toFixed(1),
+          reviewCount: provider.totalReviews,
+          bestRating: 5,
+        }
+      : undefined,
+    areaServed: {
+      "@type": "GeoCircle",
+      geoMidpoint: {
+        "@type": "GeoCoordinates",
+        latitude: provider.latitude,
+        longitude: provider.longitude,
+      },
+      geoRadius: `${provider.coverageRadiusKm}000`,
+    },
+  };
+
   return (
     <div className="min-h-screen bg-background">
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+      />
       <Header />
 
       {/* Breadcrumb */}
