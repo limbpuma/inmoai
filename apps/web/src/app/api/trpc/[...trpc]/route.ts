@@ -18,7 +18,11 @@ async function handleRequest(request: Request) {
   const trpcPath = url.pathname.replace("/api/trpc", "");
   const targetUrl = `${API_URL}/api/trpc${trpcPath}${url.search}`;
 
-  console.log(`[tRPC Proxy] ${request.method} ${targetUrl}`);
+  // Debug logging disabled in production
+  if (process.env.NODE_ENV === 'development') {
+    // eslint-disable-next-line no-console
+    console.log(`[tRPC Proxy] ${request.method} ${targetUrl}`);
+  }
 
   try {
     const headers: Record<string, string> = {

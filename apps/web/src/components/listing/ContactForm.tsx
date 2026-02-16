@@ -47,11 +47,10 @@ export function ContactForm({ listingId, listingTitle }: ContactFormProps) {
       // For now, simulate API call
       await new Promise((resolve) => setTimeout(resolve, 1000));
 
-      console.log("Lead submitted:", { listingId, ...data });
       setIsSubmitted(true);
       reset();
-    } catch (error) {
-      console.error("Error submitting lead:", error);
+    } catch {
+      // Error handled silently - TODO: Add toast notification
     } finally {
       setIsSubmitting(false);
     }
