@@ -360,6 +360,7 @@ class ProximityService {
         responseTimeMinutes: serviceProviders.responseTimeMinutes,
         isVerified: serviceProviders.isVerified,
         coverageRadiusKm: serviceProviders.coverageRadiusKm,
+        contactPhone: serviceProviders.contactPhone,
         latitude: serviceProviders.latitude,
         longitude: serviceProviders.longitude,
         distance: distanceExpr,
@@ -439,6 +440,7 @@ class ProximityService {
           responseTimeMinutes: row.responseTimeMinutes,
           isVerified: row.isVerified ?? false,
           coverageRadiusKm: row.coverageRadiusKm,
+          contactPhone: row.contactPhone ?? null,
         },
         services: services.get(row.id) ?? [],
         scores: {
@@ -496,6 +498,7 @@ class ProximityService {
         responseTimeMinutes: serviceProviders.responseTimeMinutes,
         isVerified: serviceProviders.isVerified,
         coverageRadiusKm: serviceProviders.coverageRadiusKm,
+        contactPhone: serviceProviders.contactPhone,
       })
       .from(serviceProviders)
       .where(and(...finalConditions))
@@ -552,6 +555,7 @@ class ProximityService {
           responseTimeMinutes: row.responseTimeMinutes,
           isVerified: row.isVerified ?? false,
           coverageRadiusKm: row.coverageRadiusKm,
+          contactPhone: row.contactPhone ?? null,
         },
         services: services.get(row.id) ?? [],
         scores: {

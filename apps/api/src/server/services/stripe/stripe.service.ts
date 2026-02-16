@@ -24,79 +24,87 @@ export const isStripeEnabled = (): boolean => stripe !== null;
  * 3. El valor está en el TRUST LAYER (Escrow, Reviews verificados)
  * 4. Los agentes IA son CLIENTES de nuestra API, no competidores
  *
- * REVENUE MIX OBJETIVO:
- * - 50% Transaction Fees (Escrow + Marketplace)
- * - 25% Subscriptions (Pro + Agency)
- * - 25% B2B API (Agentes externos)
+ * REVENUE MIX OBJETIVO (post-pivot):
+ * - 40% Subscriptions (Pro + Agency)
+ * - 30% API/MCP consumption (AI agents)
+ * - 20% Transaction Fees (Escrow 0.5% + Marketplace 10%)
+ * - 10% Premium verifications + Directory
  */
 export const PLANS = {
   free: {
-    name: 'Free',
-    description: 'IA incluida. Sin límites artificiales.',
+    name: 'Explorador',
+    description: 'Descubre el poder de la verificacion inmobiliaria con IA.',
     priceId: env.STRIPE_PRICE_ID_FREE || null,
     price: 0,
     features: [
-      'Búsqueda ilimitada con IA',
-      'Detección de fraude incluida',
-      'Alertas ilimitadas',
-      'Análisis de mercado básico',
-      'Historial de precios (30 días)',
+      '30 busquedas/mes con IA',
+      '1 verificacion catastral/mes',
+      '3 detecciones de fraude/mes',
+      'Analisis de mercado basico',
+      '1 alerta de precio',
     ],
     limits: {
-      searchesPerDay: -1, // UNLIMITED - eliminar fricción
-      aiCreditsPerMonth: 100, // Generoso pero con límite anti-abuse
-      alerts: -1, // unlimited
+      searchesPerMonth: 30,
+      semanticSearches: 3,
+      cadastreVerifications: 1,
+      fraudDetections: 3,
+      alerts: 1,
       priceHistoryDays: 30,
+      aiCreditsPerMonth: 100,
     },
-    // Monetización: Transaction fees cuando cierran operación
   },
   pro: {
-    name: 'Pro',
-    description: 'Herramientas avanzadas para decisiones informadas',
+    name: 'Profesional',
+    description: 'Verificaciones y herramientas avanzadas para decisiones informadas',
     priceId: env.STRIPE_PRICE_ID_PRO,
-    price: 4.99, // Reducido de €9.99 - valor en features, no en IA
+    price: 49,
     features: [
-      'Todo de Free',
+      '500 busquedas/mes con IA',
+      '50 verificaciones catastrales/mes',
+      '100 detecciones de fraude/mes',
       'Historial de precios completo',
       'Exportar a PDF/Excel',
-      'Comparador de propiedades',
+      '10 alertas de precio',
       'Soporte prioritario',
-      'Sin anuncios',
     ],
     limits: {
-      searchesPerDay: -1,
-      aiCreditsPerMonth: 500,
-      alerts: -1,
-      priceHistoryDays: -1, // unlimited
+      searchesPerMonth: 500,
+      semanticSearches: 200,
+      cadastreVerifications: 50,
+      fraudDetections: 100,
+      alerts: 10,
+      priceHistoryDays: -1,
       exports: -1,
+      aiCreditsPerMonth: 2000,
     },
-    // Valor: productividad y datos históricos, no IA
   },
   agency: {
-    name: 'Agency',
-    description: 'Automatización para profesionales inmobiliarios',
+    name: 'Agencia',
+    description: 'Automatizacion completa para equipos inmobiliarios',
     priceId: env.STRIPE_PRICE_ID_AGENCY,
-    price: 29, // Reducido de €49.99 - valor en autoposting
+    price: 149,
     features: [
-      'Todo de Pro',
-      'Autoposting en 5 portales',
+      'Todo de Profesional',
+      '2.000 busquedas/mes',
+      '200 verificaciones catastrales',
+      'Autoposting en redes sociales',
       'Dashboard de analytics',
-      'Gestión de leads centralizada',
-      'Usuarios ilimitados del equipo',
-      'API Access básico',
+      'Gestion de leads centralizada',
+      'API Access (1.000 calls/mes)',
       'Soporte 24/7',
     ],
     limits: {
-      searchesPerDay: -1,
-      aiCreditsPerMonth: 2000,
-      alerts: -1,
+      searchesPerMonth: 2000,
+      semanticSearches: 1000,
+      cadastreVerifications: 200,
+      fraudDetections: 500,
+      alerts: 50,
       priceHistoryDays: -1,
       exports: -1,
-      users: -1, // NO PER-SEAT - el valor es el autoposting
-      portals: 5,
-      apiRequestsPerDay: 1000,
+      users: -1,
+      apiRequestsPerMonth: 1000,
+      aiCreditsPerMonth: 10000,
     },
-    // Valor: automatización de publicación, no IA ni seats
   },
 } as const;
 

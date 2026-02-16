@@ -78,6 +78,7 @@ export default function ProviderPage({ params }: ProviderPageProps) {
   const requestQuoteMutation = trpc.marketplace.requestQuote.useMutation({
     onSuccess: () => {
       setSubmitSuccess(true);
+      setIsSubmitting(false);
       setQuoteForm({ name: "", email: "", phone: "", message: "" });
     },
     onError: () => {

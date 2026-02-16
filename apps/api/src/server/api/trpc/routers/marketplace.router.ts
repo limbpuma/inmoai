@@ -313,20 +313,45 @@ export const marketplaceRouter = createTRPCRouter({
       })
     )
     .query(async ({ input }) => {
-      const reviews = await db
-        .select()
-        .from(providerReviews)
-        .where(
-          and(eq(providerReviews.providerId, input.providerId), eq(providerReviews.isPublished, true))
-        )
-        .orderBy(desc(providerReviews.createdAt))
-        .limit(input.limit)
-        .offset(input.offset);
+      const [reviews, countResult] = await Promise.all([
+        db
+          .select({
+            id: providerReviews.id,
+            rating: providerReviews.rating,
+            title: providerReviews.title,
+            content: providerReviews.content,
+            authorName: providerReviews.authorName,
+            qualityRating: providerReviews.qualityRating,
+            communicationRating: providerReviews.communicationRating,
+            timelinessRating: providerReviews.timelinessRating,
+            valueRating: providerReviews.valueRating,
+            category: providerReviews.category,
+            isVerified: providerReviews.isVerified,
+            providerResponse: providerReviews.providerResponse,
+            createdAt: providerReviews.createdAt,
+          })
+          .from(providerReviews)
+          .where(
+            and(eq(providerReviews.providerId, input.providerId), eq(providerReviews.isPublished, true))
+          )
+          .orderBy(desc(providerReviews.createdAt))
+          .limit(input.limit)
+          .offset(input.offset),
+        db
+          .select({ count: sql<number>`count(*)::int` })
+          .from(providerReviews)
+          .where(
+            and(eq(providerReviews.providerId, input.providerId), eq(providerReviews.isPublished, true))
+          ),
+      ]);
 
-      return reviews.map((r) => ({
-        ...r,
-        createdAt: r.createdAt,
-      }));
+      const total = countResult[0]?.count ?? 0;
+
+      return {
+        reviews,
+        total,
+        hasMore: input.offset + reviews.length < total,
+      };
     }),
 
   /**

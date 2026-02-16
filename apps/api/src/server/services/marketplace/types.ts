@@ -66,6 +66,7 @@ export interface RankedProvider {
     responseTimeMinutes: number | null;
     isVerified: boolean;
     coverageRadiusKm: number;
+    contactPhone: string | null;
   };
   services: ProviderServiceInfo[];
   scores: ProviderScore;

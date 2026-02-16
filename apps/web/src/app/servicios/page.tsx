@@ -57,7 +57,7 @@ function ServiciosPageContent({ initialCity }: { initialCity: string }) {
   const { data, isLoading } = trpc.marketplace.searchProviders.useQuery(
     {
       city: city || undefined,
-      categoryIds: category ? [category] : undefined,
+      categories: category ? [category] : undefined,
       limit: 20,
     },
     { keepPreviousData: true }

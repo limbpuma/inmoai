@@ -23,30 +23,30 @@ import {
 
 const planFeatures = {
   free: [
-    "Busqueda basica de propiedades",
-    "Hasta 10 busquedas al dia",
-    "Alertas por email (max. 3)",
-    "Score de autenticidad basico",
+    "30 búsquedas/mes con IA",
+    "1 verificación catastral/mes",
+    "3 detecciones de fraude/mes",
+    "Análisis de mercado básico",
+    "1 alerta de precio",
   ],
   pro: [
-    "Busquedas ilimitadas",
-    "Alertas ilimitadas en tiempo real",
-    "Score de autenticidad avanzado",
-    "Analisis de precios de mercado",
-    "Historial de precios",
-    "Deteccion de fraude IA",
-    "Comparador de propiedades",
-    "Exportar a PDF",
+    "500 búsquedas/mes con IA",
+    "50 verificaciones catastrales/mes",
+    "100 detecciones de fraude/mes",
+    "Historial de precios completo",
+    "Exportar a PDF y Excel",
+    "10 alertas de precio",
+    "Soporte prioritario",
   ],
   agency: [
-    "Todo lo de Pro",
-    "API de acceso completo",
-    "Hasta 5 usuarios",
+    "Todo de Profesional",
+    "2.000 búsquedas/mes",
+    "200 verificaciones catastrales",
+    "Autoposting en redes sociales",
     "Dashboard de analytics",
-    "Integracion CRM",
-    "Informes personalizados",
-    "Soporte prioritario 24/7",
-    "Exportacion de datos",
+    "Gestión de leads centralizada",
+    "API Access (1.000 calls/mes)",
+    "Soporte 24/7",
   ],
 };
 
@@ -58,7 +58,7 @@ const planIcons = {
 
 const planNames = {
   free: "Gratis",
-  pro: "Pro",
+  pro: "Profesional",
   agency: "Agencia",
 };
 
