@@ -52,6 +52,9 @@ export const env = createEnv({
     // Rate Limiting
     RATE_LIMIT_REQUESTS_PER_HOUR: z.coerce.number().default(100),
 
+    // Cron Jobs
+    CRON_SECRET: z.string().optional(),
+
     // Portals - Autoposting System
     APP_URL: z.string().url().optional(),
     PORTAL_ENCRYPTION_KEY: z.string().min(32).optional(),

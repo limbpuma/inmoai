@@ -2,7 +2,7 @@ import Stripe from 'stripe';
 import { eq } from 'drizzle-orm';
 import { env } from '@/config/env';
 import { db } from '@/server/infrastructure/database';
-import { users } from '@/server/infrastructure/database/schema';
+import { users, serviceProviders } from '@/server/infrastructure/database/schema';
 
 // Stripe is optional in development - create client only if key exists
 export const stripe = env.STRIPE_SECRET_KEY
@@ -401,6 +401,78 @@ export async function handleSubscriptionDeleted(
       updatedAt: new Date(),
     })
     .where(eq(users.id, userId));
+}
+
+// ==========================================
+// PROVIDER SUBSCRIPTION HANDLERS
+// ==========================================
+
+export async function handleProviderSubscriptionCreated(
+  subscription: Stripe.Subscription
+) {
+  const providerId = subscription.metadata.providerId;
+  const tier = subscription.metadata.tier as 'premium' | 'enterprise';
+
+  if (!providerId || !tier) {
+    console.error('Missing providerId or tier in provider subscription metadata');
+    return;
+  }
+
+  // @ts-expect-error - current_period_end exists but types may vary
+  const currentPeriodEnd = new Date((subscription.current_period_end ?? Date.now() / 1000) * 1000);
+
+  await db
+    .update(serviceProviders)
+    .set({
+      tier,
+      stripeSubscriptionId: subscription.id,
+      stripeCurrentPeriodEnd: currentPeriodEnd,
+      updatedAt: new Date(),
+    })
+    .where(eq(serviceProviders.id, providerId));
+}
+
+export async function handleProviderSubscriptionUpdated(
+  subscription: Stripe.Subscription
+) {
+  const providerId = subscription.metadata.providerId;
+  const tier = subscription.metadata.tier as 'premium' | 'enterprise';
+
+  if (!providerId) {
+    return;
+  }
+
+  // @ts-expect-error - current_period_end exists but types may vary
+  const currentPeriodEnd = new Date((subscription.current_period_end ?? Date.now() / 1000) * 1000);
+
+  await db
+    .update(serviceProviders)
+    .set({
+      ...(tier ? { tier } : {}),
+      stripeCurrentPeriodEnd: currentPeriodEnd,
+      updatedAt: new Date(),
+    })
+    .where(eq(serviceProviders.id, providerId));
+}
+
+export async function handleProviderSubscriptionDeleted(
+  subscription: Stripe.Subscription
+) {
+  const providerId = subscription.metadata.providerId;
+
+  if (!providerId) {
+    return;
+  }
+
+  await db
+    .update(serviceProviders)
+    .set({
+      tier: 'free',
+      stripeSubscriptionId: null,
+      stripeCurrentPeriodEnd: null,
+      updatedAt: new Date(),
+    })
+    .where(eq(serviceProviders.id, providerId));
 }
 
 export async function getSubscriptionStatus(userId: string) {

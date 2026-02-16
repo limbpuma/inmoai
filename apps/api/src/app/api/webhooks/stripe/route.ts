@@ -6,6 +6,9 @@ import {
   handleSubscriptionCreated,
   handleSubscriptionUpdated,
   handleSubscriptionDeleted,
+  handleProviderSubscriptionCreated,
+  handleProviderSubscriptionUpdated,
+  handleProviderSubscriptionDeleted,
 } from '@/server/services/stripe';
 
 export async function POST(req: NextRequest) {
@@ -49,17 +52,35 @@ export async function POST(req: NextRequest) {
 
   try {
     switch (event.type) {
-      case 'customer.subscription.created':
-        await handleSubscriptionCreated(event.data.object as Stripe.Subscription);
+      case 'customer.subscription.created': {
+        const sub = event.data.object as Stripe.Subscription;
+        if (sub.metadata.type === 'provider_subscription') {
+          await handleProviderSubscriptionCreated(sub);
+        } else {
+          await handleSubscriptionCreated(sub);
+        }
         break;
+      }
 
-      case 'customer.subscription.updated':
-        await handleSubscriptionUpdated(event.data.object as Stripe.Subscription);
+      case 'customer.subscription.updated': {
+        const sub = event.data.object as Stripe.Subscription;
+        if (sub.metadata.type === 'provider_subscription' || sub.metadata.providerId) {
+          await handleProviderSubscriptionUpdated(sub);
+        } else {
+          await handleSubscriptionUpdated(sub);
+        }
         break;
+      }
 
-      case 'customer.subscription.deleted':
-        await handleSubscriptionDeleted(event.data.object as Stripe.Subscription);
+      case 'customer.subscription.deleted': {
+        const sub = event.data.object as Stripe.Subscription;
+        if (sub.metadata.type === 'provider_subscription' || sub.metadata.providerId) {
+          await handleProviderSubscriptionDeleted(sub);
+        } else {
+          await handleSubscriptionDeleted(sub);
+        }
         break;
+      }
 
       case 'invoice.payment_succeeded':
         // Handle successful payment - log only safe identifiers

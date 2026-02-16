@@ -136,22 +136,24 @@ export default function RegistroProveedorPage() {
     return false;
   };
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     setError("");
 
-    // Default coordinates for major Spanish cities
-    const cityCoords: Record<string, { lat: number; lng: number }> = {
-      madrid: { lat: 40.4168, lng: -3.7038 },
-      barcelona: { lat: 41.3874, lng: 2.1686 },
-      valencia: { lat: 39.4699, lng: -0.3763 },
-      sevilla: { lat: 37.3891, lng: -5.9845 },
-      malaga: { lat: 36.7213, lng: -4.4214 },
-      zaragoza: { lat: 41.6488, lng: -0.8891 },
-      bilbao: { lat: 43.2630, lng: -2.9350 },
-    };
-
-    const cityKey = city.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
-    const coords = cityCoords[cityKey] || { lat: 40.4168, lng: -3.7038 };
+    // Geocode city using Nominatim (OpenStreetMap) API
+    let coords = { lat: 40.4168, lng: -3.7038 }; // Madrid fallback
+    try {
+      const query = [city, province, "España"].filter(Boolean).join(", ");
+      const res = await fetch(
+        `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&limit=1&countrycodes=es`,
+        { headers: { "User-Agent": "InmoAI/1.0 (contact@inmoai.com)" } }
+      );
+      const data = await res.json();
+      if (data.length > 0) {
+        coords = { lat: parseFloat(data[0].lat), lng: parseFloat(data[0].lon) };
+      }
+    } catch {
+      // Fallback to Madrid coordinates on geocoding failure
+    }
 
     registerMutation.mutate({
       businessName,

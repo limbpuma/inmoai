@@ -282,6 +282,18 @@ export const marketplaceRouter = createTRPCRouter({
         });
       }
 
+      // Enforce lead limits per tier
+      const providerPlan = PROVIDER_PLANS[provider.tier as keyof typeof PROVIDER_PLANS] ?? PROVIDER_PLANS.free;
+      if (
+        providerPlan.limits.leadsPerMonth !== -1 &&
+        (provider.leadsThisMonth ?? 0) >= providerPlan.limits.leadsPerMonth
+      ) {
+        throw new TRPCError({
+          code: 'FORBIDDEN',
+          message: `Este profesional ha alcanzado el limite de ${providerPlan.limits.leadsPerMonth} leads/mes de su plan ${providerPlan.name}. Intenta con otro profesional.`,
+        });
+      }
+
       // Get location from listing if provided
       let workLocation = {
         address: input.workAddress,
