@@ -9,6 +9,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { CheckCircle2, Loader2, Mail, Phone, User, MessageSquare } from "lucide-react";
+import { api } from "@/lib/api";
+import { toast } from "sonner";
 
 const contactFormSchema = z.object({
   name: z.string().min(2, "El nombre debe tener al menos 2 caracteres"),
@@ -26,7 +28,8 @@ interface ContactFormProps {
 
 export function ContactForm({ listingId, listingTitle }: ContactFormProps) {
   const [isSubmitted, setIsSubmitted] = useState(false);
-  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const submitLeadMutation = api.listings.submitLead.useMutation();
 
   const {
     register,
@@ -41,20 +44,29 @@ export function ContactForm({ listingId, listingTitle }: ContactFormProps) {
   });
 
   const onSubmit = async (data: ContactFormValues) => {
-    setIsSubmitting(true);
     try {
-      // TODO: Implement actual lead submission via tRPC
-      // For now, simulate API call
-      await new Promise((resolve) => setTimeout(resolve, 1000));
+      await submitLeadMutation.mutateAsync({
+        listingId,
+        name: data.name,
+        email: data.email,
+        phone: data.phone,
+        message: data.message,
+        source: 'website',
+      });
 
       setIsSubmitted(true);
       reset();
-    } catch {
-      // Error handled silently - TODO: Add toast notification
-    } finally {
-      setIsSubmitting(false);
+      toast.success('Consulta enviada', {
+        description: 'Te contactaremos pronto',
+      });
+    } catch (error) {
+      toast.error('Error al enviar', {
+        description: error instanceof Error ? error.message : 'Inténtalo de nuevo',
+      });
     }
   };
+
+  const isSubmitting = submitLeadMutation.isPending;
 
   if (isSubmitted) {
     return (

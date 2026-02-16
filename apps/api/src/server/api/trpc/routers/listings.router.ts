@@ -7,6 +7,7 @@ import {
   priceHistory,
   sources,
   userFavorites,
+  leads,
 } from '@/server/infrastructure/database/schema';
 import { eq, desc, and, inArray } from 'drizzle-orm';
 import type { ListingDetail, ListingImage, PriceHistoryPoint } from '@/shared/types';
@@ -291,5 +292,132 @@ export const listingsRouter = createTRPCRouter({
       });
 
       return { favorited: !!favorite };
+    }),
+
+  /**
+   * Submit a lead/inquiry for a listing
+   */
+  submitLead: publicProcedure
+    .input(
+      z.object({
+        listingId: z.string().uuid(),
+        name: z.string().min(2, 'Nombre requerido'),
+        email: z.string().email('Email inválido'),
+        phone: z.string().optional(),
+        message: z.string().max(1000).optional(),
+        source: z.string().optional().default('website'),
+        utmSource: z.string().optional(),
+        utmMedium: z.string().optional(),
+        utmCampaign: z.string().optional(),
+      })
+    )
+    .mutation(async ({ input }) => {
+      // Verify listing exists
+      const listing = await db.query.listings.findFirst({
+        where: eq(listings.id, input.listingId),
+      });
+
+      if (!listing) {
+        throw new Error('Listing not found');
+      }
+
+      // Create lead
+      const [lead] = await db
+        .insert(leads)
+        .values({
+          listingId: input.listingId,
+          name: input.name,
+          email: input.email,
+          phone: input.phone || null,
+          message: input.message || null,
+          source: input.source,
+          utmSource: input.utmSource || null,
+          utmMedium: input.utmMedium || null,
+          utmCampaign: input.utmCampaign || null,
+          status: 'new',
+        })
+        .returning({ id: leads.id });
+
+      return {
+        success: true,
+        leadId: lead.id,
+        message: 'Consulta enviada correctamente',
+      };
+    }),
+
+  /**
+   * Get leads for a listing (owner only)
+   */
+  getLeads: protectedProcedure
+    .input(
+      z.object({
+        listingId: z.string().uuid(),
+        status: z.enum(['new', 'contacted', 'qualified', 'converted', 'lost']).optional(),
+        limit: z.number().min(1).max(100).default(20),
+        offset: z.number().min(0).default(0),
+      })
+    )
+    .query(async ({ ctx, input }) => {
+      const userId = ctx.session.user.id;
+
+      // Verify user owns the listing
+      const listing = await db.query.listings.findFirst({
+        where: and(
+          eq(listings.id, input.listingId),
+          eq(listings.userId, userId)
+        ),
+      });
+
+      if (!listing) {
+        throw new Error('Listing not found or not authorized');
+      }
+
+      const conditions = [eq(leads.listingId, input.listingId)];
+      if (input.status) {
+        conditions.push(eq(leads.status, input.status));
+      }
+
+      const results = await db.query.leads.findMany({
+        where: and(...conditions),
+        orderBy: (l, { desc }) => [desc(l.createdAt)],
+        limit: input.limit,
+        offset: input.offset,
+      });
+
+      return results;
+    }),
+
+  /**
+   * Update lead status
+   */
+  updateLeadStatus: protectedProcedure
+    .input(
+      z.object({
+        leadId: z.string().uuid(),
+        status: z.enum(['new', 'contacted', 'qualified', 'converted', 'lost']),
+      })
+    )
+    .mutation(async ({ ctx, input }) => {
+      const userId = ctx.session.user.id;
+
+      // Get lead and verify ownership
+      const lead = await db.query.leads.findFirst({
+        where: eq(leads.id, input.leadId),
+        with: { listing: true },
+      });
+
+      if (!lead || lead.listing?.userId !== userId) {
+        throw new Error('Lead not found or not authorized');
+      }
+
+      await db
+        .update(leads)
+        .set({
+          status: input.status,
+          updatedAt: new Date(),
+        })
+        .where(eq(leads.id, input.leadId));
+
+      return { success: true };
     }),
 });

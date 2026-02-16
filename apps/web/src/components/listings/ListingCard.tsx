@@ -1,10 +1,15 @@
+'use client';
+
+import { useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { Heart } from "lucide-react";
+import { Heart, Loader2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import { AuthenticityBadge } from "@/components/ui/AuthenticityBadge";
 import { Card, CardContent, CardFooter } from "@/components/ui/card";
+import { api } from "@/lib/api";
+import { toast } from "sonner";
+import { cn } from "@/lib/utils";
 
 export interface Listing {
     id: string;
@@ -19,9 +24,39 @@ export interface Listing {
     };
     score: number;
     source: string;
+    isFavorited?: boolean;
 }
 
-export function ListingCard({ listing }: { listing: Listing }) {
+interface ListingCardProps {
+    listing: Listing;
+    showFavorite?: boolean;
+}
+
+export function ListingCard({ listing, showFavorite = true }: ListingCardProps) {
+    const [isFavorited, setIsFavorited] = useState(listing.isFavorited ?? false);
+
+    const toggleFavoriteMutation = api.listings.toggleFavorite.useMutation({
+        onSuccess: (data) => {
+            setIsFavorited(data.favorited);
+            toast.success(data.favorited ? 'Añadido a favoritos' : 'Eliminado de favoritos');
+        },
+        onError: (error) => {
+            toast.error('Error al guardar', {
+                description: error.message.includes('UNAUTHORIZED')
+                    ? 'Inicia sesión para guardar favoritos'
+                    : 'Inténtalo de nuevo',
+            });
+        },
+    });
+
+    const handleFavoriteClick = (e: React.MouseEvent) => {
+        e.preventDefault();
+        e.stopPropagation();
+        toggleFavoriteMutation.mutate({ listingId: listing.id });
+    };
+
+    const isToggling = toggleFavoriteMutation.isPending;
+
     return (
         <Link href={`/listing/${listing.id}`} className="block h-full">
         <Card className="group overflow-hidden hover:shadow-xl transition-all duration-300 border-border/50 bg-background h-full flex flex-col rounded-xl cursor-pointer focus-within:ring-2 focus-within:ring-ring focus-within:ring-offset-2">
@@ -42,17 +77,26 @@ export function ListingCard({ listing }: { listing: Listing }) {
                     </Badge>
                 </div>
 
-                <button
-                    aria-label={`Guardar ${listing.title} en favoritos`}
-                    onClick={(e) => {
-                        e.preventDefault();
-                        e.stopPropagation();
-                        // TODO: Implement favorite toggle
-                    }}
-                    className="absolute top-3 right-3 p-2.5 rounded-full bg-background/80 hover:bg-white text-foreground/80 hover:text-red-500 backdrop-blur-md transition-all opacity-0 group-hover:opacity-100 translate-y-2 group-hover:translate-y-0 shadow-sm border border-transparent hover:border-border focus-visible:opacity-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-                >
-                    <Heart className="h-4 w-4" />
-                </button>
+                {showFavorite && (
+                    <button
+                        aria-label={isFavorited ? `Quitar ${listing.title} de favoritos` : `Guardar ${listing.title} en favoritos`}
+                        onClick={handleFavoriteClick}
+                        disabled={isToggling}
+                        className={cn(
+                            "absolute top-3 right-3 p-2.5 rounded-full backdrop-blur-md transition-all shadow-sm border focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
+                            isFavorited
+                                ? "bg-red-500 text-white border-red-500 opacity-100"
+                                : "bg-background/80 hover:bg-white text-foreground/80 hover:text-red-500 border-transparent hover:border-border opacity-0 group-hover:opacity-100 translate-y-2 group-hover:translate-y-0",
+                            isToggling && "opacity-50 cursor-not-allowed"
+                        )}
+                    >
+                        {isToggling ? (
+                            <Loader2 className="h-4 w-4 animate-spin" />
+                        ) : (
+                            <Heart className={cn("h-4 w-4", isFavorited && "fill-current")} />
+                        )}
+                    </button>
+                )}
             </div>
 
             <CardContent className="p-5 flex-1">
