@@ -93,6 +93,13 @@ function ServiciosPageContent({ initialCity }: { initialCity: string }) {
             Conectamos propietarios con los mejores profesionales de reformas,
             pintura, electricidad y mas. Verificados y cerca de ti.
           </p>
+          <div className="text-center mb-8">
+            <Link href="/servicios/registro">
+              <Button variant="outline" size="sm">
+                ¿Eres profesional? Registrate gratis
+              </Button>
+            </Link>
+          </div>
 
           {/* Search Bar */}
           <div className="max-w-3xl mx-auto">

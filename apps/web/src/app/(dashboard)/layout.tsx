@@ -14,6 +14,10 @@ import {
   CreditCard,
   Settings,
   Loader2,
+  Briefcase,
+  FileText,
+  MessageSquare,
+  Wrench,
 } from "lucide-react";
 
 const sidebarLinks = [
@@ -41,6 +45,29 @@ const sidebarLinks = [
     href: "/dashboard/settings",
     label: "Ajustes",
     icon: Settings,
+  },
+];
+
+const providerLinks = [
+  {
+    href: "/dashboard/proveedor",
+    label: "Mi negocio",
+    icon: Briefcase,
+  },
+  {
+    href: "/dashboard/proveedor/leads",
+    label: "Leads",
+    icon: FileText,
+  },
+  {
+    href: "/dashboard/proveedor/reviews",
+    label: "Opiniones",
+    icon: MessageSquare,
+  },
+  {
+    href: "/dashboard/proveedor/servicios",
+    label: "Servicios",
+    icon: Wrench,
   },
 ];
 
@@ -97,6 +124,36 @@ export default function DashboardLayout({
                 </Link>
               );
             })}
+
+            {/* Provider section */}
+            {pathname.startsWith("/dashboard/proveedor") && (
+              <>
+                <div className="pt-4 pb-2">
+                  <p className="px-3 text-xs font-semibold uppercase text-muted-foreground tracking-wider">
+                    Profesional
+                  </p>
+                </div>
+                {providerLinks.map((link) => {
+                  const Icon = link.icon;
+                  const isActive = pathname === link.href;
+                  return (
+                    <Link
+                      key={link.href}
+                      href={link.href}
+                      className={cn(
+                        "flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors",
+                        isActive
+                          ? "bg-primary text-primary-foreground"
+                          : "text-muted-foreground hover:bg-muted hover:text-foreground"
+                      )}
+                    >
+                      <Icon className="h-4 w-4" />
+                      {link.label}
+                    </Link>
+                  );
+                })}
+              </>
+            )}
           </nav>
         </aside>
 

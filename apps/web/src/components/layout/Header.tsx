@@ -15,6 +15,7 @@ export function Header() {
                     <nav className="hidden md:flex items-center gap-6 text-sm font-medium">
                         <Link href="/search" className="transition-colors hover:text-primary text-muted-foreground focus-visible:outline-none focus-visible:text-primary focus-visible:underline underline-offset-4">Comprar</Link>
                         <Link href="/search?mode=rent" className="transition-colors hover:text-primary text-muted-foreground focus-visible:outline-none focus-visible:text-primary focus-visible:underline underline-offset-4">Alquilar</Link>
+                        <Link href="/servicios" className="transition-colors hover:text-primary text-muted-foreground focus-visible:outline-none focus-visible:text-primary focus-visible:underline underline-offset-4">Profesionales</Link>
                         <Link href="/pricing" className="transition-colors hover:text-primary text-muted-foreground focus-visible:outline-none focus-visible:text-primary focus-visible:underline underline-offset-4">Precios</Link>
                     </nav>
                 </div>

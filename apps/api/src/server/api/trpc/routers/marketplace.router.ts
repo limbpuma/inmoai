@@ -11,8 +11,9 @@ import {
   listings,
   type ServiceCategory,
 } from '@/server/infrastructure/database/schema';
-import { eq, and, desc, sql, inArray } from 'drizzle-orm';
+import { eq, and, desc, sql, inArray, asc } from 'drizzle-orm';
 import { proximityService } from '@/server/services/marketplace';
+import { notifications } from '@/server/infrastructure/database/schema';
 
 const serviceCategoryEnum = z.enum([
   'painting',
@@ -347,6 +348,23 @@ export const marketplaceRouter = createTRPCRouter({
         return newLead;
       });
 
+      // Send notification to provider if they have a userId
+      if (provider.userId) {
+        await db.insert(notifications).values({
+          userId: provider.userId,
+          type: 'system',
+          title: `Nuevo presupuesto: ${input.title}`,
+          message: `${input.clientName} solicita presupuesto de ${input.category} en ${input.workCity || provider.city}`,
+          metadata: {
+            notificationType: 'service_lead_received',
+            leadId: lead.id,
+            providerId: provider.id,
+            category: input.category,
+            clientName: input.clientName,
+          },
+        });
+      }
+
       return {
         id: lead.id,
         status: lead.status,
@@ -522,5 +540,554 @@ export const marketplaceRouter = createTRPCRouter({
         isVerified: review.isVerified,
         createdAt: review.createdAt,
       };
+    }),
+
+  // ==========================================
+  // Provider Registration & Management
+  // ==========================================
+
+  /**
+   * Register as a service provider
+   */
+  registerProvider: protectedProcedure
+    .input(
+      z.object({
+        businessName: z.string().min(2).max(255),
+        description: z.string().max(2000).optional(),
+        contactName: z.string().min(2).max(255),
+        contactEmail: z.string().email(),
+        contactPhone: z.string().min(6).max(50),
+        website: z.string().url().optional(),
+        address: z.string().max(500).optional(),
+        city: z.string().min(1).max(100),
+        province: z.string().max(100).optional(),
+        postalCode: z.string().max(20).optional(),
+        latitude: z.number().min(-90).max(90),
+        longitude: z.number().min(-180).max(180),
+        coverageRadiusKm: z.number().min(1).max(200).default(25),
+        services: z.array(
+          z.object({
+            category: serviceCategoryEnum,
+            title: z.string().min(2).max(255),
+            description: z.string().max(1000).optional(),
+            priceMin: z.number().min(0).optional(),
+            priceMax: z.number().min(0).optional(),
+            priceUnit: z.string().max(50).default('proyecto'),
+          })
+        ).min(1).max(10),
+        metadata: z.object({
+          yearsInBusiness: z.number().min(0).max(100).optional(),
+          employeeCount: z.number().min(1).max(10000).optional(),
+          certifications: z.array(z.string()).optional(),
+          insuranceInfo: z.string().optional(),
+        }).optional(),
+      })
+    )
+    .mutation(async ({ ctx, input }) => {
+      // Check if user already has a provider profile
+      const existing = await db.query.serviceProviders.findFirst({
+        where: eq(serviceProviders.userId, ctx.session.user.id),
+        columns: { id: true, status: true },
+      });
+
+      if (existing) {
+        throw new TRPCError({
+          code: 'CONFLICT',
+          message: 'Ya tienes un perfil de profesional registrado',
+        });
+      }
+
+      // Generate slug from business name
+      const baseSlug = input.businessName
+        .toLowerCase()
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .replace(/[^a-z0-9]+/g, '-')
+        .replace(/^-+|-+$/g, '');
+
+      // Check slug uniqueness and append suffix if needed
+      let slug = baseSlug;
+      let suffix = 0;
+      while (true) {
+        const existingSlug = await db.query.serviceProviders.findFirst({
+          where: eq(serviceProviders.slug, slug),
+          columns: { id: true },
+        });
+        if (!existingSlug) break;
+        suffix++;
+        slug = `${baseSlug}-${suffix}`;
+      }
+
+      // Create provider and services in a transaction
+      const provider = await db.transaction(async (tx) => {
+        const [newProvider] = await tx
+          .insert(serviceProviders)
+          .values({
+            userId: ctx.session.user.id,
+            businessName: input.businessName,
+            slug,
+            description: input.description,
+            contactName: input.contactName,
+            contactEmail: input.contactEmail,
+            contactPhone: input.contactPhone,
+            website: input.website,
+            address: input.address,
+            city: input.city,
+            province: input.province,
+            postalCode: input.postalCode,
+            latitude: input.latitude.toString(),
+            longitude: input.longitude.toString(),
+            coverageRadiusKm: input.coverageRadiusKm,
+            status: 'active',
+            tier: 'free',
+            metadata: input.metadata,
+          })
+          .returning({ id: serviceProviders.id, slug: serviceProviders.slug });
+
+        // Insert services
+        if (input.services.length > 0) {
+          await tx.insert(providerServices).values(
+            input.services.map((s) => ({
+              providerId: newProvider.id,
+              category: s.category,
+              title: s.title,
+              description: s.description,
+              priceMin: s.priceMin?.toString(),
+              priceMax: s.priceMax?.toString(),
+              priceUnit: s.priceUnit,
+              isActive: true,
+            }))
+          );
+        }
+
+        return newProvider;
+      });
+
+      return {
+        id: provider.id,
+        slug: provider.slug,
+      };
+    }),
+
+  /**
+   * Get the current user's provider profile
+   */
+  getMyProvider: protectedProcedure.query(async ({ ctx }) => {
+    const provider = await db.query.serviceProviders.findFirst({
+      where: eq(serviceProviders.userId, ctx.session.user.id),
+      with: {
+        services: true,
+      },
+    });
+
+    if (!provider) {
+      return null;
+    }
+
+    return {
+      ...provider,
+      averageRating: Number(provider.averageRating),
+      latitude: Number(provider.latitude),
+      longitude: Number(provider.longitude),
+      services: provider.services.map((s) => ({
+        ...s,
+        priceMin: s.priceMin ? Number(s.priceMin) : null,
+        priceMax: s.priceMax ? Number(s.priceMax) : null,
+      })),
+    };
+  }),
+
+  /**
+   * Update provider profile
+   */
+  updateMyProvider: protectedProcedure
+    .input(
+      z.object({
+        businessName: z.string().min(2).max(255).optional(),
+        description: z.string().max(2000).optional(),
+        contactName: z.string().min(2).max(255).optional(),
+        contactEmail: z.string().email().optional(),
+        contactPhone: z.string().min(6).max(50).optional(),
+        website: z.string().url().nullable().optional(),
+        address: z.string().max(500).optional(),
+        city: z.string().min(1).max(100).optional(),
+        province: z.string().max(100).optional(),
+        postalCode: z.string().max(20).optional(),
+        latitude: z.number().min(-90).max(90).optional(),
+        longitude: z.number().min(-180).max(180).optional(),
+        coverageRadiusKm: z.number().min(1).max(200).optional(),
+        metadata: z.object({
+          yearsInBusiness: z.number().min(0).max(100).optional(),
+          employeeCount: z.number().min(1).max(10000).optional(),
+          certifications: z.array(z.string()).optional(),
+          insuranceInfo: z.string().optional(),
+        }).optional(),
+      })
+    )
+    .mutation(async ({ ctx, input }) => {
+      const provider = await db.query.serviceProviders.findFirst({
+        where: eq(serviceProviders.userId, ctx.session.user.id),
+        columns: { id: true },
+      });
+
+      if (!provider) {
+        throw new TRPCError({ code: 'NOT_FOUND', message: 'No tienes un perfil de profesional' });
+      }
+
+      const updateData: Record<string, unknown> = { updatedAt: new Date() };
+      if (input.businessName !== undefined) updateData.businessName = input.businessName;
+      if (input.description !== undefined) updateData.description = input.description;
+      if (input.contactName !== undefined) updateData.contactName = input.contactName;
+      if (input.contactEmail !== undefined) updateData.contactEmail = input.contactEmail;
+      if (input.contactPhone !== undefined) updateData.contactPhone = input.contactPhone;
+      if (input.website !== undefined) updateData.website = input.website;
+      if (input.address !== undefined) updateData.address = input.address;
+      if (input.city !== undefined) updateData.city = input.city;
+      if (input.province !== undefined) updateData.province = input.province;
+      if (input.postalCode !== undefined) updateData.postalCode = input.postalCode;
+      if (input.latitude !== undefined) updateData.latitude = input.latitude.toString();
+      if (input.longitude !== undefined) updateData.longitude = input.longitude.toString();
+      if (input.coverageRadiusKm !== undefined) updateData.coverageRadiusKm = input.coverageRadiusKm;
+      if (input.metadata !== undefined) updateData.metadata = input.metadata;
+
+      await db
+        .update(serviceProviders)
+        .set(updateData)
+        .where(eq(serviceProviders.id, provider.id));
+
+      return { success: true };
+    }),
+
+  /**
+   * Get provider's leads
+   */
+  getMyLeads: protectedProcedure
+    .input(
+      z.object({
+        status: z.enum(['new', 'viewed', 'contacted', 'quoted', 'accepted', 'completed', 'cancelled']).optional(),
+        limit: z.number().min(1).max(50).default(20),
+        offset: z.number().min(0).default(0),
+      })
+    )
+    .query(async ({ ctx, input }) => {
+      const provider = await db.query.serviceProviders.findFirst({
+        where: eq(serviceProviders.userId, ctx.session.user.id),
+        columns: { id: true },
+      });
+
+      if (!provider) {
+        throw new TRPCError({ code: 'NOT_FOUND', message: 'No tienes un perfil de profesional' });
+      }
+
+      const conditions = [eq(serviceLeads.providerId, provider.id)];
+      if (input.status) {
+        conditions.push(eq(serviceLeads.status, input.status));
+      }
+
+      const [leads, countResult] = await Promise.all([
+        db
+          .select({
+            id: serviceLeads.id,
+            category: serviceLeads.category,
+            title: serviceLeads.title,
+            description: serviceLeads.description,
+            clientName: serviceLeads.clientName,
+            clientEmail: serviceLeads.clientEmail,
+            clientPhone: serviceLeads.clientPhone,
+            workCity: serviceLeads.workCity,
+            budget: serviceLeads.budget,
+            urgency: serviceLeads.urgency,
+            preferredDate: serviceLeads.preferredDate,
+            status: serviceLeads.status,
+            viewedAt: serviceLeads.viewedAt,
+            contactedAt: serviceLeads.contactedAt,
+            quotedAmount: serviceLeads.quotedAmount,
+            quotedAt: serviceLeads.quotedAt,
+            completedAt: serviceLeads.completedAt,
+            source: serviceLeads.source,
+            createdAt: serviceLeads.createdAt,
+          })
+          .from(serviceLeads)
+          .where(and(...conditions))
+          .orderBy(desc(serviceLeads.createdAt))
+          .limit(input.limit)
+          .offset(input.offset),
+        db
+          .select({ count: sql<number>`count(*)::int` })
+          .from(serviceLeads)
+          .where(and(...conditions)),
+      ]);
+
+      return {
+        leads: leads.map((l) => ({
+          ...l,
+          budget: l.budget ? Number(l.budget) : null,
+          quotedAmount: l.quotedAmount ? Number(l.quotedAmount) : null,
+        })),
+        total: countResult[0]?.count ?? 0,
+        hasMore: input.offset + leads.length < (countResult[0]?.count ?? 0),
+      };
+    }),
+
+  /**
+   * Update lead status
+   */
+  updateLeadStatus: protectedProcedure
+    .input(
+      z.object({
+        leadId: z.string().uuid(),
+        status: z.enum(['viewed', 'contacted', 'quoted', 'accepted', 'completed', 'cancelled']),
+        quotedAmount: z.number().min(0).optional(),
+      })
+    )
+    .mutation(async ({ ctx, input }) => {
+      const provider = await db.query.serviceProviders.findFirst({
+        where: eq(serviceProviders.userId, ctx.session.user.id),
+        columns: { id: true },
+      });
+
+      if (!provider) {
+        throw new TRPCError({ code: 'NOT_FOUND', message: 'No tienes un perfil de profesional' });
+      }
+
+      // Verify the lead belongs to this provider
+      const lead = await db.query.serviceLeads.findFirst({
+        where: and(
+          eq(serviceLeads.id, input.leadId),
+          eq(serviceLeads.providerId, provider.id),
+        ),
+        columns: { id: true, status: true },
+      });
+
+      if (!lead) {
+        throw new TRPCError({ code: 'NOT_FOUND', message: 'Lead no encontrado' });
+      }
+
+      const updateData: Record<string, unknown> = {
+        status: input.status,
+        updatedAt: new Date(),
+      };
+
+      // Set timestamps based on status
+      if (input.status === 'viewed') updateData.viewedAt = new Date();
+      if (input.status === 'contacted') updateData.contactedAt = new Date();
+      if (input.status === 'quoted') {
+        updateData.quotedAt = new Date();
+        if (input.quotedAmount !== undefined) {
+          updateData.quotedAmount = input.quotedAmount.toString();
+        }
+      }
+      if (input.status === 'completed') updateData.completedAt = new Date();
+
+      await db
+        .update(serviceLeads)
+        .set(updateData)
+        .where(eq(serviceLeads.id, input.leadId));
+
+      return { success: true };
+    }),
+
+  /**
+   * Respond to a review
+   */
+  respondToReview: protectedProcedure
+    .input(
+      z.object({
+        reviewId: z.string().uuid(),
+        response: z.string().min(1).max(2000),
+      })
+    )
+    .mutation(async ({ ctx, input }) => {
+      const provider = await db.query.serviceProviders.findFirst({
+        where: eq(serviceProviders.userId, ctx.session.user.id),
+        columns: { id: true },
+      });
+
+      if (!provider) {
+        throw new TRPCError({ code: 'NOT_FOUND', message: 'No tienes un perfil de profesional' });
+      }
+
+      // Verify the review belongs to this provider
+      const review = await db.query.providerReviews.findFirst({
+        where: and(
+          eq(providerReviews.id, input.reviewId),
+          eq(providerReviews.providerId, provider.id),
+        ),
+        columns: { id: true, providerResponse: true },
+      });
+
+      if (!review) {
+        throw new TRPCError({ code: 'NOT_FOUND', message: 'Opinion no encontrada' });
+      }
+
+      await db
+        .update(providerReviews)
+        .set({
+          providerResponse: input.response,
+          providerRespondedAt: new Date(),
+          updatedAt: new Date(),
+        })
+        .where(eq(providerReviews.id, input.reviewId));
+
+      return { success: true };
+    }),
+
+  /**
+   * Get provider's reviews (for management)
+   */
+  getMyReviews: protectedProcedure
+    .input(
+      z.object({
+        limit: z.number().min(1).max(50).default(20),
+        offset: z.number().min(0).default(0),
+      })
+    )
+    .query(async ({ ctx, input }) => {
+      const provider = await db.query.serviceProviders.findFirst({
+        where: eq(serviceProviders.userId, ctx.session.user.id),
+        columns: { id: true },
+      });
+
+      if (!provider) {
+        throw new TRPCError({ code: 'NOT_FOUND', message: 'No tienes un perfil de profesional' });
+      }
+
+      const [reviews, countResult] = await Promise.all([
+        db
+          .select({
+            id: providerReviews.id,
+            rating: providerReviews.rating,
+            title: providerReviews.title,
+            content: providerReviews.content,
+            authorName: providerReviews.authorName,
+            category: providerReviews.category,
+            isVerified: providerReviews.isVerified,
+            providerResponse: providerReviews.providerResponse,
+            providerRespondedAt: providerReviews.providerRespondedAt,
+            createdAt: providerReviews.createdAt,
+          })
+          .from(providerReviews)
+          .where(
+            and(eq(providerReviews.providerId, provider.id), eq(providerReviews.isPublished, true))
+          )
+          .orderBy(desc(providerReviews.createdAt))
+          .limit(input.limit)
+          .offset(input.offset),
+        db
+          .select({ count: sql<number>`count(*)::int` })
+          .from(providerReviews)
+          .where(
+            and(eq(providerReviews.providerId, provider.id), eq(providerReviews.isPublished, true))
+          ),
+      ]);
+
+      return {
+        reviews,
+        total: countResult[0]?.count ?? 0,
+      };
+    }),
+
+  /**
+   * Get provider stats summary
+   */
+  getMyStats: protectedProcedure.query(async ({ ctx }) => {
+    const provider = await db.query.serviceProviders.findFirst({
+      where: eq(serviceProviders.userId, ctx.session.user.id),
+      columns: {
+        id: true,
+        totalLeads: true,
+        leadsThisMonth: true,
+        totalReviews: true,
+        averageRating: true,
+        responseTimeMinutes: true,
+        tier: true,
+        isVerified: true,
+        status: true,
+      },
+    });
+
+    if (!provider) {
+      return null;
+    }
+
+    // Count leads by status
+    const statusCounts = await db
+      .select({
+        status: serviceLeads.status,
+        count: sql<number>`count(*)::int`,
+      })
+      .from(serviceLeads)
+      .where(eq(serviceLeads.providerId, provider.id))
+      .groupBy(serviceLeads.status);
+
+    const leadsByStatus: Record<string, number> = {};
+    for (const row of statusCounts) {
+      leadsByStatus[row.status] = row.count;
+    }
+
+    return {
+      totalLeads: provider.totalLeads ?? 0,
+      leadsThisMonth: provider.leadsThisMonth ?? 0,
+      totalReviews: provider.totalReviews ?? 0,
+      averageRating: Number(provider.averageRating),
+      responseTimeMinutes: provider.responseTimeMinutes,
+      tier: provider.tier,
+      isVerified: provider.isVerified,
+      status: provider.status,
+      leadsByStatus,
+    };
+  }),
+
+  /**
+   * Update provider services
+   */
+  updateMyServices: protectedProcedure
+    .input(
+      z.object({
+        services: z.array(
+          z.object({
+            id: z.string().uuid().optional(),
+            category: serviceCategoryEnum,
+            title: z.string().min(2).max(255),
+            description: z.string().max(1000).optional(),
+            priceMin: z.number().min(0).optional(),
+            priceMax: z.number().min(0).optional(),
+            priceUnit: z.string().max(50).default('proyecto'),
+            isActive: z.boolean().default(true),
+          })
+        ).min(1).max(10),
+      })
+    )
+    .mutation(async ({ ctx, input }) => {
+      const provider = await db.query.serviceProviders.findFirst({
+        where: eq(serviceProviders.userId, ctx.session.user.id),
+        columns: { id: true },
+      });
+
+      if (!provider) {
+        throw new TRPCError({ code: 'NOT_FOUND', message: 'No tienes un perfil de profesional' });
+      }
+
+      await db.transaction(async (tx) => {
+        // Delete existing services and re-insert
+        await tx
+          .delete(providerServices)
+          .where(eq(providerServices.providerId, provider.id));
+
+        await tx.insert(providerServices).values(
+          input.services.map((s) => ({
+            providerId: provider.id,
+            category: s.category,
+            title: s.title,
+            description: s.description,
+            priceMin: s.priceMin?.toString(),
+            priceMax: s.priceMax?.toString(),
+            priceUnit: s.priceUnit,
+            isActive: s.isActive,
+          }))
+        );
+      });
+
+      return { success: true };
     }),
 });
