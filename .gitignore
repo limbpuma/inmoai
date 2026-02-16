@@ -40,3 +40,13 @@ coverage/
 
 # Temporary files
 tmpclaude-*
+
+# Test screenshots
+*.png
+
+# Windows nul file artifacts
+nul
+apps/api/nul
+
+# Claude local settings
+.claude/settings.local.json
