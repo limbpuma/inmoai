@@ -168,6 +168,106 @@ class InmoAIClient {
   async getVerifiedProviders() {
     return this.request('/api/trpc/marketplace.getCategories');
   }
+
+  // ============================================
+  // SOCIAL MEDIA TOOLS
+  // ============================================
+
+  async publishToSocial(params: {
+    listingId: string;
+    platforms: ('facebook' | 'instagram' | 'linkedin' | 'tiktok')[];
+    customMessage?: string;
+    scheduledAt?: string;
+  }) {
+    return this.request('/api/trpc/social.publish', 'POST', params);
+  }
+
+  async getSocialConnections() {
+    return this.request('/api/trpc/social.getConnections');
+  }
+
+  async getSocialAnalytics(params: {
+    listingId?: string;
+    platform?: string;
+    dateRange?: { from: string; to: string };
+  }) {
+    return this.request('/api/trpc/social.getAnalytics', 'POST', params);
+  }
+
+  async disconnectSocial(connectionId: string) {
+    return this.request('/api/trpc/social.disconnect', 'POST', { connectionId });
+  }
+
+  // ============================================
+  // CONTENT GENERATION TOOLS
+  // ============================================
+
+  async generateContent(params: {
+    listingId: string;
+    contentType: 'description' | 'hashtags' | 'social_post' | 'ad_copy' | 'email' | 'video_script';
+    platform?: 'facebook' | 'instagram' | 'linkedin' | 'tiktok' | 'email' | 'generic';
+    tone?: 'professional' | 'casual' | 'luxury' | 'friendly' | 'urgent';
+    language?: 'es' | 'en' | 'ca' | 'eu' | 'gl';
+    maxLength?: number;
+  }) {
+    return this.request('/api/trpc/content.generate', 'POST', params);
+  }
+
+  async getGeneratedContent(params: {
+    listingId?: string;
+    contentType?: string;
+  }) {
+    return this.request('/api/trpc/content.getGenerated', 'POST', params);
+  }
+
+  // ============================================
+  // AGENT COORDINATION TOOLS
+  // ============================================
+
+  async delegateTask(params: {
+    task: string;
+    context?: Record<string, unknown>;
+    priority?: 'low' | 'normal' | 'high';
+    waitForResult?: boolean;
+  }) {
+    return this.request('/api/trpc/agents.delegate', 'POST', params);
+  }
+
+  async getAgentCapabilities() {
+    return this.request('/api/trpc/agents.capabilities');
+  }
+
+  // ============================================
+  // WORKFLOW TOOLS
+  // ============================================
+
+  async createWorkflow(params: {
+    name: string;
+    trigger: {
+      type: 'listing_created' | 'price_changed' | 'lead_received' | 'scheduled' | 'manual';
+      conditions?: Record<string, unknown>;
+    };
+    actions: Array<{
+      agent: string;
+      params: Record<string, unknown>;
+      onSuccess?: string;
+      onFailure?: string;
+    }>;
+  }) {
+    return this.request('/api/trpc/workflows.create', 'POST', params);
+  }
+
+  async listWorkflows() {
+    return this.request('/api/trpc/workflows.list');
+  }
+
+  async executeWorkflow(workflowId: string) {
+    return this.request('/api/trpc/workflows.execute', 'POST', { workflowId });
+  }
+
+  async getWorkflowExecutions(workflowId: string) {
+    return this.request(`/api/trpc/workflows.executions?input=${encodeURIComponent(JSON.stringify({ workflowId }))}`);
+  }
 }
 
 // Initialize server
@@ -366,6 +466,287 @@ El proveedor recibirá los datos y contactará al cliente.`,
         required: ['providerId', 'serviceCategory', 'clientName', 'clientEmail'],
       },
     },
+
+    // ============================================
+    // SOCIAL MEDIA TOOLS (NEW)
+    // ============================================
+    {
+      name: 'inmoai_publish_social',
+      description: `Publica una propiedad en redes sociales automáticamente.
+Genera contenido optimizado para cada plataforma usando IA.
+Plataformas soportadas: Facebook, Instagram, LinkedIn, TikTok.
+REQUIERE que el usuario haya conectado sus cuentas previamente.
+Precio: 0.50€ por post publicado.`,
+      inputSchema: {
+        type: 'object',
+        properties: {
+          listingId: {
+            type: 'string',
+            description: 'ID del listado a publicar',
+          },
+          platforms: {
+            type: 'array',
+            items: {
+              type: 'string',
+              enum: ['facebook', 'instagram', 'linkedin', 'tiktok'],
+            },
+            description: 'Plataformas donde publicar',
+          },
+          customMessage: {
+            type: 'string',
+            description: 'Mensaje personalizado (opcional, si no se genera automáticamente)',
+          },
+          scheduledAt: {
+            type: 'string',
+            format: 'date-time',
+            description: 'Fecha/hora para programar la publicación (opcional)',
+          },
+        },
+        required: ['listingId', 'platforms'],
+      },
+    },
+    {
+      name: 'inmoai_get_social_connections',
+      description: `Lista las conexiones de redes sociales del usuario.
+Muestra qué plataformas están conectadas y su estado.`,
+      inputSchema: {
+        type: 'object',
+        properties: {},
+      },
+    },
+    {
+      name: 'inmoai_get_social_analytics',
+      description: `Obtiene analytics de los posts publicados en redes sociales.
+Incluye impresiones, engagement, clicks, y más.`,
+      inputSchema: {
+        type: 'object',
+        properties: {
+          listingId: {
+            type: 'string',
+            description: 'ID del listado (opcional)',
+          },
+          platform: {
+            type: 'string',
+            enum: ['facebook', 'instagram', 'linkedin', 'tiktok'],
+            description: 'Plataforma específica (opcional)',
+          },
+          dateRange: {
+            type: 'object',
+            properties: {
+              from: { type: 'string', format: 'date' },
+              to: { type: 'string', format: 'date' },
+            },
+            description: 'Rango de fechas (opcional)',
+          },
+        },
+      },
+    },
+
+    // ============================================
+    // CONTENT GENERATION TOOLS (NEW)
+    // ============================================
+    {
+      name: 'inmoai_generate_content',
+      description: `Genera contenido de marketing para una propiedad usando IA.
+Optimizado para el mercado inmobiliario español.
+Tipos disponibles: descripción, hashtags, post social, copy de anuncio, email, script de video.
+Precio: 0.25€ por generación.`,
+      inputSchema: {
+        type: 'object',
+        properties: {
+          listingId: {
+            type: 'string',
+            description: 'ID del listado',
+          },
+          contentType: {
+            type: 'string',
+            enum: ['description', 'hashtags', 'social_post', 'ad_copy', 'email', 'video_script'],
+            description: 'Tipo de contenido a generar',
+          },
+          platform: {
+            type: 'string',
+            enum: ['facebook', 'instagram', 'linkedin', 'tiktok', 'email', 'generic'],
+            description: 'Plataforma destino (afecta formato y longitud)',
+          },
+          tone: {
+            type: 'string',
+            enum: ['professional', 'casual', 'luxury', 'friendly', 'urgent'],
+            description: 'Tono del contenido',
+          },
+          language: {
+            type: 'string',
+            enum: ['es', 'en', 'ca', 'eu', 'gl'],
+            default: 'es',
+            description: 'Idioma del contenido',
+          },
+          maxLength: {
+            type: 'number',
+            description: 'Longitud máxima en caracteres (opcional)',
+          },
+        },
+        required: ['listingId', 'contentType'],
+      },
+    },
+    {
+      name: 'inmoai_get_generated_content',
+      description: `Recupera contenido generado previamente para un listado.
+Útil para reutilizar contenido sin regenerar.`,
+      inputSchema: {
+        type: 'object',
+        properties: {
+          listingId: { type: 'string' },
+          contentType: {
+            type: 'string',
+            enum: ['description', 'hashtags', 'social_post', 'ad_copy', 'email', 'video_script'],
+          },
+        },
+      },
+    },
+
+    // ============================================
+    // AGENT COORDINATION TOOLS (NEW)
+    // ============================================
+    {
+      name: 'inmoai_delegate_task',
+      description: `Delega una tarea compleja a los agentes especializados de InmoAI.
+El Coordinator Agent interpretará la tarea y orquestará múltiples agentes.
+Ejemplo: "Publica mi piso en redes, verifica el catastro y busca pintores cerca"
+Este es el PUNTO DE ENTRADA recomendado para tareas complejas.`,
+      inputSchema: {
+        type: 'object',
+        properties: {
+          task: {
+            type: 'string',
+            description: 'Descripción natural de la tarea a realizar',
+          },
+          context: {
+            type: 'object',
+            description: 'Contexto adicional (listingId, preferencias, ubicación, etc.)',
+          },
+          priority: {
+            type: 'string',
+            enum: ['low', 'normal', 'high'],
+            default: 'normal',
+            description: 'Prioridad de ejecución',
+          },
+          waitForResult: {
+            type: 'boolean',
+            default: true,
+            description: 'Si esperar a que termine la tarea',
+          },
+        },
+        required: ['task'],
+      },
+    },
+    {
+      name: 'inmoai_get_agent_capabilities',
+      description: `Lista los agentes disponibles y sus capacidades.
+Útil para entender qué puede hacer InmoAI.`,
+      inputSchema: {
+        type: 'object',
+        properties: {},
+      },
+    },
+
+    // ============================================
+    // WORKFLOW TOOLS (NEW)
+    // ============================================
+    {
+      name: 'inmoai_create_workflow',
+      description: `Crea un workflow automatizado de gestión inmobiliaria.
+Los workflows se ejecutan automáticamente cuando se cumple el trigger.
+Ejemplos:
+- "Cuando publique propiedad → verificar catastro → publicar en redes"
+- "Si baja precio → notificar → republicar en redes"
+- "Semanalmente → enviar resumen de leads"`,
+      inputSchema: {
+        type: 'object',
+        properties: {
+          name: {
+            type: 'string',
+            description: 'Nombre del workflow',
+          },
+          trigger: {
+            type: 'object',
+            properties: {
+              type: {
+                type: 'string',
+                enum: ['listing_created', 'price_changed', 'lead_received', 'scheduled', 'manual'],
+                description: 'Evento que dispara el workflow',
+              },
+              conditions: {
+                type: 'object',
+                description: 'Condiciones adicionales (ej: solo pisos en Madrid)',
+              },
+            },
+            required: ['type'],
+          },
+          actions: {
+            type: 'array',
+            items: {
+              type: 'object',
+              properties: {
+                agent: {
+                  type: 'string',
+                  description: 'Agente a ejecutar (search, verify, social_media, content, etc.)',
+                },
+                params: {
+                  type: 'object',
+                  description: 'Parámetros para el agente',
+                },
+                onSuccess: {
+                  type: 'string',
+                  description: 'Siguiente acción si éxito',
+                },
+                onFailure: {
+                  type: 'string',
+                  description: 'Acción si falla (retry, skip, abort)',
+                },
+              },
+              required: ['agent', 'params'],
+            },
+            description: 'Lista de acciones a ejecutar',
+          },
+        },
+        required: ['name', 'trigger', 'actions'],
+      },
+    },
+    {
+      name: 'inmoai_list_workflows',
+      description: `Lista los workflows del usuario.`,
+      inputSchema: {
+        type: 'object',
+        properties: {},
+      },
+    },
+    {
+      name: 'inmoai_execute_workflow',
+      description: `Ejecuta manualmente un workflow.`,
+      inputSchema: {
+        type: 'object',
+        properties: {
+          workflowId: {
+            type: 'string',
+            description: 'ID del workflow a ejecutar',
+          },
+        },
+        required: ['workflowId'],
+      },
+    },
+    {
+      name: 'inmoai_get_workflow_history',
+      description: `Obtiene el historial de ejecuciones de un workflow.`,
+      inputSchema: {
+        type: 'object',
+        properties: {
+          workflowId: {
+            type: 'string',
+            description: 'ID del workflow',
+          },
+        },
+        required: ['workflowId'],
+      },
+    },
   ],
 }));
 
@@ -420,6 +801,101 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
 
       case 'inmoai_book_provider': {
         const result = await client.bookProvider(args as Parameters<typeof client.bookProvider>[0]);
+        return {
+          content: [{ type: 'text', text: JSON.stringify(result, null, 2) }],
+        };
+      }
+
+      // ============================================
+      // SOCIAL MEDIA TOOLS
+      // ============================================
+
+      case 'inmoai_publish_social': {
+        const result = await client.publishToSocial(args as Parameters<typeof client.publishToSocial>[0]);
+        return {
+          content: [{ type: 'text', text: JSON.stringify(result, null, 2) }],
+        };
+      }
+
+      case 'inmoai_get_social_connections': {
+        const result = await client.getSocialConnections();
+        return {
+          content: [{ type: 'text', text: JSON.stringify(result, null, 2) }],
+        };
+      }
+
+      case 'inmoai_get_social_analytics': {
+        const result = await client.getSocialAnalytics(args as Parameters<typeof client.getSocialAnalytics>[0]);
+        return {
+          content: [{ type: 'text', text: JSON.stringify(result, null, 2) }],
+        };
+      }
+
+      // ============================================
+      // CONTENT GENERATION TOOLS
+      // ============================================
+
+      case 'inmoai_generate_content': {
+        const result = await client.generateContent(args as Parameters<typeof client.generateContent>[0]);
+        return {
+          content: [{ type: 'text', text: JSON.stringify(result, null, 2) }],
+        };
+      }
+
+      case 'inmoai_get_generated_content': {
+        const result = await client.getGeneratedContent(args as Parameters<typeof client.getGeneratedContent>[0]);
+        return {
+          content: [{ type: 'text', text: JSON.stringify(result, null, 2) }],
+        };
+      }
+
+      // ============================================
+      // AGENT COORDINATION TOOLS
+      // ============================================
+
+      case 'inmoai_delegate_task': {
+        const result = await client.delegateTask(args as Parameters<typeof client.delegateTask>[0]);
+        return {
+          content: [{ type: 'text', text: JSON.stringify(result, null, 2) }],
+        };
+      }
+
+      case 'inmoai_get_agent_capabilities': {
+        const result = await client.getAgentCapabilities();
+        return {
+          content: [{ type: 'text', text: JSON.stringify(result, null, 2) }],
+        };
+      }
+
+      // ============================================
+      // WORKFLOW TOOLS
+      // ============================================
+
+      case 'inmoai_create_workflow': {
+        const result = await client.createWorkflow(args as Parameters<typeof client.createWorkflow>[0]);
+        return {
+          content: [{ type: 'text', text: JSON.stringify(result, null, 2) }],
+        };
+      }
+
+      case 'inmoai_list_workflows': {
+        const result = await client.listWorkflows();
+        return {
+          content: [{ type: 'text', text: JSON.stringify(result, null, 2) }],
+        };
+      }
+
+      case 'inmoai_execute_workflow': {
+        const { workflowId } = args as { workflowId: string };
+        const result = await client.executeWorkflow(workflowId);
+        return {
+          content: [{ type: 'text', text: JSON.stringify(result, null, 2) }],
+        };
+      }
+
+      case 'inmoai_get_workflow_history': {
+        const { workflowId } = args as { workflowId: string };
+        const result = await client.getWorkflowExecutions(workflowId);
         return {
           content: [{ type: 'text', text: JSON.stringify(result, null, 2) }],
         };

@@ -1477,6 +1477,10 @@ export const agentTypeEnum = pgEnum('agent_type', [
   'alert',        // Alert agent - monitors for new listings/changes
   'publish',      // Publishing agent - auto-posts to portals
   'transaction',  // Transaction agent - manages full sale/rent process
+  // NEW: AI Infrastructure agents
+  'coordinator',  // Orchestrates other agents for complex tasks
+  'social_media', // Publishes to social networks (FB, IG, LinkedIn, TikTok)
+  'content',      // Generates marketing content using AI
 ]);
 
 /**
@@ -1515,6 +1519,300 @@ export const agentTransactionTypeEnum = pgEnum('agent_transaction_type', [
   'property_rented',   // Rental transaction completed
   'portal_published',  // Published to external portal
   'api_call',          // B2B API consumption
+  // NEW: AI Infrastructure transaction types
+  'social_post',       // Post published to social network (0.50€)
+  'content_generated', // AI content generated (0.25€)
+  'agent_delegation',  // Task delegated to another agent
+  'workflow_executed', // Automated workflow completed
+]);
+
+// ============================================
+// SOCIAL MEDIA & CONTENT - ENUMS
+// ============================================
+
+/**
+ * Social media platforms supported for autoposting
+ */
+export const socialPlatformEnum = pgEnum('social_platform', [
+  'facebook',
+  'instagram',
+  'linkedin',
+  'tiktok',
+  'twitter',
+]);
+
+/**
+ * Social connection status
+ */
+export const socialConnectionStatusEnum = pgEnum('social_connection_status', [
+  'active',        // Connection working
+  'expired',       // Token expired, needs refresh
+  'revoked',       // User revoked access
+  'error',         // Connection error
+]);
+
+/**
+ * Social post status
+ */
+export const socialPostStatusEnum = pgEnum('social_post_status', [
+  'draft',         // Not yet published
+  'scheduled',     // Scheduled for future
+  'publishing',    // Currently being published
+  'published',     // Successfully published
+  'failed',        // Publication failed
+  'deleted',       // Deleted from platform
+]);
+
+/**
+ * Content type for AI generation
+ */
+export const contentTypeEnum = pgEnum('content_type', [
+  'description',       // Long listing description
+  'short_description', // Short social description
+  'hashtags',          // Optimized hashtags
+  'social_post',       // Complete social post
+  'ad_copy',           // Advertisement copy
+  'email_subject',     // Email subject line
+  'email_body',        // Email body
+  'video_script',      // Script for video/reel
+  'seo_title',         // SEO optimized title
+  'seo_description',   // Meta description
+]);
+
+/**
+ * Workflow trigger types
+ */
+export const workflowTriggerEnum = pgEnum('workflow_trigger', [
+  'listing_created',   // New listing published
+  'price_changed',     // Price was updated
+  'lead_received',     // New lead came in
+  'scheduled',         // Time-based trigger
+  'manual',            // Manual execution
+  'social_posted',     // After social post
+  'verification_done', // After cadastral verification
+]);
+
+/**
+ * Workflow status
+ */
+export const workflowStatusEnum = pgEnum('workflow_status', [
+  'active',
+  'paused',
+  'completed',
+  'failed',
+]);
+
+// ============================================
+// SOCIAL MEDIA & CONTENT - TABLES
+// ============================================
+
+/**
+ * Social Connections - OAuth connections to social platforms
+ */
+export const socialConnections = pgTable('social_connections', {
+  id: uuid('id').defaultRandom().primaryKey(),
+  userId: uuid('user_id').references(() => users.id, { onDelete: 'cascade' }).notNull(),
+
+  // Platform info
+  platform: socialPlatformEnum('platform').notNull(),
+  platformUserId: varchar('platform_user_id', { length: 100 }),
+  platformUsername: varchar('platform_username', { length: 255 }),
+
+  // OAuth tokens (encrypted in production)
+  accessToken: text('access_token'),
+  refreshToken: text('refresh_token'),
+  tokenExpiresAt: timestamp('token_expires_at', { withTimezone: true }),
+
+  // For Facebook/Instagram business pages
+  pageId: varchar('page_id', { length: 100 }),
+  pageName: varchar('page_name', { length: 255 }),
+  pageAccessToken: text('page_access_token'),
+
+  // Status
+  status: socialConnectionStatusEnum('status').default('active').notNull(),
+  lastUsedAt: timestamp('last_used_at', { withTimezone: true }),
+  errorMessage: text('error_message'),
+
+  // Metadata
+  scopes: jsonb('scopes').$type<string[]>(),
+  metadata: jsonb('metadata').$type<Record<string, unknown>>(),
+
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
+}, (table) => [
+  index('social_connections_user_idx').on(table.userId),
+  index('social_connections_platform_idx').on(table.platform),
+  uniqueIndex('social_connections_user_platform_page_idx').on(table.userId, table.platform, table.pageId),
+]);
+
+/**
+ * Social Posts - Posts published to social platforms
+ */
+export const socialPosts = pgTable('social_posts', {
+  id: uuid('id').defaultRandom().primaryKey(),
+
+  // References
+  listingId: uuid('listing_id').references(() => listings.id, { onDelete: 'set null' }),
+  connectionId: uuid('connection_id').references(() => socialConnections.id, { onDelete: 'cascade' }).notNull(),
+  userId: uuid('user_id').references(() => users.id, { onDelete: 'cascade' }).notNull(),
+
+  // Platform info
+  platform: socialPlatformEnum('platform').notNull(),
+  platformPostId: varchar('platform_post_id', { length: 255 }),
+  postUrl: varchar('post_url', { length: 1000 }),
+
+  // Content
+  content: text('content'),
+  hashtags: jsonb('hashtags').$type<string[]>(),
+  mediaUrls: jsonb('media_urls').$type<string[]>(),
+  mediaType: varchar('media_type', { length: 20 }), // image, video, carousel
+
+  // Status & scheduling
+  status: socialPostStatusEnum('status').default('draft').notNull(),
+  scheduledAt: timestamp('scheduled_at', { withTimezone: true }),
+  publishedAt: timestamp('published_at', { withTimezone: true }),
+
+  // Analytics (updated periodically)
+  analytics: jsonb('analytics').$type<{
+    impressions?: number;
+    reach?: number;
+    engagement?: number;
+    likes?: number;
+    comments?: number;
+    shares?: number;
+    clicks?: number;
+    saves?: number;
+  }>(),
+  analyticsUpdatedAt: timestamp('analytics_updated_at', { withTimezone: true }),
+
+  // Error handling
+  errorMessage: text('error_message'),
+  retryCount: integer('retry_count').default(0),
+
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
+}, (table) => [
+  index('social_posts_listing_idx').on(table.listingId),
+  index('social_posts_user_idx').on(table.userId),
+  index('social_posts_status_idx').on(table.status),
+  index('social_posts_scheduled_idx').on(table.scheduledAt),
+]);
+
+/**
+ * AI Generated Content - Stores generated content for reuse
+ */
+export const aiGeneratedContent = pgTable('ai_generated_content', {
+  id: uuid('id').defaultRandom().primaryKey(),
+
+  // References
+  listingId: uuid('listing_id').references(() => listings.id, { onDelete: 'cascade' }),
+  userId: uuid('user_id').references(() => users.id, { onDelete: 'cascade' }).notNull(),
+
+  // Content details
+  contentType: contentTypeEnum('content_type').notNull(),
+  platform: socialPlatformEnum('platform'),
+  language: varchar('language', { length: 5 }).default('es'),
+  tone: varchar('tone', { length: 20 }), // professional, casual, luxury, friendly
+
+  // Generated content
+  content: text('content').notNull(),
+  metadata: jsonb('metadata').$type<{
+    model?: string;
+    promptTokens?: number;
+    completionTokens?: number;
+    generationTimeMs?: number;
+  }>(),
+
+  // Usage tracking
+  usedCount: integer('used_count').default(0),
+  lastUsedAt: timestamp('last_used_at', { withTimezone: true }),
+
+  // Rating/feedback
+  rating: integer('rating'), // 1-5 stars
+  feedback: text('feedback'),
+
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+}, (table) => [
+  index('ai_content_listing_idx').on(table.listingId),
+  index('ai_content_user_type_idx').on(table.userId, table.contentType),
+]);
+
+/**
+ * AI Workflows - Automated agent workflows
+ */
+export const aiWorkflows = pgTable('ai_workflows', {
+  id: uuid('id').defaultRandom().primaryKey(),
+  userId: uuid('user_id').references(() => users.id, { onDelete: 'cascade' }).notNull(),
+
+  // Workflow definition
+  name: varchar('name', { length: 255 }).notNull(),
+  description: text('description'),
+
+  // Trigger configuration
+  trigger: workflowTriggerEnum('trigger').notNull(),
+  triggerConditions: jsonb('trigger_conditions').$type<{
+    listingType?: string;
+    priceRange?: { min?: number; max?: number };
+    cities?: string[];
+    schedule?: string; // cron expression
+  }>(),
+
+  // Actions to execute
+  actions: jsonb('actions').$type<{
+    agent: string;
+    params: Record<string, unknown>;
+    onSuccess?: string; // next action or 'complete'
+    onFailure?: string; // retry, skip, abort
+  }[]>().notNull(),
+
+  // Status
+  status: workflowStatusEnum('status').default('active').notNull(),
+  isEnabled: boolean('is_enabled').default(true),
+
+  // Execution stats
+  executionCount: integer('execution_count').default(0),
+  lastExecutedAt: timestamp('last_executed_at', { withTimezone: true }),
+  lastExecutionStatus: varchar('last_execution_status', { length: 20 }),
+
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
+}, (table) => [
+  index('ai_workflows_user_idx').on(table.userId),
+  index('ai_workflows_trigger_idx').on(table.trigger),
+]);
+
+/**
+ * Workflow Executions - Log of workflow runs
+ */
+export const workflowExecutions = pgTable('workflow_executions', {
+  id: uuid('id').defaultRandom().primaryKey(),
+  workflowId: uuid('workflow_id').references(() => aiWorkflows.id, { onDelete: 'cascade' }).notNull(),
+
+  // Trigger info
+  triggeredBy: varchar('triggered_by', { length: 50 }).notNull(), // event type or 'manual'
+  triggerData: jsonb('trigger_data').$type<Record<string, unknown>>(),
+
+  // Execution details
+  status: varchar('status', { length: 20 }).default('running').notNull(),
+  startedAt: timestamp('started_at', { withTimezone: true }).defaultNow().notNull(),
+  completedAt: timestamp('completed_at', { withTimezone: true }),
+
+  // Results
+  actionsExecuted: jsonb('actions_executed').$type<{
+    agent: string;
+    status: 'success' | 'failed' | 'skipped';
+    result?: unknown;
+    error?: string;
+    durationMs?: number;
+  }[]>(),
+
+  // Billing
+  totalCost: decimal('total_cost', { precision: 10, scale: 4 }),
+
+  errorMessage: text('error_message'),
+}, (table) => [
+  index('workflow_executions_workflow_idx').on(table.workflowId),
+  index('workflow_executions_status_idx').on(table.status),
 ]);
 
 // ============================================
@@ -1935,3 +2233,82 @@ export type NewAgentUsage = typeof agentUsage.$inferInsert;
 
 export type Escrow = typeof escrow.$inferSelect;
 export type NewEscrow = typeof escrow.$inferInsert;
+
+// ============================================
+// SOCIAL MEDIA & CONTENT - RELATIONS
+// ============================================
+
+export const socialConnectionsRelations = relations(socialConnections, ({ one, many }) => ({
+  user: one(users, {
+    fields: [socialConnections.userId],
+    references: [users.id],
+  }),
+  posts: many(socialPosts),
+}));
+
+export const socialPostsRelations = relations(socialPosts, ({ one }) => ({
+  listing: one(listings, {
+    fields: [socialPosts.listingId],
+    references: [listings.id],
+  }),
+  connection: one(socialConnections, {
+    fields: [socialPosts.connectionId],
+    references: [socialConnections.id],
+  }),
+  user: one(users, {
+    fields: [socialPosts.userId],
+    references: [users.id],
+  }),
+}));
+
+export const aiGeneratedContentRelations = relations(aiGeneratedContent, ({ one }) => ({
+  listing: one(listings, {
+    fields: [aiGeneratedContent.listingId],
+    references: [listings.id],
+  }),
+  user: one(users, {
+    fields: [aiGeneratedContent.userId],
+    references: [users.id],
+  }),
+}));
+
+export const aiWorkflowsRelations = relations(aiWorkflows, ({ one, many }) => ({
+  user: one(users, {
+    fields: [aiWorkflows.userId],
+    references: [users.id],
+  }),
+  executions: many(workflowExecutions),
+}));
+
+export const workflowExecutionsRelations = relations(workflowExecutions, ({ one }) => ({
+  workflow: one(aiWorkflows, {
+    fields: [workflowExecutions.workflowId],
+    references: [aiWorkflows.id],
+  }),
+}));
+
+// ============================================
+// SOCIAL MEDIA & CONTENT - TYPE EXPORTS
+// ============================================
+
+export type SocialPlatform = (typeof socialPlatformEnum.enumValues)[number];
+export type SocialConnectionStatus = (typeof socialConnectionStatusEnum.enumValues)[number];
+export type SocialPostStatus = (typeof socialPostStatusEnum.enumValues)[number];
+export type ContentType = (typeof contentTypeEnum.enumValues)[number];
+export type WorkflowTrigger = (typeof workflowTriggerEnum.enumValues)[number];
+export type WorkflowStatus = (typeof workflowStatusEnum.enumValues)[number];
+
+export type SocialConnection = typeof socialConnections.$inferSelect;
+export type NewSocialConnection = typeof socialConnections.$inferInsert;
+
+export type SocialPost = typeof socialPosts.$inferSelect;
+export type NewSocialPost = typeof socialPosts.$inferInsert;
+
+export type AIGeneratedContent = typeof aiGeneratedContent.$inferSelect;
+export type NewAIGeneratedContent = typeof aiGeneratedContent.$inferInsert;
+
+export type AIWorkflow = typeof aiWorkflows.$inferSelect;
+export type NewAIWorkflow = typeof aiWorkflows.$inferInsert;
+
+export type WorkflowExecution = typeof workflowExecutions.$inferSelect;
+export type NewWorkflowExecution = typeof workflowExecutions.$inferInsert;
