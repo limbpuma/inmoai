@@ -12,6 +12,7 @@ import { portalsRouter } from './portals.router';
 import { agentsRouter } from './agents.router';
 import { escrowRouter } from './escrow.router';
 import { cadastreRouter } from './cadastre.router';
+import { socialRouter } from './social.router';
 
 /**
  * Root router combining all sub-routers
@@ -35,7 +36,8 @@ export const appRouter = createTRPCRouter({
   portals: portalsRouter,
   agents: agentsRouter,
   escrow: escrowRouter,
-  cadastre: cadastreRouter, // NEW: Official property verification
+  cadastre: cadastreRouter,
+  social: socialRouter, // NEW: Social media autoposting
 });
 
 export type AppRouter = typeof appRouter;
