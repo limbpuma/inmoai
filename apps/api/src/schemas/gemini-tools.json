@@ -1,0 +1,451 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "name": "InmoAI Tools for Gemini",
+  "description": "Gemini Function Calling schema for InmoAI - Spanish Real Estate AI Infrastructure",
+  "version": "1.0.0",
+  "tools": [
+    {
+      "functionDeclarations": [
+        {
+          "name": "inmoai_search_properties",
+          "description": "Search for properties in Spain. Returns listings matching the criteria with verified data from official sources.",
+          "parameters": {
+            "type": "OBJECT",
+            "properties": {
+              "location": {
+                "type": "STRING",
+                "description": "City, neighborhood, or province in Spain (e.g., 'Madrid', 'Salamanca, Madrid', 'Barcelona')"
+              },
+              "operationType": {
+                "type": "STRING",
+                "enum": ["sale", "rent"],
+                "description": "Type of operation: sale or rent"
+              },
+              "propertyType": {
+                "type": "STRING",
+                "enum": ["apartment", "house", "penthouse", "studio", "duplex", "loft", "chalet", "villa", "townhouse", "rural", "commercial", "office", "warehouse", "garage", "land"],
+                "description": "Type of property"
+              },
+              "priceMin": {
+                "type": "NUMBER",
+                "description": "Minimum price in EUR"
+              },
+              "priceMax": {
+                "type": "NUMBER",
+                "description": "Maximum price in EUR"
+              },
+              "bedrooms": {
+                "type": "INTEGER",
+                "description": "Minimum number of bedrooms"
+              },
+              "bathrooms": {
+                "type": "INTEGER",
+                "description": "Minimum number of bathrooms"
+              },
+              "sizeMin": {
+                "type": "NUMBER",
+                "description": "Minimum size in square meters"
+              },
+              "sizeMax": {
+                "type": "NUMBER",
+                "description": "Maximum size in square meters"
+              },
+              "features": {
+                "type": "ARRAY",
+                "items": {
+                  "type": "STRING"
+                },
+                "description": "Desired features (pool, terrace, garden, parking, elevator, etc.)"
+              },
+              "limit": {
+                "type": "INTEGER",
+                "description": "Maximum number of results (default: 10, max: 50)"
+              }
+            },
+            "required": ["location"]
+          }
+        },
+        {
+          "name": "inmoai_verify_property",
+          "description": "Verify a property against the Spanish Cadastre (Catastro). Returns official property data including size, year built, cadastral value, and ownership verification.",
+          "parameters": {
+            "type": "OBJECT",
+            "properties": {
+              "listingId": {
+                "type": "STRING",
+                "description": "InmoAI listing ID to verify"
+              },
+              "cadastralReference": {
+                "type": "STRING",
+                "description": "20-character Spanish cadastral reference (referencia catastral)"
+              },
+              "address": {
+                "type": "STRING",
+                "description": "Full address for lookup if cadastral reference is not available"
+              }
+            },
+            "required": []
+          }
+        },
+        {
+          "name": "inmoai_estimate_value",
+          "description": "Get an AI-powered property valuation based on market data, location analysis, and comparable sales in Spain.",
+          "parameters": {
+            "type": "OBJECT",
+            "properties": {
+              "listingId": {
+                "type": "STRING",
+                "description": "InmoAI listing ID to value"
+              },
+              "address": {
+                "type": "STRING",
+                "description": "Property address for valuation"
+              },
+              "propertyType": {
+                "type": "STRING",
+                "enum": ["apartment", "house", "penthouse", "studio", "duplex", "loft", "chalet", "villa", "townhouse"],
+                "description": "Type of property"
+              },
+              "sizeSqm": {
+                "type": "NUMBER",
+                "description": "Size in square meters"
+              },
+              "bedrooms": {
+                "type": "INTEGER",
+                "description": "Number of bedrooms"
+              },
+              "bathrooms": {
+                "type": "INTEGER",
+                "description": "Number of bathrooms"
+              },
+              "yearBuilt": {
+                "type": "INTEGER",
+                "description": "Year the property was built"
+              },
+              "condition": {
+                "type": "STRING",
+                "enum": ["new", "excellent", "good", "needs_renovation", "to_renovate"],
+                "description": "Property condition"
+              },
+              "features": {
+                "type": "ARRAY",
+                "items": {
+                  "type": "STRING"
+                },
+                "description": "Property features"
+              }
+            },
+            "required": ["address", "propertyType", "sizeSqm"]
+          }
+        },
+        {
+          "name": "inmoai_publish_social",
+          "description": "Publish a property listing to social media platforms. Automatically generates optimized content for each platform.",
+          "parameters": {
+            "type": "OBJECT",
+            "properties": {
+              "listingId": {
+                "type": "STRING",
+                "description": "InmoAI listing ID to publish"
+              },
+              "platforms": {
+                "type": "ARRAY",
+                "items": {
+                  "type": "STRING",
+                  "enum": ["facebook", "instagram", "linkedin", "tiktok"]
+                },
+                "description": "Social media platforms to publish to"
+              },
+              "customMessage": {
+                "type": "STRING",
+                "description": "Optional custom message to include"
+              },
+              "scheduledAt": {
+                "type": "STRING",
+                "description": "Optional scheduled publication time (ISO 8601 format)"
+              },
+              "language": {
+                "type": "STRING",
+                "enum": ["es", "en", "ca", "eu", "gl"],
+                "description": "Content language (default: es)"
+              }
+            },
+            "required": ["listingId", "platforms"]
+          }
+        },
+        {
+          "name": "inmoai_generate_content",
+          "description": "Generate AI-powered marketing content for a property listing. Supports multiple content types optimized for different platforms.",
+          "parameters": {
+            "type": "OBJECT",
+            "properties": {
+              "listingId": {
+                "type": "STRING",
+                "description": "InmoAI listing ID"
+              },
+              "contentType": {
+                "type": "STRING",
+                "enum": ["description", "short_description", "hashtags", "social_post", "ad_copy", "email_subject", "email_body", "video_script", "seo_title", "seo_description"],
+                "description": "Type of content to generate"
+              },
+              "platform": {
+                "type": "STRING",
+                "enum": ["facebook", "instagram", "linkedin", "tiktok", "twitter", "email", "generic"],
+                "description": "Target platform for optimization"
+              },
+              "tone": {
+                "type": "STRING",
+                "enum": ["professional", "casual", "luxury", "friendly", "urgent"],
+                "description": "Tone of the content (default: professional)"
+              },
+              "language": {
+                "type": "STRING",
+                "enum": ["es", "en", "ca", "eu", "gl"],
+                "description": "Content language (default: es)"
+              },
+              "maxLength": {
+                "type": "INTEGER",
+                "description": "Maximum character length"
+              }
+            },
+            "required": ["listingId", "contentType"]
+          }
+        },
+        {
+          "name": "inmoai_find_services",
+          "description": "Find verified service providers near a property. Includes ratings, reviews, and pricing information.",
+          "parameters": {
+            "type": "OBJECT",
+            "properties": {
+              "listingId": {
+                "type": "STRING",
+                "description": "InmoAI listing ID for location context"
+              },
+              "location": {
+                "type": "STRING",
+                "description": "Location to search (city or neighborhood)"
+              },
+              "serviceType": {
+                "type": "STRING",
+                "enum": ["painter", "electrician", "plumber", "moving", "cleaning", "renovation", "interior_design", "photographer", "home_staging", "notary", "lawyer", "mortgage_broker", "insurance", "architect", "constructor"],
+                "description": "Type of service needed"
+              },
+              "urgency": {
+                "type": "STRING",
+                "enum": ["flexible", "within_week", "within_days", "urgent"],
+                "description": "How soon the service is needed (default: flexible)"
+              },
+              "budget": {
+                "type": "STRING",
+                "enum": ["economy", "standard", "premium"],
+                "description": "Budget preference"
+              },
+              "limit": {
+                "type": "INTEGER",
+                "description": "Maximum number of providers to return (default: 5, max: 20)"
+              }
+            },
+            "required": ["serviceType"]
+          }
+        },
+        {
+          "name": "inmoai_delegate_task",
+          "description": "Delegate a complex real estate task to InmoAI's specialized agents. The Coordinator Agent will orchestrate multiple agents as needed.",
+          "parameters": {
+            "type": "OBJECT",
+            "properties": {
+              "task": {
+                "type": "STRING",
+                "description": "Natural language description of the task (e.g., 'Publish my apartment, verify cadastre, and find painters')"
+              },
+              "context": {
+                "type": "OBJECT",
+                "properties": {
+                  "listingId": {
+                    "type": "STRING",
+                    "description": "Related listing ID"
+                  },
+                  "preferences": {
+                    "type": "OBJECT",
+                    "description": "User preferences for the task"
+                  }
+                },
+                "description": "Additional context for the task"
+              },
+              "priority": {
+                "type": "STRING",
+                "enum": ["low", "normal", "high"],
+                "description": "Task priority (default: normal)"
+              },
+              "waitForResult": {
+                "type": "BOOLEAN",
+                "description": "Whether to wait for all agents to complete (default: true)"
+              }
+            },
+            "required": ["task"]
+          }
+        },
+        {
+          "name": "inmoai_create_workflow",
+          "description": "Create an automated workflow for property management. Triggers execute actions automatically based on events.",
+          "parameters": {
+            "type": "OBJECT",
+            "properties": {
+              "name": {
+                "type": "STRING",
+                "description": "Workflow name"
+              },
+              "description": {
+                "type": "STRING",
+                "description": "Workflow description"
+              },
+              "trigger": {
+                "type": "OBJECT",
+                "properties": {
+                  "type": {
+                    "type": "STRING",
+                    "enum": ["listing_created", "listing_updated", "price_changed", "lead_received", "scheduled", "manual"],
+                    "description": "Event that triggers the workflow"
+                  },
+                  "conditions": {
+                    "type": "OBJECT",
+                    "description": "Conditions for the trigger"
+                  },
+                  "schedule": {
+                    "type": "STRING",
+                    "description": "Cron expression for scheduled triggers"
+                  }
+                },
+                "required": ["type"]
+              },
+              "actions": {
+                "type": "ARRAY",
+                "items": {
+                  "type": "OBJECT",
+                  "properties": {
+                    "agent": {
+                      "type": "STRING",
+                      "description": "Agent to execute (search, verify, valuation, content, social_media, service_match, alert)"
+                    },
+                    "params": {
+                      "type": "OBJECT",
+                      "description": "Parameters for the agent"
+                    },
+                    "onSuccess": {
+                      "type": "STRING",
+                      "description": "Next action on success"
+                    },
+                    "onFailure": {
+                      "type": "STRING",
+                      "description": "Action on failure"
+                    }
+                  },
+                  "required": ["agent"]
+                },
+                "description": "Actions to execute in order"
+              }
+            },
+            "required": ["name", "trigger", "actions"]
+          }
+        },
+        {
+          "name": "inmoai_get_social_analytics",
+          "description": "Get analytics for social media posts published through InmoAI.",
+          "parameters": {
+            "type": "OBJECT",
+            "properties": {
+              "listingId": {
+                "type": "STRING",
+                "description": "Filter by listing ID"
+              },
+              "platform": {
+                "type": "STRING",
+                "enum": ["facebook", "instagram", "linkedin", "tiktok"],
+                "description": "Filter by platform"
+              },
+              "dateRange": {
+                "type": "OBJECT",
+                "properties": {
+                  "from": {
+                    "type": "STRING",
+                    "description": "Start date (YYYY-MM-DD)"
+                  },
+                  "to": {
+                    "type": "STRING",
+                    "description": "End date (YYYY-MM-DD)"
+                  }
+                }
+              }
+            },
+            "required": []
+          }
+        },
+        {
+          "name": "inmoai_create_alert",
+          "description": "Create a property alert. Get notified when properties matching your criteria become available.",
+          "parameters": {
+            "type": "OBJECT",
+            "properties": {
+              "name": {
+                "type": "STRING",
+                "description": "Alert name"
+              },
+              "criteria": {
+                "type": "OBJECT",
+                "properties": {
+                  "location": {
+                    "type": "STRING",
+                    "description": "Location to monitor"
+                  },
+                  "operationType": {
+                    "type": "STRING",
+                    "enum": ["sale", "rent"]
+                  },
+                  "propertyType": {
+                    "type": "STRING"
+                  },
+                  "priceMax": {
+                    "type": "NUMBER"
+                  },
+                  "bedroomsMin": {
+                    "type": "INTEGER"
+                  }
+                },
+                "required": ["location"]
+              },
+              "frequency": {
+                "type": "STRING",
+                "enum": ["instant", "daily", "weekly"],
+                "description": "How often to check for matches (default: daily)"
+              },
+              "channels": {
+                "type": "ARRAY",
+                "items": {
+                  "type": "STRING",
+                  "enum": ["email", "push", "sms", "webhook"]
+                },
+                "description": "Notification channels (default: email)"
+              }
+            },
+            "required": ["name", "criteria"]
+          }
+        },
+        {
+          "name": "inmoai_get_agent_capabilities",
+          "description": "Get information about all available InmoAI agents and their capabilities.",
+          "parameters": {
+            "type": "OBJECT",
+            "properties": {
+              "agentType": {
+                "type": "STRING",
+                "enum": ["search", "verify", "valuation", "content", "social_media", "service_match", "negotiate", "alert", "coordinator"],
+                "description": "Filter by specific agent type"
+              }
+            },
+            "required": []
+          }
+        }
+      ]
+    }
+  ]
+}
