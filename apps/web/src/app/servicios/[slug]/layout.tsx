@@ -3,17 +3,17 @@ import type { Metadata } from "next";
 const API_URL =
   process.env.API_URL ||
   process.env.NEXT_PUBLIC_API_URL ||
-  "http://localhost:3001";
+  "http://localhost:9091";
 
 async function getProviderBySlug(slug: string) {
   try {
     const url = `${API_URL}/api/trpc/marketplace.getProviderBySlug?input=${encodeURIComponent(
-      JSON.stringify({ slug })
+      JSON.stringify({ json: { slug } })
     )}`;
     const res = await fetch(url, { next: { revalidate: 3600 } });
     if (!res.ok) return null;
     const data = await res.json();
-    return data?.result?.data;
+    return data?.result?.data?.json;
   } catch {
     return null;
   }
