@@ -13,6 +13,7 @@ import { agentsRouter } from './agents.router';
 import { escrowRouter } from './escrow.router';
 import { cadastreRouter } from './cadastre.router';
 import { socialRouter } from './social.router';
+import { contentRouter } from './content.router';
 
 /**
  * Root router combining all sub-routers
@@ -38,6 +39,7 @@ export const appRouter = createTRPCRouter({
   escrow: escrowRouter,
   cadastre: cadastreRouter,
   social: socialRouter, // NEW: Social media autoposting
+  content: contentRouter, // NEW: AI content generation
 });
 
 export type AppRouter = typeof appRouter;
