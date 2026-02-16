@@ -1,20 +1,20 @@
 import { z } from 'zod';
-import { router, adminProcedure } from '../trpc';
+import { createTRPCRouter, adminProcedure } from '../trpc';
+import { db } from '@/server/infrastructure/database';
+import { systemSettings } from '@/server/infrastructure/database/schema';
+import { eq } from 'drizzle-orm';
 
-// In-memory settings storage (would be database in production)
-let systemSettings = {
+// ============================================
+// DEFAULT VALUES
+// ============================================
+
+const DEFAULT_SYSTEM_SETTINGS = {
   siteName: 'InmoAI',
   siteUrl: 'https://inmoai.es',
   maintenanceMode: false,
   debugMode: false,
-  scrapingEnabled: true,
-  scrapingInterval: 6,
-  maxListingsPerRun: 500,
-  sources: {
-    idealista: true,
-    fotocasa: true,
-    habitaclia: true,
-  },
+  semanticSearchEnabled: true,
+  cadastreVerificationEnabled: true,
   fraudDetectionEnabled: true,
   fraudThreshold: 70,
   priceAnalysisEnabled: true,
@@ -25,22 +25,68 @@ let systemSettings = {
   alertEmail: 'admin@inmoai.es',
 };
 
-// Feature flags
-let featureFlags = {
+const DEFAULT_FEATURE_FLAGS = {
   voiceSearch: true,
   semanticSearch: true,
   aiChat: false,
   betaFeatures: false,
   darkMode: true,
   multiLanguage: false,
+  socialAutopost: true,
+  cadastreVerification: true,
 };
 
-export const settingsRouter = router({
+// ============================================
+// HELPERS
+// ============================================
+
+async function getSetting<T>(key: string, defaultValue: T): Promise<T> {
+  const setting = await db.query.systemSettings.findFirst({
+    where: eq(systemSettings.key, key),
+  });
+
+  if (!setting) {
+    return defaultValue;
+  }
+
+  return setting.value as T;
+}
+
+async function setSetting<T>(
+  key: string,
+  value: T,
+  userId?: string,
+  description?: string
+): Promise<void> {
+  await db
+    .insert(systemSettings)
+    .values({
+      key,
+      value: value as unknown as Record<string, unknown>,
+      description,
+      updatedBy: userId || null,
+      updatedAt: new Date(),
+    })
+    .onConflictDoUpdate({
+      target: systemSettings.key,
+      set: {
+        value: value as unknown as Record<string, unknown>,
+        updatedBy: userId || null,
+        updatedAt: new Date(),
+      },
+    });
+}
+
+// ============================================
+// ROUTER
+// ============================================
+
+export const settingsRouter = createTRPCRouter({
   /**
    * Get all system settings
    */
-  getAll: adminProcedure.query(() => {
-    return systemSettings;
+  getAll: adminProcedure.query(async () => {
+    return getSetting('system_settings', DEFAULT_SYSTEM_SETTINGS);
   }),
 
   /**
@@ -53,14 +99,8 @@ export const settingsRouter = router({
         siteUrl: z.string().url().optional(),
         maintenanceMode: z.boolean().optional(),
         debugMode: z.boolean().optional(),
-        scrapingEnabled: z.boolean().optional(),
-        scrapingInterval: z.number().min(1).max(24).optional(),
-        maxListingsPerRun: z.number().min(1).max(10000).optional(),
-        sources: z.object({
-          idealista: z.boolean(),
-          fotocasa: z.boolean(),
-          habitaclia: z.boolean(),
-        }).optional(),
+        semanticSearchEnabled: z.boolean().optional(),
+        cadastreVerificationEnabled: z.boolean().optional(),
         fraudDetectionEnabled: z.boolean().optional(),
         fraudThreshold: z.number().min(0).max(100).optional(),
         priceAnalysisEnabled: z.boolean().optional(),
@@ -71,20 +111,29 @@ export const settingsRouter = router({
         alertEmail: z.string().email().optional(),
       })
     )
-    .mutation(({ input }) => {
-      systemSettings = {
-        ...systemSettings,
+    .mutation(async ({ ctx, input }) => {
+      const currentSettings = await getSetting('system_settings', DEFAULT_SYSTEM_SETTINGS);
+
+      const updatedSettings = {
+        ...currentSettings,
         ...input,
-        sources: input.sources || systemSettings.sources,
       };
-      return systemSettings;
+
+      await setSetting(
+        'system_settings',
+        updatedSettings,
+        ctx.session.user.id,
+        'System configuration'
+      );
+
+      return updatedSettings;
     }),
 
   /**
    * Get feature flags
    */
-  getFeatureFlags: adminProcedure.query(() => {
-    return featureFlags;
+  getFeatureFlags: adminProcedure.query(async () => {
+    return getSetting('feature_flags', DEFAULT_FEATURE_FLAGS);
   }),
 
   /**
@@ -99,30 +148,51 @@ export const settingsRouter = router({
         betaFeatures: z.boolean().optional(),
         darkMode: z.boolean().optional(),
         multiLanguage: z.boolean().optional(),
+        socialAutopost: z.boolean().optional(),
+        cadastreVerification: z.boolean().optional(),
       })
     )
-    .mutation(({ input }) => {
-      featureFlags = {
-        ...featureFlags,
+    .mutation(async ({ ctx, input }) => {
+      const currentFlags = await getSetting('feature_flags', DEFAULT_FEATURE_FLAGS);
+
+      const updatedFlags = {
+        ...currentFlags,
         ...input,
       };
-      return featureFlags;
+
+      await setSetting(
+        'feature_flags',
+        updatedFlags,
+        ctx.session.user.id,
+        'Feature flags'
+      );
+
+      return updatedFlags;
     }),
 
   /**
    * Get system health status
    */
-  getHealth: adminProcedure.query(() => {
+  getHealth: adminProcedure.query(async () => {
+    // Check database connectivity
+    let dbStatus = 'disconnected';
+    try {
+      await db.query.systemSettings.findFirst();
+      dbStatus = 'connected';
+    } catch {
+      dbStatus = 'error';
+    }
+
     return {
-      status: 'healthy',
+      status: dbStatus === 'connected' ? 'healthy' : 'degraded',
       uptime: process.uptime(),
       memory: process.memoryUsage(),
-      version: '0.2.0',
+      version: '0.3.0',
       services: {
-        database: 'connected',
-        redis: 'connected',
+        database: dbStatus,
+        redis: 'not_configured',
         stripe: 'connected',
-        gemini: 'connected',
+        anthropic: 'connected',
       },
     };
   }),
@@ -130,16 +200,46 @@ export const settingsRouter = router({
   /**
    * Clear system cache
    */
-  clearCache: adminProcedure.mutation(() => {
-    // In production, this would clear Redis cache
-    return { success: true, message: 'Cache cleared successfully' };
+  clearCache: adminProcedure.mutation(async () => {
+    // TODO: Integrate with Redis when available
+    return {
+      success: true,
+      message: 'Cache cleared successfully',
+      timestamp: new Date().toISOString(),
+    };
   }),
 
   /**
    * Trigger search reindex
    */
-  reindexSearch: adminProcedure.mutation(() => {
-    // In production, this would trigger a search reindex job
-    return { success: true, message: 'Search reindex started' };
+  reindexSearch: adminProcedure.mutation(async () => {
+    // TODO: Trigger actual search reindex job
+    return {
+      success: true,
+      message: 'Search reindex queued',
+      timestamp: new Date().toISOString(),
+    };
   }),
+
+  /**
+   * Get all settings history (audit log)
+   */
+  getHistory: adminProcedure
+    .input(z.object({ key: z.string().optional() }))
+    .query(async ({ input }) => {
+      // Get all settings with their last update info
+      const conditions = input.key ? eq(systemSettings.key, input.key) : undefined;
+
+      const settings = await db.query.systemSettings.findMany({
+        where: conditions,
+        orderBy: (s, { desc }) => [desc(s.updatedAt)],
+      });
+
+      return settings.map((s) => ({
+        key: s.key,
+        updatedAt: s.updatedAt,
+        updatedBy: s.updatedBy,
+        description: s.description,
+      }));
+    }),
 });

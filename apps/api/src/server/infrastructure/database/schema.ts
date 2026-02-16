@@ -1979,3 +1979,130 @@ export type NewAIWorkflow = typeof aiWorkflows.$inferInsert;
 
 export type WorkflowExecution = typeof workflowExecutions.$inferSelect;
 export type NewWorkflowExecution = typeof workflowExecutions.$inferInsert;
+
+// ============================================
+// SYSTEM SETTINGS
+// ============================================
+
+/**
+ * System settings - Key-value store for app configuration
+ */
+export const systemSettings = pgTable('system_settings', {
+  key: varchar('key', { length: 100 }).primaryKey(),
+  value: jsonb('value').notNull(),
+  description: text('description'),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
+  updatedBy: uuid('updated_by').references(() => users.id),
+});
+
+export type SystemSetting = typeof systemSettings.$inferSelect;
+export type NewSystemSetting = typeof systemSettings.$inferInsert;
+
+// ============================================
+// ACTIVITY LOG
+// ============================================
+
+export const activityTypeEnum = pgEnum('activity_type', [
+  'user_registered',
+  'user_login',
+  'listing_created',
+  'listing_updated',
+  'listing_deleted',
+  'lead_received',
+  'payment_received',
+  'subscription_started',
+  'subscription_cancelled',
+  'social_post_published',
+  'cadastre_verified',
+  'system_event',
+]);
+
+/**
+ * Activity Log - System-wide activity tracking
+ */
+export const activityLog = pgTable(
+  'activity_log',
+  {
+    id: uuid('id').defaultRandom().primaryKey(),
+    type: activityTypeEnum('type').notNull(),
+    message: varchar('message', { length: 500 }).notNull(),
+    details: text('details'),
+    metadata: jsonb('metadata'),
+
+    // Actor
+    userId: uuid('user_id').references(() => users.id),
+
+    // Related entities
+    listingId: uuid('listing_id').references(() => listings.id),
+    leadId: uuid('lead_id').references(() => leads.id),
+
+    createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+  },
+  (table) => [
+    index('idx_activity_type').on(table.type),
+    index('idx_activity_user').on(table.userId),
+    index('idx_activity_created').on(table.createdAt),
+  ]
+);
+
+export type ActivityLogEntry = typeof activityLog.$inferSelect;
+export type NewActivityLogEntry = typeof activityLog.$inferInsert;
+
+// ============================================
+// SYSTEM ALERTS
+// ============================================
+
+export const alertSeverityEnum = pgEnum('alert_severity', ['low', 'medium', 'high', 'critical']);
+
+/**
+ * System Alerts - Admin alerts and notifications
+ */
+export const systemAlerts = pgTable(
+  'system_alerts',
+  {
+    id: uuid('id').defaultRandom().primaryKey(),
+    severity: alertSeverityEnum('severity').notNull(),
+    message: varchar('message', { length: 500 }).notNull(),
+    details: text('details'),
+    metadata: jsonb('metadata'),
+
+    // Resolution
+    resolved: boolean('resolved').default(false).notNull(),
+    resolvedAt: timestamp('resolved_at', { withTimezone: true }),
+    resolvedBy: uuid('resolved_by').references(() => users.id),
+
+    createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+  },
+  (table) => [
+    index('idx_alerts_severity').on(table.severity),
+    index('idx_alerts_resolved').on(table.resolved),
+    index('idx_alerts_created').on(table.createdAt),
+  ]
+);
+
+export type SystemAlert = typeof systemAlerts.$inferSelect;
+export type NewSystemAlert = typeof systemAlerts.$inferInsert;
+
+// Relations for activity log
+export const activityLogRelations = relations(activityLog, ({ one }) => ({
+  user: one(users, {
+    fields: [activityLog.userId],
+    references: [users.id],
+  }),
+  listing: one(listings, {
+    fields: [activityLog.listingId],
+    references: [listings.id],
+  }),
+  lead: one(leads, {
+    fields: [activityLog.leadId],
+    references: [leads.id],
+  }),
+}));
+
+// Relations for system alerts
+export const systemAlertsRelations = relations(systemAlerts, ({ one }) => ({
+  resolver: one(users, {
+    fields: [systemAlerts.resolvedBy],
+    references: [users.id],
+  }),
+}));

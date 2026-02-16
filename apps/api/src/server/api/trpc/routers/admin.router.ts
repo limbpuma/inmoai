@@ -1,10 +1,15 @@
 import { z } from 'zod';
-import { router, adminProcedure } from '../trpc';
+import { createTRPCRouter, adminProcedure } from '../trpc';
 import { db } from '@/server/infrastructure/database';
-import { users, listings } from '@/server/infrastructure/database/schema';
+import {
+  users,
+  listings,
+  activityLog,
+  systemAlerts,
+} from '@/server/infrastructure/database/schema';
 import { count, sql, desc, eq, gte, and } from 'drizzle-orm';
 
-export const adminRouter = router({
+export const adminRouter = createTRPCRouter({
   /**
    * Get dashboard metrics
    */
@@ -141,88 +146,179 @@ export const adminRouter = router({
     .input(
       z.object({
         limit: z.number().min(1).max(100).default(20),
-        type: z.enum(['all', 'user', 'listing', 'payment', 'system']).optional(),
+        type: z.enum([
+          'all',
+          'user_registered',
+          'user_login',
+          'listing_created',
+          'listing_updated',
+          'lead_received',
+          'payment_received',
+          'social_post_published',
+          'system_event',
+        ]).optional(),
       }).optional()
     )
     .query(async ({ input }) => {
-      // In a real implementation, this would query an activity_logs table
-      // For now, return mock data
-      const mockActivity = [
-        {
-          id: '1',
-          type: 'user',
-          message: 'Nuevo usuario registrado',
-          details: 'juan@example.com',
-          timestamp: new Date().toISOString(),
-        },
-        {
-          id: '2',
-          type: 'listing',
-          message: '45 nuevos listings importados',
-          details: 'Source: Idealista',
-          timestamp: new Date(Date.now() - 3600000).toISOString(),
-        },
-        {
-          id: '3',
-          type: 'payment',
-          message: 'Nueva suscripcion Pro',
-          details: 'maria@example.com',
-          timestamp: new Date(Date.now() - 7200000).toISOString(),
-        },
-        {
-          id: '4',
-          type: 'system',
-          message: 'Scraping completado',
-          details: 'Fotocasa: 234 listings',
-          timestamp: new Date(Date.now() - 10800000).toISOString(),
-        },
-      ];
+      const limit = input?.limit || 20;
 
+      // Build conditions
+      const conditions = [];
       if (input?.type && input.type !== 'all') {
-        return mockActivity.filter((a) => a.type === input.type);
+        conditions.push(eq(activityLog.type, input.type));
       }
 
-      return mockActivity;
+      const activities = await db.query.activityLog.findMany({
+        where: conditions.length > 0 ? and(...conditions) : undefined,
+        orderBy: (log, { desc }) => [desc(log.createdAt)],
+        limit,
+        with: {
+          user: {
+            columns: {
+              id: true,
+              name: true,
+              email: true,
+            },
+          },
+        },
+      });
+
+      return activities.map((a) => ({
+        id: a.id,
+        type: a.type,
+        message: a.message,
+        details: a.details,
+        metadata: a.metadata,
+        userId: a.userId,
+        userName: a.user?.name || null,
+        timestamp: a.createdAt.toISOString(),
+      }));
     }),
 
   /**
    * Get system alerts
    */
-  getAlerts: adminProcedure.query(async () => {
-    // In a real implementation, this would query an alerts table
-    // For now, return mock data
-    return [
-      {
-        id: '1',
-        severity: 'high' as const,
-        message: '3 listings con score de fraude > 90%',
-        createdAt: new Date().toISOString(),
-        resolved: false,
-      },
-      {
-        id: '2',
-        severity: 'medium' as const,
-        message: 'Scraping de Fotocasa fallo 2 veces',
-        createdAt: new Date(Date.now() - 3600000).toISOString(),
-        resolved: false,
-      },
-      {
-        id: '3',
-        severity: 'low' as const,
-        message: '5 usuarios con sesion expirada',
-        createdAt: new Date(Date.now() - 7200000).toISOString(),
-        resolved: false,
-      },
-    ];
-  }),
+  getAlerts: adminProcedure
+    .input(
+      z.object({
+        resolved: z.boolean().optional(),
+        severity: z.enum(['low', 'medium', 'high', 'critical']).optional(),
+        limit: z.number().min(1).max(100).default(20),
+      }).optional()
+    )
+    .query(async ({ input }) => {
+      const conditions = [];
+
+      if (input?.resolved !== undefined) {
+        conditions.push(eq(systemAlerts.resolved, input.resolved));
+      }
+
+      if (input?.severity) {
+        conditions.push(eq(systemAlerts.severity, input.severity));
+      }
+
+      const alerts = await db.query.systemAlerts.findMany({
+        where: conditions.length > 0 ? and(...conditions) : undefined,
+        orderBy: (alert, { desc }) => [desc(alert.createdAt)],
+        limit: input?.limit || 20,
+      });
+
+      return alerts.map((a) => ({
+        id: a.id,
+        severity: a.severity,
+        message: a.message,
+        details: a.details,
+        createdAt: a.createdAt.toISOString(),
+        resolved: a.resolved,
+        resolvedAt: a.resolvedAt?.toISOString() || null,
+      }));
+    }),
 
   /**
    * Resolve an alert
    */
   resolveAlert: adminProcedure
-    .input(z.object({ alertId: z.string() }))
-    .mutation(async ({ input }) => {
-      // In a real implementation, this would update the alert in the database
+    .input(z.object({ alertId: z.string().uuid() }))
+    .mutation(async ({ ctx, input }) => {
+      await db
+        .update(systemAlerts)
+        .set({
+          resolved: true,
+          resolvedAt: new Date(),
+          resolvedBy: ctx.session.user.id,
+        })
+        .where(eq(systemAlerts.id, input.alertId));
+
       return { success: true, alertId: input.alertId };
+    }),
+
+  /**
+   * Create a new alert (for system use)
+   */
+  createAlert: adminProcedure
+    .input(
+      z.object({
+        severity: z.enum(['low', 'medium', 'high', 'critical']),
+        message: z.string().min(1).max(500),
+        details: z.string().optional(),
+        metadata: z.record(z.unknown()).optional(),
+      })
+    )
+    .mutation(async ({ input }) => {
+      const [alert] = await db
+        .insert(systemAlerts)
+        .values({
+          severity: input.severity,
+          message: input.message,
+          details: input.details || null,
+          metadata: input.metadata || null,
+        })
+        .returning({ id: systemAlerts.id });
+
+      return { success: true, alertId: alert.id };
+    }),
+
+  /**
+   * Log an activity (for system use)
+   */
+  logActivity: adminProcedure
+    .input(
+      z.object({
+        type: z.enum([
+          'user_registered',
+          'user_login',
+          'listing_created',
+          'listing_updated',
+          'listing_deleted',
+          'lead_received',
+          'payment_received',
+          'subscription_started',
+          'subscription_cancelled',
+          'social_post_published',
+          'cadastre_verified',
+          'system_event',
+        ]),
+        message: z.string().min(1).max(500),
+        details: z.string().optional(),
+        metadata: z.record(z.unknown()).optional(),
+        listingId: z.string().uuid().optional(),
+        leadId: z.string().uuid().optional(),
+      })
+    )
+    .mutation(async ({ ctx, input }) => {
+      const [entry] = await db
+        .insert(activityLog)
+        .values({
+          type: input.type,
+          message: input.message,
+          details: input.details || null,
+          metadata: input.metadata || null,
+          userId: ctx.session.user.id,
+          listingId: input.listingId || null,
+          leadId: input.leadId || null,
+        })
+        .returning({ id: activityLog.id });
+
+      return { success: true, activityId: entry.id };
     }),
 });
