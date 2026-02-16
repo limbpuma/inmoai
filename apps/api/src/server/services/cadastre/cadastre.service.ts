@@ -11,9 +11,73 @@
  * - Property details by cadastral reference
  * - Owner verification (limited - requires official agreement)
  * - Cadastral value estimation
+ * - Surface discrepancy detection (listing vs cadastral)
  */
 
 import { XMLParser } from 'fast-xml-parser';
+
+// ============================================================================
+// CACHING - LRU Cache con TTL para evitar rate limits del Catastro
+// ============================================================================
+interface CacheEntry<T> {
+  data: T;
+  timestamp: number;
+}
+
+const CACHE_TTL_MS = 24 * 60 * 60 * 1000; // 24 horas - datos catastrales cambian poco
+const CACHE_MAX_SIZE = 500;
+
+const propertyCache = new Map<string, CacheEntry<CadastralProperty>>();
+const searchCache = new Map<string, CacheEntry<CadastralSearchResult>>();
+
+function getCached<T>(cache: Map<string, CacheEntry<T>>, key: string): T | null {
+  const entry = cache.get(key);
+  if (!entry) return null;
+  if (Date.now() - entry.timestamp > CACHE_TTL_MS) {
+    cache.delete(key);
+    return null;
+  }
+  return entry.data;
+}
+
+function setCache<T>(cache: Map<string, CacheEntry<T>>, key: string, data: T): void {
+  // LRU: eliminar entrada mas antigua si excede tamanio
+  if (cache.size >= CACHE_MAX_SIZE) {
+    const oldestKey = cache.keys().next().value;
+    if (oldestKey) cache.delete(oldestKey);
+  }
+  cache.set(key, { data, timestamp: Date.now() });
+}
+
+// ============================================================================
+// FETCH ROBUSTO - Timeout + Retry con exponential backoff
+// ============================================================================
+const FETCH_TIMEOUT_MS = 10000; // 10 segundos
+const MAX_RETRIES = 3;
+
+async function fetchWithRetry(url: string, retries = MAX_RETRIES): Promise<string> {
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
+
+  try {
+    const response = await fetch(url, { signal: controller.signal });
+    clearTimeout(timeoutId);
+
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+    }
+    return await response.text();
+  } catch (error) {
+    clearTimeout(timeoutId);
+
+    if (retries > 0 && !(error instanceof Error && error.name === 'AbortError')) {
+      const delay = Math.pow(2, MAX_RETRIES - retries) * 500; // 500ms, 1s, 2s
+      await new Promise(resolve => setTimeout(resolve, delay));
+      return fetchWithRetry(url, retries - 1);
+    }
+    throw error;
+  }
+}
 
 // Cadastre API endpoints (official, free)
 const CADASTRE_API_BASE = 'https://ovc.catastro.meh.es/ovcservweb/OVCSWLocalizacionRC';
@@ -67,6 +131,54 @@ export interface CadastralVerification {
   error?: string;
 }
 
+// ============================================================================
+// DISCREPANCIA DE SUPERFICIE - Deteccion de fraude/errores
+// ============================================================================
+export interface SurfaceDiscrepancy {
+  hasMajorDiscrepancy: boolean;
+  listingSurface: number;
+  cadastralSurface: number;
+  differenceM2: number;
+  differencePercent: number;
+  severity: 'none' | 'minor' | 'significant' | 'critical';
+  warning?: string;
+}
+
+export function detectSurfaceDiscrepancy(
+  listingSurfaceM2: number,
+  cadastralSurfaceM2: number
+): SurfaceDiscrepancy {
+  const diff = listingSurfaceM2 - cadastralSurfaceM2;
+  const diffPercent = cadastralSurfaceM2 > 0
+    ? (diff / cadastralSurfaceM2) * 100
+    : 0;
+  const absDiffPercent = Math.abs(diffPercent);
+
+  let severity: SurfaceDiscrepancy['severity'] = 'none';
+  let warning: string | undefined;
+
+  if (absDiffPercent > 20) {
+    severity = 'critical';
+    warning = `Discrepancia critica: ${Math.abs(diff).toFixed(0)}m2 (${absDiffPercent.toFixed(1)}%) entre superficie anunciada y catastral. Posible fraude o error grave.`;
+  } else if (absDiffPercent > 10) {
+    severity = 'significant';
+    warning = `Discrepancia significativa: ${Math.abs(diff).toFixed(0)}m2. Verificar con vendedor.`;
+  } else if (absDiffPercent > 5) {
+    severity = 'minor';
+    warning = `Discrepancia menor: diferencia de ${Math.abs(diff).toFixed(0)}m2.`;
+  }
+
+  return {
+    hasMajorDiscrepancy: severity === 'critical' || severity === 'significant',
+    listingSurface: listingSurfaceM2,
+    cadastralSurface: cadastralSurfaceM2,
+    differenceM2: diff,
+    differencePercent: diffPercent,
+    severity,
+    warning,
+  };
+}
+
 // XML Parser configuration
 const xmlParser = new XMLParser({
   ignoreAttributes: false,
@@ -88,8 +200,12 @@ export async function searchByAddress(
   street: string,
   number: string
 ): Promise<CadastralSearchResult> {
+  // Cache key basado en parametros normalizados
+  const cacheKey = `search:${province.toUpperCase()}:${municipality.toUpperCase()}:${street.toUpperCase()}:${number}`;
+  const cached = getCached(searchCache, cacheKey);
+  if (cached) return cached;
+
   try {
-    // Use ConsultaNumero endpoint which returns actual property data
     const url = new URL(`${CADASTRE_API_BASE}/OVCCallejero.asmx/ConsultaNumero`);
     url.searchParams.set('Provincia', province.toUpperCase());
     url.searchParams.set('Municipio', municipality.toUpperCase());
@@ -101,22 +217,25 @@ export async function searchByAddress(
     url.searchParams.set('Planta', '');
     url.searchParams.set('Puerta', '');
 
-    const response = await fetch(url.toString());
-    const xmlText = await response.text();
+    const xmlText = await fetchWithRetry(url.toString());
     const data = xmlParser.parse(xmlText);
-
-    // Parse consulta_numerero response
     const results = parseConsultaNumeroResponse(data);
 
-    return {
+    const result: CadastralSearchResult = {
       found: results.length > 0,
       properties: results,
     };
+
+    setCache(searchCache, cacheKey, result);
+    return result;
   } catch (error) {
+    const errorMsg = error instanceof Error ? error.message : 'Unknown error';
+    // Log estructurado para monitoring
+    logCadastreError('searchByAddress', { province, municipality, street, number }, errorMsg);
     return {
       found: false,
       properties: [],
-      error: error instanceof Error ? error.message : 'Unknown error',
+      error: errorMsg,
     };
   }
 }
@@ -185,24 +304,33 @@ function parseConsultaNumeroResponse(data: unknown): CadastralProperty[] {
 export async function getPropertyByReference(
   cadastralRef: string
 ): Promise<CadastralProperty | null> {
+  const normalizedRef = cadastralRef.replace(/\s/g, '').toUpperCase();
+
+  // Check cache primero
+  const cached = getCached(propertyCache, normalizedRef);
+  if (cached) return cached;
+
   try {
-    // Validate cadastral reference format
-    if (!isValidCadastralReference(cadastralRef)) {
+    if (!isValidCadastralReference(normalizedRef)) {
       throw new Error('Invalid cadastral reference format');
     }
 
     const url = new URL(`${CADASTRE_API_BASE}/OVCCallejero.asmx/Consulta_DNPRC`);
     url.searchParams.set('Provincia', '');
     url.searchParams.set('Municipio', '');
-    url.searchParams.set('RC', cadastralRef);
+    url.searchParams.set('RC', normalizedRef);
 
-    const response = await fetch(url.toString());
-    const xmlText = await response.text();
+    const xmlText = await fetchWithRetry(url.toString());
     const data = xmlParser.parse(xmlText);
+    const property = parsePropertyDetails(data, normalizedRef);
 
-    return parsePropertyDetails(data, cadastralRef);
+    if (property) {
+      setCache(propertyCache, normalizedRef, property);
+    }
+    return property;
   } catch (error) {
-    console.error('Error fetching cadastral data:', error);
+    const errorMsg = error instanceof Error ? error.message : 'Unknown error';
+    logCadastreError('getPropertyByReference', { cadastralRef: normalizedRef }, errorMsg);
     return null;
   }
 }
@@ -471,11 +599,140 @@ function compareAddresses(
   return streetMatch && numberMatch && postalMatch;
 }
 
+// ============================================================================
+// LOGGING ESTRUCTURADO
+// ============================================================================
+function logCadastreError(
+  operation: string,
+  params: Record<string, unknown>,
+  error: string
+): void {
+  // Logging estructurado para monitoring (Datadog, CloudWatch, etc.)
+  const logEntry = {
+    service: 'cadastre',
+    operation,
+    params,
+    error,
+    timestamp: new Date().toISOString(),
+  };
+  // En produccion esto iria a un sistema de logging externo
+  if (process.env.NODE_ENV !== 'test') {
+    process.stderr.write(JSON.stringify(logEntry) + '\n');
+  }
+}
+
+// ============================================================================
+// VERIFICACION CRUZADA CON LISTING
+// ============================================================================
+export interface CrossVerificationResult extends CadastralVerification {
+  surfaceDiscrepancy?: SurfaceDiscrepancy;
+  yearDiscrepancy?: {
+    listingYear?: number;
+    cadastralYear?: number;
+    matches: boolean;
+  };
+  riskScore: number; // 0-100, donde 100 = alto riesgo de fraude
+  riskFactors: string[];
+}
+
+export async function crossVerifyWithListing(
+  listingData: {
+    address: {
+      street: string;
+      number: string;
+      postalCode?: string;
+      city: string;
+      province: string;
+    };
+    surfaceM2?: number;
+    constructionYear?: number;
+    cadastralReference?: string;
+  }
+): Promise<CrossVerificationResult> {
+  const baseVerification = await verifyProperty(
+    listingData.address,
+    listingData.cadastralReference
+  );
+
+  const riskFactors: string[] = [];
+  let riskScore = 0;
+
+  // Surface discrepancy check
+  let surfaceDiscrepancy: SurfaceDiscrepancy | undefined;
+  if (listingData.surfaceM2 && baseVerification.property?.surface.built) {
+    surfaceDiscrepancy = detectSurfaceDiscrepancy(
+      listingData.surfaceM2,
+      baseVerification.property.surface.built
+    );
+    if (surfaceDiscrepancy.severity === 'critical') {
+      riskScore += 40;
+      riskFactors.push(surfaceDiscrepancy.warning || 'Discrepancia critica de superficie');
+    } else if (surfaceDiscrepancy.severity === 'significant') {
+      riskScore += 20;
+      riskFactors.push(surfaceDiscrepancy.warning || 'Discrepancia significativa');
+    }
+  }
+
+  // Year discrepancy check
+  let yearDiscrepancy: CrossVerificationResult['yearDiscrepancy'];
+  if (listingData.constructionYear && baseVerification.property?.constructionYear) {
+    const matches = Math.abs(listingData.constructionYear - baseVerification.property.constructionYear) <= 2;
+    yearDiscrepancy = {
+      listingYear: listingData.constructionYear,
+      cadastralYear: baseVerification.property.constructionYear,
+      matches,
+    };
+    if (!matches) {
+      riskScore += 15;
+      riskFactors.push(`Anno construccion no coincide: anuncio ${listingData.constructionYear}, catastro ${baseVerification.property.constructionYear}`);
+    }
+  }
+
+  // Address mismatch
+  if (!baseVerification.matchesAddress) {
+    riskScore += 25;
+    riskFactors.push('Direccion del anuncio no coincide con Catastro');
+  }
+
+  // Property not found
+  if (!baseVerification.verified) {
+    riskScore += 30;
+    riskFactors.push('Propiedad no encontrada en Catastro');
+  }
+
+  return {
+    ...baseVerification,
+    surfaceDiscrepancy,
+    yearDiscrepancy,
+    riskScore: Math.min(riskScore, 100),
+    riskFactors,
+  };
+}
+
+// ============================================================================
+// CACHE STATS (para monitoring)
+// ============================================================================
+export function getCacheStats(): { properties: number; searches: number } {
+  return {
+    properties: propertyCache.size,
+    searches: searchCache.size,
+  };
+}
+
+export function clearCache(): void {
+  propertyCache.clear();
+  searchCache.clear();
+}
+
 // Export service object
 export const cadastreService = {
   searchByAddress,
   getPropertyByReference,
   getReferenceByCoordenates,
   verifyProperty,
+  crossVerifyWithListing,
+  detectSurfaceDiscrepancy,
   isValidCadastralReference,
+  getCacheStats,
+  clearCache,
 };
