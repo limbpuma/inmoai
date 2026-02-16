@@ -20,11 +20,18 @@ import { useRecentListings } from "@/hooks/useSearch";
 import { useSemanticSearchFlow } from "@/hooks/useSemanticSearchFlow";
 import { Skeleton } from "@/components/ui/skeleton";
 
-function SearchPageContent({ initialQuery }: { initialQuery: string }) {
+function SearchPageContent({
+  initialQuery,
+  initialOperationType = "sale"
+}: {
+  initialQuery: string;
+  initialOperationType?: "sale" | "rent";
+}) {
 
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
   const [sortBy, setSortBy] = useState("relevance");
   const [filtersOpen, setFiltersOpen] = useState(false);
+  const [operationType, setOperationType] = useState<"sale" | "rent">(initialOperationType);
 
   // Semantic search flow
   const {
@@ -41,7 +48,8 @@ function SearchPageContent({ initialQuery }: { initialQuery: string }) {
   // Fallback to recent listings when no search query
   const { data: recentListings, isLoading: isRecentLoading } = useRecentListings(
     parsedFilters?.city ?? "Madrid",
-    20
+    20,
+    operationType
   );
 
   // Run initial search if query param exists
@@ -145,7 +153,7 @@ function SearchPageContent({ initialQuery }: { initialQuery: string }) {
           {/* Desktop Filters Sidebar */}
           <aside className="hidden lg:block w-72 flex-shrink-0">
             <div className="sticky top-4">
-              <FiltersSidebar initialFilters={parsedFilters ?? undefined} />
+              <FiltersSidebar initialFilters={{ ...parsedFilters, operationType }} />
             </div>
           </aside>
 
@@ -173,7 +181,7 @@ function SearchPageContent({ initialQuery }: { initialQuery: string }) {
                     <div className="p-6">
                       <FiltersSidebar
                         onClose={() => setFiltersOpen(false)}
-                        initialFilters={parsedFilters ?? undefined}
+                        initialFilters={{ ...parsedFilters, operationType }}
                       />
                     </div>
                   </SheetContent>
@@ -270,7 +278,9 @@ function SearchPageContent({ initialQuery }: { initialQuery: string }) {
 function SearchPageWrapper() {
   const searchParams = useSearchParams();
   const initialQuery = searchParams.get("q") ?? "";
-  return <SearchPageContent initialQuery={initialQuery} />;
+  const mode = searchParams.get("mode"); // 'rent' or null (sale)
+  const initialOperationType = mode === "rent" ? "rent" : "sale";
+  return <SearchPageContent initialQuery={initialQuery} initialOperationType={initialOperationType} />;
 }
 
 export default function SearchPage() {

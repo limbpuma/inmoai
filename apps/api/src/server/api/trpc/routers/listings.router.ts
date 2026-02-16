@@ -127,6 +127,7 @@ export const listingsRouter = createTRPCRouter({
       z.object({
         limit: z.number().min(1).max(50).default(12),
         city: z.string().optional(),
+        operationType: z.enum(['sale', 'rent']).optional(),
       })
     )
     .query(async ({ input }) => {
@@ -134,6 +135,10 @@ export const listingsRouter = createTRPCRouter({
 
       if (input.city) {
         conditions.push(eq(listings.city, input.city));
+      }
+
+      if (input.operationType) {
+        conditions.push(eq(listings.operationType, input.operationType));
       }
 
       const results = await db

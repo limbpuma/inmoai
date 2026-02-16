@@ -549,7 +549,7 @@ export const listingsRelations = relations(listings, ({ one, many }) => ({
   favorites: many(userFavorites),
   leads: many(leads),
   serviceLeads: many(serviceLeads),
-  portalPosts: many(portalPosts),
+  socialPosts: many(socialPosts),
   notifications: many(notifications),
 }));
 
@@ -575,7 +575,7 @@ export const usersRelations = relations(users, ({ many }) => ({
   leads: many(leads),
   apiKeys: many(apiKeys),
   serviceProviders: many(serviceProviders),
-  portalConnections: many(portalConnections),
+  socialConnections: many(socialConnections),
   notifications: many(notifications),
 }));
 
@@ -1054,279 +1054,17 @@ export type ProviderTier = (typeof providerTierEnum.enumValues)[number];
 export type ServiceLeadStatus = (typeof serviceLeadStatusEnum.enumValues)[number];
 
 // ============================================
-// AUTOPOSTING SYSTEM - ENUMS
+// NOTIFICATIONS - ENUMS
 // ============================================
-
-export const portalEnum = pgEnum('portal', [
-  'idealista',
-  'fotocasa',
-  'habitaclia',
-  'pisos',
-  'milanuncios',
-]);
-
-export const portalConnectionStatusEnum = pgEnum('portal_connection_status', [
-  'active',
-  'expired',
-  'revoked',
-  'error',
-]);
-
-export const portalPostStatusEnum = pgEnum('portal_post_status', [
-  'draft',
-  'pending',
-  'publishing',
-  'published',
-  'failed',
-  'updating',
-  'deleting',
-  'deleted',
-  'paused',
-  'rejected',
-]);
-
-export const portalSyncJobTypeEnum = pgEnum('portal_sync_job_type', [
-  'publish',
-  'update',
-  'delete',
-  'sync_leads',
-  'sync_analytics',
-  'refresh_token',
-]);
-
-export const portalSyncJobStatusEnum = pgEnum('portal_sync_job_status', [
-  'pending',
-  'processing',
-  'completed',
-  'failed',
-  'cancelled',
-]);
 
 export const notificationTypeEnum = pgEnum('notification_type', [
-  'portal_published',
-  'portal_failed',
-  'portal_lead',
-  'portal_expired',
-  'portal_stats',
+  'social_published',
+  'social_failed',
+  'social_lead',
+  'content_generated',
+  'workflow_completed',
   'system',
 ]);
-
-// ============================================
-// AUTOPOSTING SYSTEM - TABLES
-// ============================================
-
-/**
- * Portal Connections - OAuth connections to real estate portals
- * Stores encrypted tokens and connection status
- */
-export const portalConnections = pgTable('portal_connections', {
-  id: uuid('id').defaultRandom().primaryKey(),
-  userId: uuid('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
-  portal: portalEnum('portal').notNull(),
-
-  // OAuth tokens (encrypted at application level)
-  accessToken: text('access_token').notNull(),
-  refreshToken: text('refresh_token'),
-  tokenExpiresAt: timestamp('token_expires_at', { withTimezone: true }),
-
-  // Portal-specific account info
-  portalAccountId: varchar('portal_account_id', { length: 255 }),
-  portalAccountEmail: varchar('portal_account_email', { length: 255 }),
-  portalAccountName: varchar('portal_account_name', { length: 255 }),
-
-  // Connection settings
-  status: portalConnectionStatusEnum('status').default('active').notNull(),
-  autoSync: boolean('auto_sync').default(true),
-  syncInterval: integer('sync_interval_hours').default(6),
-  lastSyncAt: timestamp('last_sync_at', { withTimezone: true }),
-  lastErrorMessage: text('last_error_message'),
-  lastErrorAt: timestamp('last_error_at', { withTimezone: true }),
-
-  // Metadata
-  metadata: jsonb('metadata').$type<{
-    scopes?: string[];
-    capabilities?: string[];
-    quotas?: {
-      dailyPosts?: number;
-      monthlyPosts?: number;
-      usedToday?: number;
-      usedThisMonth?: number;
-    };
-  }>(),
-
-  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
-  updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
-}, (table) => ({
-  userIdx: index('idx_portal_connections_user').on(table.userId),
-  portalIdx: index('idx_portal_connections_portal').on(table.portal),
-  statusIdx: index('idx_portal_connections_status').on(table.status),
-  uniqueUserPortal: uniqueIndex('idx_portal_connections_unique').on(table.userId, table.portal),
-}));
-
-/**
- * Portal Posts - Published listings on external portals
- * Tracks the state of each listing on each portal
- */
-export const portalPosts = pgTable('portal_posts', {
-  id: uuid('id').defaultRandom().primaryKey(),
-  connectionId: uuid('connection_id').notNull().references(() => portalConnections.id, { onDelete: 'cascade' }),
-  listingId: uuid('listing_id').notNull().references(() => listings.id, { onDelete: 'cascade' }),
-  portal: portalEnum('portal').notNull(),
-
-  // Portal identifiers
-  portalListingId: varchar('portal_listing_id', { length: 255 }),
-  portalUrl: varchar('portal_url', { length: 1000 }),
-
-  // Status tracking
-  status: portalPostStatusEnum('status').default('draft').notNull(),
-  lastStatusChange: timestamp('last_status_change', { withTimezone: true }).defaultNow(),
-  errorMessage: text('error_message'),
-  errorCode: varchar('error_code', { length: 50 }),
-  retryCount: integer('retry_count').default(0),
-  nextRetryAt: timestamp('next_retry_at', { withTimezone: true }),
-
-  // Content sync tracking
-  lastSyncedPrice: decimal('last_synced_price', { precision: 12, scale: 2 }),
-  lastSyncedAt: timestamp('last_synced_at', { withTimezone: true }),
-  contentHash: varchar('content_hash', { length: 64 }), // For detecting changes
-
-  // Publication dates
-  publishedAt: timestamp('published_at', { withTimezone: true }),
-  expiresAt: timestamp('expires_at', { withTimezone: true }),
-  unpublishedAt: timestamp('unpublished_at', { withTimezone: true }),
-
-  // Metadata
-  metadata: jsonb('metadata').$type<{
-    publishOptions?: {
-      featured?: boolean;
-      highlighted?: boolean;
-      urgent?: boolean;
-    };
-    portalResponse?: Record<string, unknown>;
-  }>(),
-
-  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
-  updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
-}, (table) => ({
-  connectionIdx: index('idx_portal_posts_connection').on(table.connectionId),
-  listingIdx: index('idx_portal_posts_listing').on(table.listingId),
-  portalIdx: index('idx_portal_posts_portal').on(table.portal),
-  statusIdx: index('idx_portal_posts_status').on(table.status),
-  uniqueListingPortal: uniqueIndex('idx_portal_posts_unique').on(table.listingId, table.portal),
-}));
-
-/**
- * Portal Sync Jobs - BullMQ job tracking
- * Stores job state for async operations
- */
-export const portalSyncJobs = pgTable('portal_sync_jobs', {
-  id: uuid('id').defaultRandom().primaryKey(),
-  connectionId: uuid('connection_id').references(() => portalConnections.id, { onDelete: 'set null' }),
-  postId: uuid('post_id').references(() => portalPosts.id, { onDelete: 'set null' }),
-
-  jobType: portalSyncJobTypeEnum('job_type').notNull(),
-  status: portalSyncJobStatusEnum('status').default('pending').notNull(),
-  priority: integer('priority').default(0),
-
-  // BullMQ integration
-  bullmqJobId: varchar('bullmq_job_id', { length: 255 }),
-  queueName: varchar('queue_name', { length: 100 }),
-
-  // Job data
-  payload: jsonb('payload').$type<Record<string, unknown>>(),
-  result: jsonb('result').$type<Record<string, unknown>>(),
-  errorMessage: text('error_message'),
-
-  // Timing
-  scheduledFor: timestamp('scheduled_for', { withTimezone: true }),
-  startedAt: timestamp('started_at', { withTimezone: true }),
-  completedAt: timestamp('completed_at', { withTimezone: true }),
-
-  // Retry tracking
-  attempts: integer('attempts').default(0),
-  maxAttempts: integer('max_attempts').default(3),
-
-  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
-  updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
-}, (table) => ({
-  connectionIdx: index('idx_portal_sync_jobs_connection').on(table.connectionId),
-  postIdx: index('idx_portal_sync_jobs_post').on(table.postId),
-  statusIdx: index('idx_portal_sync_jobs_status').on(table.status),
-  typeIdx: index('idx_portal_sync_jobs_type').on(table.jobType),
-  scheduledIdx: index('idx_portal_sync_jobs_scheduled').on(table.scheduledFor),
-}));
-
-/**
- * Portal Analytics - Daily metrics per portal post
- */
-export const portalAnalytics = pgTable('portal_analytics', {
-  id: uuid('id').defaultRandom().primaryKey(),
-  postId: uuid('post_id').notNull().references(() => portalPosts.id, { onDelete: 'cascade' }),
-  date: timestamp('date', { withTimezone: true }).notNull(),
-
-  // Engagement metrics
-  views: integer('views').default(0),
-  uniqueViews: integer('unique_views').default(0),
-  clicks: integer('clicks').default(0),
-  phoneClicks: integer('phone_clicks').default(0),
-  emailClicks: integer('email_clicks').default(0),
-  favorites: integer('favorites').default(0),
-  shares: integer('shares').default(0),
-
-  // Lead metrics
-  leadsGenerated: integer('leads_generated').default(0),
-
-  // Position tracking (if available)
-  searchPosition: integer('search_position'),
-  categoryPosition: integer('category_position'),
-
-  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
-}, (table) => ({
-  postIdx: index('idx_portal_analytics_post').on(table.postId),
-  dateIdx: index('idx_portal_analytics_date').on(table.date),
-  uniquePostDate: uniqueIndex('idx_portal_analytics_unique').on(table.postId, table.date),
-}));
-
-/**
- * Portal Leads - Leads received from portals
- */
-export const portalLeads = pgTable('portal_leads', {
-  id: uuid('id').defaultRandom().primaryKey(),
-  postId: uuid('post_id').notNull().references(() => portalPosts.id, { onDelete: 'cascade' }),
-  portal: portalEnum('portal').notNull(),
-
-  // Portal lead identifier
-  portalLeadId: varchar('portal_lead_id', { length: 255 }),
-
-  // Contact info
-  contactName: varchar('contact_name', { length: 255 }),
-  contactEmail: varchar('contact_email', { length: 255 }),
-  contactPhone: varchar('contact_phone', { length: 50 }),
-
-  // Lead content
-  subject: varchar('subject', { length: 500 }),
-  message: text('message'),
-
-  // Status
-  isRead: boolean('is_read').default(false),
-  readAt: timestamp('read_at', { withTimezone: true }),
-  isReplied: boolean('is_replied').default(false),
-  repliedAt: timestamp('replied_at', { withTimezone: true }),
-
-  // Raw data from portal (for debugging/audit)
-  rawData: jsonb('raw_data').$type<Record<string, unknown>>(),
-
-  // Timestamps from portal
-  portalReceivedAt: timestamp('portal_received_at', { withTimezone: true }),
-
-  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
-  updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
-}, (table) => ({
-  postIdx: index('idx_portal_leads_post').on(table.postId),
-  portalIdx: index('idx_portal_leads_portal').on(table.portal),
-  isReadIdx: index('idx_portal_leads_is_read').on(table.isRead),
-  uniquePortalLead: uniqueIndex('idx_portal_leads_unique').on(table.portal, table.portalLeadId),
-}));
 
 /**
  * Notifications - User notifications
@@ -1340,9 +1078,9 @@ export const notifications = pgTable('notifications', {
   message: text('message'),
 
   // Link to related entities
-  portalPostId: uuid('portal_post_id').references(() => portalPosts.id, { onDelete: 'set null' }),
-  portalLeadId: uuid('portal_lead_id').references(() => portalLeads.id, { onDelete: 'set null' }),
+  socialPostId: uuid('social_post_id').references(() => socialPosts.id, { onDelete: 'set null' }),
   listingId: uuid('listing_id').references(() => listings.id, { onDelete: 'set null' }),
+  workflowExecutionId: uuid('workflow_execution_id').references(() => workflowExecutions.id, { onDelete: 'set null' }),
 
   // Status
   isRead: boolean('is_read').default(false),
@@ -1360,104 +1098,33 @@ export const notifications = pgTable('notifications', {
 }));
 
 // ============================================
-// AUTOPOSTING SYSTEM - RELATIONS
+// NOTIFICATIONS - RELATIONS
 // ============================================
-
-export const portalConnectionsRelations = relations(portalConnections, ({ one, many }) => ({
-  user: one(users, {
-    fields: [portalConnections.userId],
-    references: [users.id],
-  }),
-  posts: many(portalPosts),
-  syncJobs: many(portalSyncJobs),
-}));
-
-export const portalPostsRelations = relations(portalPosts, ({ one, many }) => ({
-  connection: one(portalConnections, {
-    fields: [portalPosts.connectionId],
-    references: [portalConnections.id],
-  }),
-  listing: one(listings, {
-    fields: [portalPosts.listingId],
-    references: [listings.id],
-  }),
-  analytics: many(portalAnalytics),
-  leads: many(portalLeads),
-  syncJobs: many(portalSyncJobs),
-  notifications: many(notifications),
-}));
-
-export const portalSyncJobsRelations = relations(portalSyncJobs, ({ one }) => ({
-  connection: one(portalConnections, {
-    fields: [portalSyncJobs.connectionId],
-    references: [portalConnections.id],
-  }),
-  post: one(portalPosts, {
-    fields: [portalSyncJobs.postId],
-    references: [portalPosts.id],
-  }),
-}));
-
-export const portalAnalyticsRelations = relations(portalAnalytics, ({ one }) => ({
-  post: one(portalPosts, {
-    fields: [portalAnalytics.postId],
-    references: [portalPosts.id],
-  }),
-}));
-
-export const portalLeadsRelations = relations(portalLeads, ({ one, many }) => ({
-  post: one(portalPosts, {
-    fields: [portalLeads.postId],
-    references: [portalPosts.id],
-  }),
-  notifications: many(notifications),
-}));
 
 export const notificationsRelations = relations(notifications, ({ one }) => ({
   user: one(users, {
     fields: [notifications.userId],
     references: [users.id],
   }),
-  portalPost: one(portalPosts, {
-    fields: [notifications.portalPostId],
-    references: [portalPosts.id],
-  }),
-  portalLead: one(portalLeads, {
-    fields: [notifications.portalLeadId],
-    references: [portalLeads.id],
+  socialPost: one(socialPosts, {
+    fields: [notifications.socialPostId],
+    references: [socialPosts.id],
   }),
   listing: one(listings, {
     fields: [notifications.listingId],
     references: [listings.id],
   }),
+  workflowExecution: one(workflowExecutions, {
+    fields: [notifications.workflowExecutionId],
+    references: [workflowExecutions.id],
+  }),
 }));
 
 // ============================================
-// AUTOPOSTING SYSTEM - TYPE EXPORTS
+// NOTIFICATIONS - TYPE EXPORTS
 // ============================================
 
-export type Portal = (typeof portalEnum.enumValues)[number];
-export type PortalConnectionStatus = (typeof portalConnectionStatusEnum.enumValues)[number];
-export type PortalPostStatus = (typeof portalPostStatusEnum.enumValues)[number];
-export type PortalSyncJobType = (typeof portalSyncJobTypeEnum.enumValues)[number];
-export type PortalSyncJobStatus = (typeof portalSyncJobStatusEnum.enumValues)[number];
 export type NotificationType = (typeof notificationTypeEnum.enumValues)[number];
-
-export type PortalConnection = typeof portalConnections.$inferSelect;
-export type NewPortalConnection = typeof portalConnections.$inferInsert;
-
-export type PortalPost = typeof portalPosts.$inferSelect;
-export type NewPortalPost = typeof portalPosts.$inferInsert;
-
-export type PortalSyncJob = typeof portalSyncJobs.$inferSelect;
-export type NewPortalSyncJob = typeof portalSyncJobs.$inferInsert;
-
-export type PortalAnalytics = typeof portalAnalytics.$inferSelect;
-export type NewPortalAnalytics = typeof portalAnalytics.$inferInsert;
-
-export type PortalLead = typeof portalLeads.$inferSelect;
-export type NewPortalLead = typeof portalLeads.$inferInsert;
-
 export type Notification = typeof notifications.$inferSelect;
 export type NewNotification = typeof notifications.$inferInsert;
 

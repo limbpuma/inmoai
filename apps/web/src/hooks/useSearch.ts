@@ -37,9 +37,9 @@ export function useAutocomplete(query: string, limit = 10) {
   );
 }
 
-export function useRecentListings(city?: string, limit = 12) {
+export function useRecentListings(city?: string, limit = 12, operationType?: "sale" | "rent") {
   return trpc.listings.getRecent.useQuery(
-    { city, limit },
+    { city, limit, operationType },
     {
       staleTime: 60000, // 1 minute
     }

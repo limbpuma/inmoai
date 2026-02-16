@@ -291,22 +291,22 @@ export function FiltersSidebar({ onClose, initialFilters, onFiltersChange }: Fil
 
       <Separator />
 
-      {/* Sources */}
+      {/* Verification Status */}
       <div className="space-y-3">
-        <Label className="text-sm font-medium">Fuentes</Label>
+        <Label className="text-sm font-medium">Verificaci\u00f3n</Label>
         <div className="space-y-2">
           {[
-            { id: "idealista", label: "Idealista" },
-            { id: "fotocasa", label: "Fotocasa" },
-            { id: "habitaclia", label: "Habitaclia" },
-          ].map((source) => (
-            <div key={source.id} className="flex items-center space-x-2">
-              <Checkbox id={source.id} defaultChecked />
+            { id: "verified", label: "Verificado por Catastro" },
+            { id: "pending", label: "Pendiente de verificar" },
+            { id: "all", label: "Todos" },
+          ].map((status) => (
+            <div key={status.id} className="flex items-center space-x-2">
+              <Checkbox id={status.id} defaultChecked={status.id !== "pending"} />
               <Label
-                htmlFor={source.id}
+                htmlFor={status.id}
                 className="text-sm font-normal cursor-pointer"
               >
-                {source.label}
+                {status.label}
               </Label>
             </div>
           ))}

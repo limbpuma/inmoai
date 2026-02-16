@@ -15,26 +15,88 @@ class SearchServiceImpl implements SearchService {
     query: string,
     filters?: Partial<SearchFilters>
   ): Promise<SearchResult> {
-    // 1. Parse the natural language query
-    const parsed = await this.parseNaturalLanguageQuery(query);
+    let parsedFilters: Partial<SearchFilters> = {};
+
+    try {
+      // 1. Try to parse the natural language query with AI
+      const parsed = await this.parseNaturalLanguageQuery(query);
+      parsedFilters = parsed.filters;
+    } catch (error) {
+      // AI parsing failed - use basic text extraction as fallback
+      console.warn('AI query parsing failed, using basic extraction:', error);
+      parsedFilters = this.extractBasicFilters(query);
+    }
 
     // 2. Merge parsed filters with explicit filters
     const mergedFilters: SearchFilters = {
-      ...parsed.filters,
+      ...parsedFilters,
       ...filters,
       limit: filters?.limit ?? 20,
       offset: filters?.offset ?? 0,
     };
 
-    // 3. Generate embedding for semantic search
-    const embedding = await aiEngine.generateEmbedding(query);
-
-    // 4. Search in vector DB (when implemented)
+    // 3. Skip embedding generation - vector search will be implemented later
     // For now, fall back to filter search
-    // const vectorResults = await this.vectorSearch(embedding, 100);
 
-    // 5. Filter search with merged filters
+    // 4. Filter search with merged filters
     return this.filterSearch(mergedFilters);
+  }
+
+  /**
+   * Basic filter extraction from query text (fallback when AI is unavailable)
+   */
+  private extractBasicFilters(query: string): Partial<SearchFilters> {
+    const filters: Partial<SearchFilters> = {};
+    const queryLower = query.toLowerCase();
+
+    // Extract city names (Spanish cities)
+    const cities = ['madrid', 'barcelona', 'valencia', 'sevilla', 'malaga', 'bilbao', 'zaragoza'];
+    for (const city of cities) {
+      if (queryLower.includes(city)) {
+        filters.city = city.charAt(0).toUpperCase() + city.slice(1);
+        break;
+      }
+    }
+
+    // Extract operation type
+    if (queryLower.includes('alquil') || queryLower.includes('rent')) {
+      filters.operationType = 'rent';
+    } else if (queryLower.includes('compr') || queryLower.includes('venta') || queryLower.includes('buy')) {
+      filters.operationType = 'sale';
+    }
+
+    // Extract property type
+    if (queryLower.includes('piso') || queryLower.includes('apartamento')) {
+      filters.propertyType = ['apartment'];
+    } else if (queryLower.includes('casa') || queryLower.includes('chalet')) {
+      filters.propertyType = ['house', 'villa'];
+    } else if (queryLower.includes('local') || queryLower.includes('oficina')) {
+      filters.propertyType = ['commercial'];
+    }
+
+    // Extract price range (e.g., "menos de 300k", "por debajo de 500000")
+    const priceMatch = queryLower.match(/(?:menos de|por debajo de|hasta|max(?:imo)?)\s*(\d+)k?/);
+    if (priceMatch) {
+      let price = parseInt(priceMatch[1], 10);
+      if (queryLower.includes('k')) price *= 1000;
+      else if (price < 10000) price *= 1000; // Assume "300" means "300k"
+      filters.priceMax = price;
+    }
+
+    // Extract features
+    if (queryLower.includes('terraza')) filters.hasTerrace = true;
+    if (queryLower.includes('parking') || queryLower.includes('garaje')) filters.hasParking = true;
+    if (queryLower.includes('ascensor')) filters.hasElevator = true;
+    if (queryLower.includes('jardin') || queryLower.includes('jardín')) filters.hasGarden = true;
+    if (queryLower.includes('piscina')) filters.hasPool = true;
+
+    // Extract bedrooms
+    const bedroomMatch = queryLower.match(/(\d+)\s*(?:habitacion|dormitorio|bedroom)/);
+    if (bedroomMatch) {
+      filters.bedroomsMin = parseInt(bedroomMatch[1], 10);
+    }
+
+    return filters;
   }
 
   async filterSearch(filters: SearchFilters): Promise<SearchResult> {
@@ -300,55 +362,55 @@ class SearchServiceImpl implements SearchService {
       conditions.push(eq(listings.operationType, filters.operationType));
     }
 
-    if (filters.priceMin !== undefined) {
+    if (filters.priceMin != null) {
       conditions.push(gte(listings.price, filters.priceMin.toString()));
     }
 
-    if (filters.priceMax !== undefined) {
+    if (filters.priceMax != null) {
       conditions.push(lte(listings.price, filters.priceMax.toString()));
     }
 
-    if (filters.sizeMin !== undefined) {
+    if (filters.sizeMin != null) {
       conditions.push(gte(listings.sizeSqm, filters.sizeMin));
     }
 
-    if (filters.sizeMax !== undefined) {
+    if (filters.sizeMax != null) {
       conditions.push(lte(listings.sizeSqm, filters.sizeMax));
     }
 
-    if (filters.roomsMin !== undefined) {
+    if (filters.roomsMin != null) {
       conditions.push(gte(listings.rooms, filters.roomsMin));
     }
 
-    if (filters.bedroomsMin !== undefined) {
+    if (filters.bedroomsMin != null) {
       conditions.push(gte(listings.bedrooms, filters.bedroomsMin));
     }
 
-    if (filters.bathroomsMin !== undefined) {
+    if (filters.bathroomsMin != null) {
       conditions.push(gte(listings.bathrooms, filters.bathroomsMin));
     }
 
-    if (filters.hasParking !== undefined) {
+    if (filters.hasParking != null) {
       conditions.push(eq(listings.hasParking, filters.hasParking));
     }
 
-    if (filters.hasElevator !== undefined) {
+    if (filters.hasElevator != null) {
       conditions.push(eq(listings.hasElevator, filters.hasElevator));
     }
 
-    if (filters.hasTerrace !== undefined) {
+    if (filters.hasTerrace != null) {
       conditions.push(eq(listings.hasTerrace, filters.hasTerrace));
     }
 
-    if (filters.hasGarden !== undefined) {
+    if (filters.hasGarden != null) {
       conditions.push(eq(listings.hasGarden, filters.hasGarden));
     }
 
-    if (filters.hasPool !== undefined) {
+    if (filters.hasPool != null) {
       conditions.push(eq(listings.hasPool, filters.hasPool));
     }
 
-    if (filters.authenticityScoreMin !== undefined) {
+    if (filters.authenticityScoreMin != null) {
       conditions.push(gte(listings.authenticityScore, filters.authenticityScoreMin));
     }
 

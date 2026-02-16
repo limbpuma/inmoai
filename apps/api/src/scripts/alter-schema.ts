@@ -20,6 +20,16 @@ async function alterSchema() {
     await sql`ALTER TABLE sources ADD COLUMN IF NOT EXISTS website varchar(500)`;
     console.log('✅ Added website column');
 
+    // Add cadastral columns for Catastro integration
+    await sql`ALTER TABLE listings ADD COLUMN IF NOT EXISTS cadastral_ref varchar(20)`;
+    await sql`ALTER TABLE listings ADD COLUMN IF NOT EXISTS cadastral_verified boolean DEFAULT false`;
+    await sql`ALTER TABLE listings ADD COLUMN IF NOT EXISTS cadastral_verified_at timestamp with time zone`;
+    await sql`ALTER TABLE listings ADD COLUMN IF NOT EXISTS cadastral_surface integer`;
+    await sql`ALTER TABLE listings ADD COLUMN IF NOT EXISTS cadastral_use varchar(50)`;
+    await sql`ALTER TABLE listings ADD COLUMN IF NOT EXISTS cadastral_construction_year integer`;
+    await sql`ALTER TABLE listings ADD COLUMN IF NOT EXISTS cadastral_mismatch jsonb`;
+    console.log('✅ Added cadastral columns');
+
     console.log('✅ Schema updated successfully!');
   } catch (e) {
     console.error('Error:', e);

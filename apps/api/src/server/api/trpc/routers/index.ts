@@ -8,7 +8,6 @@ import { usersRouter } from './users.router';
 import { settingsRouter } from './settings.router';
 import { aiRouter } from './ai.router';
 import { marketplaceRouter } from './marketplace.router';
-import { portalsRouter } from './portals.router';
 import { agentsRouter } from './agents.router';
 import { escrowRouter } from './escrow.router';
 import { cadastreRouter } from './cadastre.router';
@@ -23,6 +22,8 @@ import { contentRouter } from './content.router';
  * - escrow: Regulated transaction trust layer
  * - marketplace: Verified service provider network
  * - agents: AI orchestration for external agents
+ * - social: Autoposting to social media (Facebook, Instagram, LinkedIn, TikTok)
+ * - content: AI-powered content generation
  */
 export const appRouter = createTRPCRouter({
   auth: authRouter,
@@ -34,12 +35,11 @@ export const appRouter = createTRPCRouter({
   settings: settingsRouter,
   ai: aiRouter,
   marketplace: marketplaceRouter,
-  portals: portalsRouter,
   agents: agentsRouter,
   escrow: escrowRouter,
   cadastre: cadastreRouter,
-  social: socialRouter, // NEW: Social media autoposting
-  content: contentRouter, // NEW: AI content generation
+  social: socialRouter,
+  content: contentRouter,
 });
 
 export type AppRouter = typeof appRouter;

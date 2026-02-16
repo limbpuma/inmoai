@@ -174,13 +174,13 @@ export default function ListingsManagementPage() {
             </Select>
             <Select value={sourceFilter} onValueChange={setSourceFilter}>
               <SelectTrigger className="w-[150px]">
-                <SelectValue placeholder="Fuente" />
+                <SelectValue placeholder="Verificaci\u00f3n" />
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">Todas</SelectItem>
-                <SelectItem value="idealista">Idealista</SelectItem>
-                <SelectItem value="fotocasa">Fotocasa</SelectItem>
-                <SelectItem value="habitaclia">Habitaclia</SelectItem>
+                <SelectItem value="verified">Verificadas</SelectItem>
+                <SelectItem value="pending">Pendientes</SelectItem>
+                <SelectItem value="issues">Con problemas</SelectItem>
               </SelectContent>
             </Select>
           </div>
