@@ -10,7 +10,7 @@ export type AIStatus = "idle" | "working" | "waiting" | "error" | "paused";
 
 // Delegable AI Functions
 export type AIFunction =
-  | "scraping"
+  | "data_pipeline"
   | "fraud_detection"
   | "price_analysis"
   | "moderation"

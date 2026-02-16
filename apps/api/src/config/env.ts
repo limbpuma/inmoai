@@ -66,18 +66,6 @@ export const env = createEnv({
     REDIS_PASSWORD: z.string().optional(),
     REDIS_DB: z.string().optional(),
 
-    // Portal OAuth Credentials
-    IDEALISTA_CLIENT_ID: z.string().optional(),
-    IDEALISTA_CLIENT_SECRET: z.string().optional(),
-    FOTOCASA_CLIENT_ID: z.string().optional(),
-    FOTOCASA_CLIENT_SECRET: z.string().optional(),
-    HABITACLIA_CLIENT_ID: z.string().optional(),
-    HABITACLIA_CLIENT_SECRET: z.string().optional(),
-    PISOS_CLIENT_ID: z.string().optional(),
-    PISOS_CLIENT_SECRET: z.string().optional(),
-    MILANUNCIOS_CLIENT_ID: z.string().optional(),
-    MILANUNCIOS_CLIENT_SECRET: z.string().optional(),
-
     // Social Media OAuth
     FACEBOOK_APP_ID: z.string().optional(),
     FACEBOOK_APP_SECRET: z.string().optional(),
@@ -120,6 +108,7 @@ export const env = createEnv({
     STRIPE_PRICE_ID_PROVIDER_PREMIUM: process.env.STRIPE_PRICE_ID_PROVIDER_PREMIUM,
     STRIPE_PRICE_ID_PROVIDER_ENTERPRISE: process.env.STRIPE_PRICE_ID_PROVIDER_ENTERPRISE,
     RATE_LIMIT_REQUESTS_PER_HOUR: process.env.RATE_LIMIT_REQUESTS_PER_HOUR,
+    CRON_SECRET: process.env.CRON_SECRET,
     NEXT_PUBLIC_APP_URL: process.env.NEXT_PUBLIC_APP_URL,
 
     // Portals
@@ -130,16 +119,6 @@ export const env = createEnv({
     REDIS_PORT: process.env.REDIS_PORT,
     REDIS_PASSWORD: process.env.REDIS_PASSWORD,
     REDIS_DB: process.env.REDIS_DB,
-    IDEALISTA_CLIENT_ID: process.env.IDEALISTA_CLIENT_ID,
-    IDEALISTA_CLIENT_SECRET: process.env.IDEALISTA_CLIENT_SECRET,
-    FOTOCASA_CLIENT_ID: process.env.FOTOCASA_CLIENT_ID,
-    FOTOCASA_CLIENT_SECRET: process.env.FOTOCASA_CLIENT_SECRET,
-    HABITACLIA_CLIENT_ID: process.env.HABITACLIA_CLIENT_ID,
-    HABITACLIA_CLIENT_SECRET: process.env.HABITACLIA_CLIENT_SECRET,
-    PISOS_CLIENT_ID: process.env.PISOS_CLIENT_ID,
-    PISOS_CLIENT_SECRET: process.env.PISOS_CLIENT_SECRET,
-    MILANUNCIOS_CLIENT_ID: process.env.MILANUNCIOS_CLIENT_ID,
-    MILANUNCIOS_CLIENT_SECRET: process.env.MILANUNCIOS_CLIENT_SECRET,
 
     // Social Media OAuth
     FACEBOOK_APP_ID: process.env.FACEBOOK_APP_ID,

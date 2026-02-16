@@ -106,7 +106,7 @@ const mockUserDetails: Record<string, UserDetail> = {
       status: "active",
       startDate: "2024-01-10",
       nextBilling: "2024-02-10",
-      amount: "9.99€/mes",
+      amount: "49€/mes",
     },
     activity: [
       { action: "Busqueda", details: "Casa con jardin Madrid", time: "Hace 1 hora" },
@@ -132,7 +132,7 @@ const mockUserDetails: Record<string, UserDetail> = {
       status: "active",
       startDate: "2023-12-05",
       nextBilling: "2024-01-05",
-      amount: "49.99€/mes",
+      amount: "149€/mes",
     },
     activity: [
       { action: "API Call", details: "GET /listings (234 results)", time: "Hace 30 min" },

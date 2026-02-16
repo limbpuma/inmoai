@@ -62,12 +62,12 @@ export const PRICING_TIERS: Record<PricingTier, PricingTierConfig> = {
     priceMonthly: 0,
     priceYearly: 0,
     limits: {
-      searchesPerMonth: 50,
-      semanticSearches: 10,
-      cadastreVerifications: 3,
-      fraudDetections: 5,
-      valuations: 2,
-      savedSearches: 3,
+      searchesPerMonth: 30,
+      semanticSearches: 3,
+      cadastreVerifications: 1,
+      fraudDetections: 3,
+      valuations: 1,
+      savedSearches: 2,
       alerts: 1,
       activeListings: 0,
       leadsPerMonth: 0,
@@ -93,8 +93,8 @@ export const PRICING_TIERS: Record<PricingTier, PricingTierConfig> = {
     id: 'pro',
     name: 'Profesional',
     description: 'Para agentes y vendedores activos',
-    priceMonthly: 29,
-    priceYearly: 290,
+    priceMonthly: 49,
+    priceYearly: 529,
     limits: {
       searchesPerMonth: 500,
       semanticSearches: 200,
@@ -127,8 +127,8 @@ export const PRICING_TIERS: Record<PricingTier, PricingTierConfig> = {
     id: 'agency',
     name: 'Agencia',
     description: 'Para equipos inmobiliarios',
-    priceMonthly: 99,
-    priceYearly: 990,
+    priceMonthly: 149,
+    priceYearly: 1609,
     limits: {
       searchesPerMonth: 2000,
       semanticSearches: 1000,
@@ -198,19 +198,27 @@ export const PRICING_TIERS: Record<PricingTier, PricingTierConfig> = {
 
 export const OUTCOME_PRICING = {
   qualifiedLead: {
-    price: 15,
-    description: 'Lead que agenda visita',
+    price: 35,
+    description: 'Lead cualificado que agenda visita',
   },
   closedDeal: {
-    salePercentage: 0.1,
-    rentMultiplier: 0.5,
-    minFee: 50,
-    maxFee: 500,
-    description: 'Comision por cierre exitoso',
+    salePercentage: 0.5,
+    rentFirstMonthPercent: 5,
+    minFee: 100,
+    maxFee: 5000,
+    description: 'Comision por cierre exitoso (0.5% ventas, 5% primer mes alquiler)',
   },
   premiumVerification: {
-    price: 5,
-    description: 'Verificacion catastral completa',
+    price: 15,
+    description: 'Verificacion catastral completa premium',
+  },
+  directoryListing: {
+    price: 10,
+    description: 'Consulta directorio empresarial premium',
+  },
+  comprehensiveVerification: {
+    price: 25,
+    description: 'Verificacion integral: catastro + fraude + mercado + comparables',
   },
 } as const;
 
@@ -235,9 +243,35 @@ export function isUnlimited(value: number): boolean {
 }
 
 export function calculateOutcomeFee(type: 'sale' | 'rent', price: number): number {
-  const { salePercentage, rentMultiplier, minFee, maxFee } = OUTCOME_PRICING.closedDeal;
+  const { salePercentage, rentFirstMonthPercent, minFee, maxFee } = OUTCOME_PRICING.closedDeal;
 
-  const fee = type === 'sale' ? (price * salePercentage) / 100 : price * rentMultiplier;
+  const fee = type === 'sale'
+    ? (price * salePercentage) / 100
+    : (price * rentFirstMonthPercent) / 100;
 
   return Math.min(Math.max(fee, minFee), maxFee);
 }
+
+// ============================================
+// API PRICING (for AI agents via MCP/REST)
+// ============================================
+
+export const API_PRICING = {
+  verification: {
+    basic: 0.15,
+    comprehensive: 0.50,
+    description: 'Verificacion catastral por API (basic/comprehensive)',
+  },
+  directoryQuery: {
+    price: 0.10,
+    description: 'Consulta directorio empresarial por API',
+  },
+  contentGeneration: {
+    price: 0.25,
+    description: 'Generacion de contenido AI por API',
+  },
+  socialPost: {
+    price: 0.50,
+    description: 'Publicacion en redes sociales por API',
+  },
+} as const;

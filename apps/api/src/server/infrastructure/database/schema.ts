@@ -1981,6 +1981,206 @@ export type WorkflowExecution = typeof workflowExecutions.$inferSelect;
 export type NewWorkflowExecution = typeof workflowExecutions.$inferInsert;
 
 // ============================================
+// BUSINESS DIRECTORY (Glosario Empresarial)
+// Revenue stream: empresas pagan por presencia premium
+// AI agents consultan directorio via MCP/API
+// ============================================
+
+export const businessCategoryEnum = pgEnum('business_category', [
+  'real_estate_agency',
+  'notary',
+  'gestoria',
+  'lawyer',
+  'renovation',
+  'moving',
+  'cleaning',
+  'insurance',
+  'appraisal',
+  'mortgage_broker',
+  'architect',
+  'interior_design',
+]);
+
+export const businessTierEnum = pgEnum('business_tier', [
+  'free',
+  'featured',
+  'premium',
+]);
+
+export const businessStatusEnum = pgEnum('business_status', [
+  'pending_review',
+  'active',
+  'suspended',
+  'inactive',
+]);
+
+/**
+ * Business Directory - Directorio ultraespecializado del sector inmobiliario
+ * Moat: datos acumulados de track record, especializaciones, tiempos de respuesta
+ */
+export const businessDirectory = pgTable('business_directory', {
+  id: uuid('id').defaultRandom().primaryKey(),
+
+  // Business identity
+  name: varchar('name', { length: 255 }).notNull(),
+  slug: varchar('slug', { length: 150 }).notNull().unique(),
+  category: businessCategoryEnum('category').notNull(),
+  description: text('description'),
+  shortDescription: varchar('short_description', { length: 300 }),
+
+  // Contact info
+  contactName: varchar('contact_name', { length: 255 }),
+  email: varchar('email', { length: 255 }).notNull(),
+  phone: varchar('phone', { length: 50 }),
+  website: varchar('website', { length: 500 }),
+
+  // Location
+  address: varchar('address', { length: 500 }),
+  city: varchar('city', { length: 100 }).notNull(),
+  province: varchar('province', { length: 100 }),
+  postalCode: varchar('postal_code', { length: 20 }),
+  latitude: decimal('latitude', { precision: 10, scale: 7 }),
+  longitude: decimal('longitude', { precision: 10, scale: 7 }),
+  coverageCities: jsonb('coverage_cities').$type<string[]>(),
+
+  // Specializations (moat: data that only exists if InmoAI collects it)
+  specializations: jsonb('specializations').$type<string[]>(),
+  languages: jsonb('languages').$type<string[]>().default(['es']),
+  targetAudience: jsonb('target_audience').$type<string[]>(),
+
+  // Tier & monetization
+  tier: businessTierEnum('tier').default('free').notNull(),
+  status: businessStatusEnum('status').default('pending_review').notNull(),
+
+  // Stripe for premium listings
+  stripeCustomerId: varchar('stripe_customer_id', { length: 255 }),
+  stripeSubscriptionId: varchar('stripe_subscription_id', { length: 255 }),
+  premiumExpiresAt: timestamp('premium_expires_at', { withTimezone: true }),
+
+  // Accumulated data (moat - grows over time)
+  totalReviews: integer('total_reviews').default(0),
+  averageRating: decimal('average_rating', { precision: 2, scale: 1 }).default('0'),
+  totalTransactions: integer('total_transactions').default(0),
+  avgResponseTimeHours: decimal('avg_response_time_hours', { precision: 5, scale: 1 }),
+  completionRate: decimal('completion_rate', { precision: 3, scale: 2 }),
+  totalApiQueries: integer('total_api_queries').default(0),
+
+  // Verification
+  isVerified: boolean('is_verified').default(false),
+  verifiedAt: timestamp('verified_at', { withTimezone: true }),
+  verificationDocuments: jsonb('verification_documents').$type<string[]>(),
+
+  // Legal info (for notaries, lawyers, gestorías)
+  licenseNumber: varchar('license_number', { length: 100 }),
+  registrationBody: varchar('registration_body', { length: 255 }),
+  insurancePolicy: varchar('insurance_policy', { length: 255 }),
+
+  // Media
+  logoUrl: varchar('logo_url', { length: 500 }),
+  coverImageUrl: varchar('cover_image_url', { length: 500 }),
+  galleryUrls: jsonb('gallery_urls').$type<string[]>(),
+
+  // SEO & display
+  seoTitle: varchar('seo_title', { length: 200 }),
+  seoDescription: varchar('seo_description', { length: 300 }),
+
+  // Metadata
+  metadata: jsonb('metadata').$type<Record<string, unknown>>(),
+
+  // Owner (if registered user)
+  ownerId: uuid('owner_id').references(() => users.id, { onDelete: 'set null' }),
+
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
+}, (table) => [
+  index('idx_biz_dir_category').on(table.category),
+  index('idx_biz_dir_city').on(table.city),
+  index('idx_biz_dir_province').on(table.province),
+  index('idx_biz_dir_tier').on(table.tier),
+  index('idx_biz_dir_status').on(table.status),
+  index('idx_biz_dir_rating').on(table.averageRating),
+  index('idx_biz_dir_verified').on(table.isVerified),
+  index('idx_biz_dir_owner').on(table.ownerId),
+]);
+
+/**
+ * Business Reviews - Valoraciones de empresas del directorio
+ * Data acumulada que crea moat irrecuperable
+ */
+export const businessReviews = pgTable('business_reviews', {
+  id: uuid('id').defaultRandom().primaryKey(),
+  businessId: uuid('business_id')
+    .references(() => businessDirectory.id, { onDelete: 'cascade' })
+    .notNull(),
+  userId: uuid('user_id').references(() => users.id, { onDelete: 'set null' }),
+
+  // Review content
+  rating: integer('rating').notNull(),
+  title: varchar('title', { length: 255 }),
+  content: text('content'),
+
+  // Detailed ratings
+  qualityRating: integer('quality_rating'),
+  communicationRating: integer('communication_rating'),
+  timelinessRating: integer('timeliness_rating'),
+  valueRating: integer('value_rating'),
+
+  // Context
+  serviceType: varchar('service_type', { length: 100 }),
+  transactionType: varchar('transaction_type', { length: 50 }),
+  city: varchar('city', { length: 100 }),
+
+  // Verification
+  isVerified: boolean('is_verified').default(false),
+  verificationSource: varchar('verification_source', { length: 50 }),
+
+  // Business response
+  businessResponse: text('business_response'),
+  businessRespondedAt: timestamp('business_responded_at', { withTimezone: true }),
+
+  isPublished: boolean('is_published').default(true),
+
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
+}, (table) => [
+  index('idx_biz_reviews_business').on(table.businessId),
+  index('idx_biz_reviews_user').on(table.userId),
+  index('idx_biz_reviews_rating').on(table.rating),
+  index('idx_biz_reviews_verified').on(table.isVerified),
+]);
+
+// Business Directory Relations
+export const businessDirectoryRelations = relations(businessDirectory, ({ one, many }) => ({
+  owner: one(users, {
+    fields: [businessDirectory.ownerId],
+    references: [users.id],
+  }),
+  reviews: many(businessReviews),
+}));
+
+export const businessReviewsRelations = relations(businessReviews, ({ one }) => ({
+  business: one(businessDirectory, {
+    fields: [businessReviews.businessId],
+    references: [businessDirectory.id],
+  }),
+  user: one(users, {
+    fields: [businessReviews.userId],
+    references: [users.id],
+  }),
+}));
+
+// Business Directory Type Exports
+export type BusinessCategory = (typeof businessCategoryEnum.enumValues)[number];
+export type BusinessTier = (typeof businessTierEnum.enumValues)[number];
+export type BusinessStatus = (typeof businessStatusEnum.enumValues)[number];
+
+export type BusinessDirectoryEntry = typeof businessDirectory.$inferSelect;
+export type NewBusinessDirectoryEntry = typeof businessDirectory.$inferInsert;
+
+export type BusinessReview = typeof businessReviews.$inferSelect;
+export type NewBusinessReview = typeof businessReviews.$inferInsert;
+
+// ============================================
 // SYSTEM SETTINGS
 // ============================================
 

@@ -59,8 +59,8 @@ describe("AdminAIStore", () => {
     it("should set function mode independently", () => {
       const store = useAdminAIStore.getState();
 
-      store.setFunctionMode("scraping", "active");
-      expect(useAdminAIStore.getState().config.functions.scraping.mode).toBe("active");
+      store.setFunctionMode("data_pipeline", "active");
+      expect(useAdminAIStore.getState().config.functions.data_pipeline.mode).toBe("active");
 
       // Global mode should not change
       expect(useAdminAIStore.getState().config.mode).toBe("lazy");
@@ -88,7 +88,7 @@ describe("AdminAIStore", () => {
       const initialAlertsCount = store.alerts.length;
 
       store.addAlert({
-        function: "scraping",
+        function: "data_pipeline",
         severity: "warning",
         title: "Test Alert",
         message: "This is a test alert",
@@ -104,7 +104,7 @@ describe("AdminAIStore", () => {
       const store = useAdminAIStore.getState();
 
       store.addAlert({
-        function: "scraping",
+        function: "data_pipeline",
         severity: "error",
         title: "Error Alert",
         message: "Something went wrong",
@@ -121,7 +121,7 @@ describe("AdminAIStore", () => {
       const store = useAdminAIStore.getState();
 
       store.addAlert({
-        function: "scraping",
+        function: "data_pipeline",
         severity: "info",
         title: "Alert 1",
         message: "Message 1",
@@ -145,7 +145,7 @@ describe("AdminAIStore", () => {
       const store = useAdminAIStore.getState();
 
       store.addDecision({
-        function: "scraping",
+        function: "data_pipeline",
         action: "Delete listing",
         description: "Listing contains spam",
         impact: "medium",
@@ -204,13 +204,13 @@ describe("AdminAIStore", () => {
 
       store.addEvent({
         type: "start",
-        function: "scraping",
-        message: "Starting scraping task",
+        function: "data_pipeline",
+        message: "Starting data pipeline task",
         severity: "info",
       });
 
       const events = useAdminAIStore.getState().events;
-      expect(events[0].message).toBe("Starting scraping task");
+      expect(events[0].message).toBe("Starting data pipeline task");
       expect(events[0].type).toBe("start");
     });
 
@@ -221,7 +221,7 @@ describe("AdminAIStore", () => {
       for (let i = 0; i < 250; i++) {
         store.addEvent({
           type: "complete",
-          function: "scraping",
+          function: "data_pipeline",
           message: `Event ${i}`,
           severity: "success",
         });

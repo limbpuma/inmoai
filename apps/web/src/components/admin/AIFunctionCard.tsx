@@ -28,7 +28,7 @@ import { useAdminAIStore } from "@/stores/adminAIStore";
 import { AIFunction, AIMode } from "@/types/adminAI";
 
 const functionIcons: Record<AIFunction, React.ReactNode> = {
-  scraping: <Search className="h-5 w-5" />,
+  data_pipeline: <Search className="h-5 w-5" />,
   fraud_detection: <Shield className="h-5 w-5" />,
   price_analysis: <TrendingUp className="h-5 w-5" />,
   moderation: <Bot className="h-5 w-5" />,
@@ -37,7 +37,7 @@ const functionIcons: Record<AIFunction, React.ReactNode> = {
 };
 
 const functionColors: Record<AIFunction, string> = {
-  scraping: "text-blue-600 bg-blue-100",
+  data_pipeline: "text-blue-600 bg-blue-100",
   fraud_detection: "text-red-600 bg-red-100",
   price_analysis: "text-green-600 bg-green-100",
   moderation: "text-purple-600 bg-purple-100",

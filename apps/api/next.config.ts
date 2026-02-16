@@ -16,11 +16,11 @@ const nextConfig: NextConfig = {
       },
       {
         protocol: 'https',
-        hostname: '*.idealista.com',
+        hostname: '*.unsplash.com',
       },
       {
         protocol: 'https',
-        hostname: '*.fotocasa.es',
+        hostname: 'images.unsplash.com',
       },
     ],
   },

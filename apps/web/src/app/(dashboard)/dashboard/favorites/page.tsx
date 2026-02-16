@@ -37,7 +37,7 @@ const mockFavorites = [
     area: 95,
     authenticityScore: 92,
     savedAt: "2024-01-20",
-    source: "idealista",
+    source: "usuario",
     image: "/placeholder.jpg",
   },
   {
@@ -50,7 +50,7 @@ const mockFavorites = [
     area: 180,
     authenticityScore: 88,
     savedAt: "2024-01-19",
-    source: "fotocasa",
+    source: "api",
     image: "/placeholder.jpg",
   },
   {
@@ -63,7 +63,7 @@ const mockFavorites = [
     area: 75,
     authenticityScore: 45,
     savedAt: "2024-01-18",
-    source: "idealista",
+    source: "usuario",
     image: "/placeholder.jpg",
   },
   {
@@ -76,7 +76,7 @@ const mockFavorites = [
     area: 40,
     authenticityScore: 95,
     savedAt: "2024-01-17",
-    source: "habitaclia",
+    source: "crm-import",
     image: "/placeholder.jpg",
   },
 ];

@@ -31,7 +31,7 @@ const mockLogs = [
     timestamp: "2024-01-23T14:32:44.890Z",
     level: "warning",
     source: "scraper",
-    message: "Rate limit reached for Idealista",
+    message: "Rate limit reached for geocoding API",
     details: "Waiting 60 seconds before retry...",
   },
   {
@@ -87,8 +87,8 @@ const mockLogs = [
     timestamp: "2024-01-23T14:32:37.123Z",
     level: "info",
     source: "scraper",
-    message: "Scraping completed",
-    details: "source: Fotocasa, new_listings: 45, updated: 123, time: 12.5s",
+    message: "Data sync completed",
+    details: "source: data-pipeline, new_listings: 45, updated: 123, time: 12.5s",
   },
   {
     id: "10",

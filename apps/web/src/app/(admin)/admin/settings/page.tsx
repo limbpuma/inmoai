@@ -42,14 +42,14 @@ export default function SettingsPage() {
     maintenanceMode: false,
     debugMode: false,
 
-    // Scraping
-    scrapingEnabled: true,
-    scrapingInterval: "6",
+    // Data Pipeline
+    dataPipelineEnabled: true,
+    syncInterval: "6",
     maxListingsPerRun: "500",
     sources: {
-      idealista: true,
-      fotocasa: true,
-      habitaclia: true,
+      userUploads: true,
+      crmImports: true,
+      apiIngestion: true,
     },
 
     // AI
@@ -195,22 +195,22 @@ export default function SettingsPage() {
           <CardContent className="space-y-4">
             <div className="flex items-center justify-between">
               <div className="space-y-0.5">
-                <Label>Scraping activo</Label>
+                <Label>Pipeline de datos activo</Label>
                 <p className="text-sm text-muted-foreground">
-                  Ejecutar scraping automatico
+                  Sincronizar datos automaticamente
                 </p>
               </div>
               <Switch
-                checked={settings.scrapingEnabled}
-                onCheckedChange={(checked) => updateSetting("scrapingEnabled", checked)}
+                checked={settings.dataPipelineEnabled}
+                onCheckedChange={(checked) => updateSetting("dataPipelineEnabled", checked)}
               />
             </div>
             <Separator />
             <div className="space-y-2">
               <Label>Intervalo de ejecucion</Label>
               <Select
-                value={settings.scrapingInterval}
-                onValueChange={(value) => updateSetting("scrapingInterval", value)}
+                value={settings.syncInterval}
+                onValueChange={(value) => updateSetting("syncInterval", value)}
               >
                 <SelectTrigger>
                   <Clock className="h-4 w-4 mr-2" />

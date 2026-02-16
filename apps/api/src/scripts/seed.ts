@@ -20,9 +20,9 @@ const client = postgres(connectionString);
 const db = drizzle(client);
 
 const SOURCES_DATA = [
-  { name: 'Idealista', slug: 'idealista', baseUrl: 'https://www.idealista.com', website: 'https://www.idealista.com' },
-  { name: 'Fotocasa', slug: 'fotocasa', baseUrl: 'https://www.fotocasa.es', website: 'https://www.fotocasa.es' },
-  { name: 'Habitaclia', slug: 'habitaclia', baseUrl: 'https://www.habitaclia.com', website: 'https://www.habitaclia.com' },
+  { name: 'Usuario', slug: 'usuario', baseUrl: 'https://www.inmoai.es', website: 'https://www.inmoai.es' },
+  { name: 'API', slug: 'api', baseUrl: 'https://api.inmoai.es', website: 'https://www.inmoai.es' },
+  { name: 'CRM Import', slug: 'crm-import', baseUrl: 'https://www.inmoai.es', website: 'https://www.inmoai.es' },
   { name: 'InmoAI', slug: 'inmoai', baseUrl: 'https://www.inmoai.es', website: 'https://www.inmoai.es' },
 ];
 
@@ -34,13 +34,8 @@ const daysAgo = (days: number) => {
 };
 
 // Helper to generate external URLs
-const generateExternalUrl = (sourceSlug: string, id: string) => {
-  const urls: Record<string, string> = {
-    idealista: `https://www.idealista.com/inmueble/${id}/`,
-    fotocasa: `https://www.fotocasa.es/es/comprar/vivienda/${id}`,
-    habitaclia: `https://www.habitaclia.com/comprar-piso/${id}.htm`,
-  };
-  return urls[sourceSlug] || null;
+const generateExternalUrl = (_sourceSlug: string, _id: string) => {
+  return null;
 };
 
 // Generate price history with potential drops for older listings
@@ -197,7 +192,7 @@ const MOCK_LISTINGS = [
     hasTerrace: true,
     hasAirConditioning: true,
     authenticityScore: 94,
-    sourceSlug: 'idealista',
+    sourceSlug: 'usuario',
     daysOnMarket: 3, // Recién publicado
     priceHistory: [425000], // Sin bajadas
     images: [
@@ -225,7 +220,7 @@ const MOCK_LISTINGS = [
     hasBalcony: true,
     hasHeating: true,
     authenticityScore: 88,
-    sourceSlug: 'fotocasa',
+    sourceSlug: 'api',
     daysOnMarket: 45, // Medium time - for availability testing
     improvements: [SAMPLE_IMPROVEMENTS[1], SAMPLE_IMPROVEMENTS[3]], // bathrooms + flooring
     images: [
@@ -251,7 +246,7 @@ const MOCK_LISTINGS = [
     hasParking: true,
     hasPool: false,
     authenticityScore: 96,
-    sourceSlug: 'idealista',
+    sourceSlug: 'usuario',
     images: [
       'https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?w=800&h=600&fit=crop',
       'https://images.unsplash.com/photo-1613490493576-7fde63acd811?w=800&h=600&fit=crop',
@@ -276,7 +271,7 @@ const MOCK_LISTINGS = [
     hasElevator: false,
     hasAirConditioning: true,
     authenticityScore: 72,
-    sourceSlug: 'fotocasa',
+    sourceSlug: 'api',
     images: [
       'https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?w=800&h=600&fit=crop',
     ],
@@ -300,7 +295,7 @@ const MOCK_LISTINGS = [
     hasParking: true,
     hasAirConditioning: true,
     authenticityScore: 91,
-    sourceSlug: 'idealista',
+    sourceSlug: 'usuario',
     images: [
       'https://images.unsplash.com/photo-1613490493576-7fde63acd811?w=800&h=600&fit=crop',
       'https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?w=800&h=600&fit=crop',
@@ -325,7 +320,7 @@ const MOCK_LISTINGS = [
     hasElevator: true,
     hasBalcony: true,
     authenticityScore: 85,
-    sourceSlug: 'habitaclia',
+    sourceSlug: 'crm-import',
     images: [
       'https://images.unsplash.com/photo-1600585154340-be6161a56a0c?w=800&h=600&fit=crop',
     ],
@@ -349,7 +344,7 @@ const MOCK_LISTINGS = [
     hasElevator: true,
     hasAirConditioning: true,
     authenticityScore: 89,
-    sourceSlug: 'idealista',
+    sourceSlug: 'usuario',
     images: [
       'https://images.unsplash.com/photo-1502672260266-1c1ef2d93688?w=800&h=600&fit=crop',
     ],
@@ -370,7 +365,7 @@ const MOCK_LISTINGS = [
     bathrooms: 2,
     hasAirConditioning: true,
     authenticityScore: 93,
-    sourceSlug: 'fotocasa',
+    sourceSlug: 'api',
     daysOnMarket: 45,
     // RENT listing with improvements - tests renter mode of ImprovementSuggestions
     improvements: [SAMPLE_IMPROVEMENTS[2], SAMPLE_IMPROVEMENTS[1]], // paint + bathroom
@@ -398,7 +393,7 @@ const MOCK_LISTINGS = [
     hasBalcony: true,
     hasHeating: true,
     authenticityScore: 97,
-    sourceSlug: 'idealista',
+    sourceSlug: 'usuario',
     images: [
       'https://images.unsplash.com/photo-1560185007-cde436f6a4d0?w=800&h=600&fit=crop',
       'https://images.unsplash.com/photo-1600607687939-ce8a6c25118c?w=800&h=600&fit=crop',
@@ -422,7 +417,7 @@ const MOCK_LISTINGS = [
     totalFloors: 5,
     hasElevator: false,
     authenticityScore: 78,
-    sourceSlug: 'habitaclia',
+    sourceSlug: 'crm-import',
     daysOnMarket: 120, // Old listing - low availability
     priceHistory: [165000, 155000, 145000], // Multiple price drops = motivated seller
     improvements: [SAMPLE_IMPROVEMENTS[0], SAMPLE_IMPROVEMENTS[1], SAMPLE_IMPROVEMENTS[2], SAMPLE_IMPROVEMENTS[3]], // Needs work
@@ -452,7 +447,7 @@ const MOCK_LISTINGS = [
     hasTerrace: true,
     hasAirConditioning: true,
     authenticityScore: 92,
-    sourceSlug: 'idealista',
+    sourceSlug: 'usuario',
     images: [
       'https://images.unsplash.com/photo-1600607687939-ce8a6c25118c?w=800&h=600&fit=crop',
       'https://images.unsplash.com/photo-1600566753190-17f0baa2a6c3?w=800&h=600&fit=crop',
@@ -478,7 +473,7 @@ const MOCK_LISTINGS = [
     hasTerrace: true,
     hasAirConditioning: true,
     authenticityScore: 95,
-    sourceSlug: 'fotocasa',
+    sourceSlug: 'api',
     images: [
       'https://images.unsplash.com/photo-1502672260266-1c1ef2d93688?w=800&h=600&fit=crop',
       'https://images.unsplash.com/photo-1600585154340-be6161a56a0c?w=800&h=600&fit=crop',
@@ -503,7 +498,7 @@ const MOCK_LISTINGS = [
     hasElevator: false,
     hasBalcony: true,
     authenticityScore: 87,
-    sourceSlug: 'habitaclia',
+    sourceSlug: 'crm-import',
     images: [
       'https://images.unsplash.com/photo-1560448204-e02f11c3d0e2?w=800&h=600&fit=crop',
     ],
@@ -526,7 +521,7 @@ const MOCK_LISTINGS = [
     hasParking: true,
     hasPool: false,
     authenticityScore: 98,
-    sourceSlug: 'idealista',
+    sourceSlug: 'usuario',
     images: [
       'https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?w=800&h=600&fit=crop',
       'https://images.unsplash.com/photo-1600607687939-ce8a6c25118c?w=800&h=600&fit=crop',
@@ -550,7 +545,7 @@ const MOCK_LISTINGS = [
     totalFloors: 4,
     hasAirConditioning: true,
     authenticityScore: 81,
-    sourceSlug: 'fotocasa',
+    sourceSlug: 'api',
     images: [
       'https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?w=800&h=600&fit=crop',
     ],
@@ -575,7 +570,7 @@ const MOCK_LISTINGS = [
     hasTerrace: true,
     hasAirConditioning: true,
     authenticityScore: 90,
-    sourceSlug: 'idealista',
+    sourceSlug: 'usuario',
     images: [
       'https://images.unsplash.com/photo-1600585154340-be6161a56a0c?w=800&h=600&fit=crop',
       'https://images.unsplash.com/photo-1560185007-cde436f6a4d0?w=800&h=600&fit=crop',
@@ -600,7 +595,7 @@ const MOCK_LISTINGS = [
     hasElevator: true,
     hasAirConditioning: true,
     authenticityScore: 86,
-    sourceSlug: 'habitaclia',
+    sourceSlug: 'crm-import',
     images: [
       'https://images.unsplash.com/photo-1502672260266-1c1ef2d93688?w=800&h=600&fit=crop',
     ],
@@ -621,7 +616,7 @@ const MOCK_LISTINGS = [
     bathrooms: 1,
     hasAirConditioning: true,
     authenticityScore: 88,
-    sourceSlug: 'fotocasa',
+    sourceSlug: 'api',
     images: [
       'https://images.unsplash.com/photo-1560448204-e02f11c3d0e2?w=800&h=600&fit=crop',
     ],
@@ -644,7 +639,7 @@ const MOCK_LISTINGS = [
     totalFloors: 5,
     hasElevator: true,
     authenticityScore: 75,
-    sourceSlug: 'idealista',
+    sourceSlug: 'usuario',
     images: [
       'https://images.unsplash.com/photo-1560448204-e02f11c3d0e2?w=800&h=600&fit=crop',
     ],
@@ -667,7 +662,7 @@ const MOCK_LISTINGS = [
     hasParking: true,
     hasAirConditioning: true,
     authenticityScore: 93,
-    sourceSlug: 'habitaclia',
+    sourceSlug: 'crm-import',
     images: [
       'https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?w=800&h=600&fit=crop',
       'https://images.unsplash.com/photo-1600585154340-be6161a56a0c?w=800&h=600&fit=crop',
@@ -695,7 +690,7 @@ const MOCK_LISTINGS = [
     hasBalcony: true,
     hasAirConditioning: true,
     authenticityScore: 89,
-    sourceSlug: 'idealista',
+    sourceSlug: 'usuario',
     images: [
       'https://images.unsplash.com/photo-1600607687939-ce8a6c25118c?w=800&h=600&fit=crop',
       'https://images.unsplash.com/photo-1600566753190-17f0baa2a6c3?w=800&h=600&fit=crop',
@@ -721,7 +716,7 @@ const MOCK_LISTINGS = [
     hasTerrace: true,
     hasAirConditioning: true,
     authenticityScore: 94,
-    sourceSlug: 'fotocasa',
+    sourceSlug: 'api',
     images: [
       'https://images.unsplash.com/photo-1502672260266-1c1ef2d93688?w=800&h=600&fit=crop',
       'https://images.unsplash.com/photo-1600585154340-be6161a56a0c?w=800&h=600&fit=crop',
@@ -746,7 +741,7 @@ const MOCK_LISTINGS = [
     hasElevator: true,
     hasBalcony: true,
     authenticityScore: 91,
-    sourceSlug: 'habitaclia',
+    sourceSlug: 'crm-import',
     images: [
       'https://images.unsplash.com/photo-1560448204-e02f11c3d0e2?w=800&h=600&fit=crop',
     ],
@@ -770,7 +765,7 @@ const MOCK_LISTINGS = [
     hasParking: true,
     hasAirConditioning: true,
     authenticityScore: 96,
-    sourceSlug: 'idealista',
+    sourceSlug: 'usuario',
     images: [
       'https://images.unsplash.com/photo-1613490493576-7fde63acd811?w=800&h=600&fit=crop',
       'https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?w=800&h=600&fit=crop',
@@ -794,7 +789,7 @@ const MOCK_LISTINGS = [
     totalFloors: 3,
     hasAirConditioning: true,
     authenticityScore: 79,
-    sourceSlug: 'fotocasa',
+    sourceSlug: 'api',
     images: [
       'https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?w=800&h=600&fit=crop',
     ],
@@ -818,7 +813,7 @@ const MOCK_LISTINGS = [
     hasElevator: true,
     hasBalcony: true,
     authenticityScore: 84,
-    sourceSlug: 'habitaclia',
+    sourceSlug: 'crm-import',
     images: [
       'https://images.unsplash.com/photo-1600585154340-be6161a56a0c?w=800&h=600&fit=crop',
     ],
@@ -841,7 +836,7 @@ const MOCK_LISTINGS = [
     totalFloors: 3,
     hasAirConditioning: true,
     authenticityScore: 82,
-    sourceSlug: 'idealista',
+    sourceSlug: 'usuario',
     images: [
       'https://images.unsplash.com/photo-1502672260266-1c1ef2d93688?w=800&h=600&fit=crop',
     ],
@@ -865,7 +860,7 @@ const MOCK_LISTINGS = [
     hasElevator: true,
     hasParking: true,
     authenticityScore: 87,
-    sourceSlug: 'fotocasa',
+    sourceSlug: 'api',
     images: [
       'https://images.unsplash.com/photo-1560448204-e02f11c3d0e2?w=800&h=600&fit=crop',
     ],
@@ -886,7 +881,7 @@ const MOCK_LISTINGS = [
     bathrooms: 1,
     hasAirConditioning: true,
     authenticityScore: 85,
-    sourceSlug: 'habitaclia',
+    sourceSlug: 'crm-import',
     images: [
       'https://images.unsplash.com/photo-1560448204-e02f11c3d0e2?w=800&h=600&fit=crop',
     ],
@@ -909,7 +904,7 @@ const MOCK_LISTINGS = [
     hasPool: true,
     hasParking: true,
     authenticityScore: 92,
-    sourceSlug: 'idealista',
+    sourceSlug: 'usuario',
     images: [
       'https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?w=800&h=600&fit=crop',
       'https://images.unsplash.com/photo-1600607687939-ce8a6c25118c?w=800&h=600&fit=crop',

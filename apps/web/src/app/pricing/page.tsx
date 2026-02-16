@@ -52,48 +52,49 @@ function PricingMessages() {
 }
 
 /**
- * PRICING v3 - Modelo Agentic Anti-Frágil
+ * PRICING v4 - Intelligence Service Model
  *
  * PRINCIPIOS:
- * 1. Free generoso → elimina fricción → monetiza transacciones
- * 2. Pro bajo precio → valor en herramientas, no en IA
- * 3. Agency → valor en automatización (autoposting), no en seats
- * 4. Revenue real viene de TRANSACTION FEES (Escrow 0.3-10%)
+ * 1. Free limitado → demuestra valor → fuerza upgrade
+ * 2. Pro a €49/mes → valor en verificaciones + herramientas avanzadas
+ * 3. Agency a €149/mes → automatización + API access
+ * 4. Revenue real viene de: suscripciones + verificaciones premium + transacciones (0.5%)
  *
- * Un cierre de venta (€600) = 120 meses de Pro
+ * Valores sincronizados con apps/api/src/config/pricing.ts
  */
 const plans = [
   {
     id: "free" as const,
-    name: "Gratis",
-    description: "IA incluida. Sin límites artificiales.",
+    name: "Explorador",
+    description: "Descubre el poder de la verificación inmobiliaria con IA.",
     monthlyPrice: 0,
     yearlyPrice: 0,
     icon: Users,
     features: [
-      "Búsqueda ilimitada con IA",
-      "Detección de fraude incluida",
-      "Alertas ilimitadas",
-      "Análisis de mercado",
-      "Historial de precios (30 días)",
+      "30 búsquedas/mes con IA",
+      "1 verificación catastral/mes",
+      "3 detecciones de fraude/mes",
+      "Análisis de mercado básico",
+      "1 alerta de precio",
     ],
     cta: "Empezar gratis",
-    popular: true, // Free es el hero ahora
+    popular: true,
   },
   {
     id: "pro" as const,
-    name: "Pro",
-    description: "Herramientas avanzadas para decisiones informadas",
-    monthlyPrice: 4.99,
-    yearlyPrice: 49.99,
+    name: "Profesional",
+    description: "Verificaciones ilimitadas y herramientas avanzadas",
+    monthlyPrice: 49,
+    yearlyPrice: 529,
     icon: Zap,
     features: [
-      "Todo de Free",
+      "500 búsquedas/mes con IA",
+      "50 verificaciones catastrales/mes",
+      "100 detecciones de fraude/mes",
       "Historial de precios completo",
       "Exportar a PDF y Excel",
-      "Comparador de propiedades",
+      "10 alertas de precio",
       "Soporte prioritario",
-      "Sin anuncios",
     ],
     cta: "Suscribirse",
     popular: false,
@@ -101,17 +102,18 @@ const plans = [
   {
     id: "agency" as const,
     name: "Agencia",
-    description: "Automatización para profesionales",
-    monthlyPrice: 29,
-    yearlyPrice: 290,
+    description: "Automatización completa para equipos inmobiliarios",
+    monthlyPrice: 149,
+    yearlyPrice: 1609,
     icon: Building2,
     features: [
-      "Todo de Pro",
-      "Autoposting en 5 portales",
+      "Todo de Profesional",
+      "2.000 búsquedas/mes",
+      "200 verificaciones catastrales",
+      "Autoposting en redes sociales",
       "Dashboard de analytics",
       "Gestión de leads centralizada",
-      "Usuarios ilimitados",
-      "API Access",
+      "API Access (1.000 calls/mes)",
       "Soporte 24/7",
     ],
     cta: "Suscribirse",
@@ -189,7 +191,7 @@ export default function PricingPage() {
           </Label>
           {isYearly && (
             <Badge variant="default" className="bg-green-600">
-              Ahorra 2 meses
+              Ahorra 10%
             </Badge>
           )}
         </div>

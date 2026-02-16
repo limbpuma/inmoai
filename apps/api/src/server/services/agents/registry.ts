@@ -113,16 +113,17 @@ export const DEFAULT_AGENT_CONFIGS: Record<AgentType, Partial<AgentConfig>> = {
   },
   verify: {
     name: 'Verify Agent',
-    description: 'Verifica la autenticidad y calidad de propiedades',
+    description: 'Verifica propiedades contra Catastro oficial + deteccion de fraude + analisis de mercado',
     capabilities: [
-      'Detección de fraude',
-      'Análisis de imágenes',
-      'Verificación de precios',
-      'Puntuación de autenticidad',
+      'Verificacion catastral oficial (API Catastro español)',
+      'Deteccion de fraude (superficie, año, imagenes AI)',
+      'Cross-verificacion listing vs registro',
+      'Trust score 0-100 automatico',
+      'Verificacion comprehensive (todo en una llamada)',
     ],
     pricing: {
       sessionCost: 0,
-      outcomeCost: 1.0, // 1 EUR per verification
+      outcomeCost: 1.0, // 1 EUR per basic verification
       billableOutcomes: ['verification'],
     },
     limits: {
@@ -240,17 +241,17 @@ export const DEFAULT_AGENT_CONFIGS: Record<AgentType, Partial<AgentConfig>> = {
   },
   transaction: {
     name: 'Transaction Agent',
-    description: 'Gestiona el proceso completo de compraventa',
+    description: 'Gestiona el proceso completo de compraventa via Stripe Treasury/Mangopay',
     capabilities: [
       'Coordinación de transacción',
-      'Gestión de escrow',
+      'Gestión de escrow (via partnership)',
       'Documentación legal',
       'Seguimiento de pagos',
     ],
     pricing: {
       sessionCost: 0,
       outcomeCost: 0,
-      transactionFeePercent: 0.003, // 0.3% of transaction value
+      transactionFeePercent: 0.005, // 0.5% of transaction value
       billableOutcomes: ['property_sold', 'property_rented'],
     },
     limits: {

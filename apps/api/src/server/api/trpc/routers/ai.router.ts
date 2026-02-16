@@ -14,7 +14,7 @@ import {
 import { AIFunction, AIMode } from "@/services/ai/types";
 
 const aiFunctionSchema = z.enum([
-  "scraping",
+  "data_pipeline",
   "fraud_detection",
   "price_analysis",
   "moderation",

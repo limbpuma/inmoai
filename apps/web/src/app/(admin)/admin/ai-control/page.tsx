@@ -21,7 +21,7 @@ import { AIActionHistory } from "@/components/admin/AIActionHistory";
 import { AIFunction } from "@/types/adminAI";
 
 const aiFeatures: AIFunction[] = [
-  'scraping',
+  'data_pipeline',
   'fraud_detection',
   'price_analysis',
   'moderation',

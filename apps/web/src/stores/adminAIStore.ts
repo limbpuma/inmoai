@@ -68,7 +68,7 @@ export const useAdminAIStore = create<AdminAIState>()(
         }));
         get().addEvent({
           type: 'alert',
-          function: 'scraping', // Generic
+          function: 'data_pipeline', // Generic
           message: `Modo cambiado a ${mode.toUpperCase()}`,
           severity: 'info',
         });
@@ -274,7 +274,7 @@ export const useAdminAIStore = create<AdminAIState>()(
         set({ status: 'paused' });
         get().addEvent({
           type: 'alert',
-          function: 'scraping',
+          function: 'data_pipeline',
           message: 'Sistema IA pausado',
           severity: 'warning',
         });
@@ -284,7 +284,7 @@ export const useAdminAIStore = create<AdminAIState>()(
         set({ status: 'idle' });
         get().addEvent({
           type: 'alert',
-          function: 'scraping',
+          function: 'data_pipeline',
           message: 'Sistema IA reanudado',
           severity: 'info',
         });

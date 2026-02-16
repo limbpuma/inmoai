@@ -31,7 +31,7 @@ const recentActivity = [
 
 const alerts = [
   { id: 1, severity: "high", message: "3 listings con score de fraude > 90%", action: "Revisar" },
-  { id: 2, severity: "medium", message: "Scraping de Fotocasa fallo 2 veces", action: "Verificar" },
+  { id: 2, severity: "medium", message: "Pipeline de datos fallo 2 veces", action: "Verificar" },
   { id: 3, severity: "low", message: "5 usuarios con sesion expirada", action: "Notificar" },
 ];
 
@@ -175,7 +175,7 @@ export default function AdminDashboardPage() {
             </Button>
             <Button variant="outline">
               <Search className="h-4 w-4 mr-2" />
-              Ejecutar scraping
+              Sincronizar datos
             </Button>
             <Button variant="outline">
               <AlertTriangle className="h-4 w-4 mr-2" />

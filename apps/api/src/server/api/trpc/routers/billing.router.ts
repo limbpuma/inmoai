@@ -75,7 +75,7 @@ export const billingRouter = createTRPCRouter({
         fee,
         percentage: input.type === 'sale'
           ? OUTCOME_PRICING.closedDeal.salePercentage
-          : OUTCOME_PRICING.closedDeal.rentMultiplier * 100,
+          : OUTCOME_PRICING.closedDeal.rentFirstMonthPercent,
       };
     }),
 

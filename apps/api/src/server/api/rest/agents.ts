@@ -102,10 +102,13 @@ async function validateApiKey(apiKeyPrefix: string): Promise<ApiKeyData | null> 
 const TOOL_TO_AGENT_MAP: Record<string, AgentTypeName> = {
   inmoai_search_properties: 'search',
   inmoai_verify_property: 'verify',
+  inmoai_verify_comprehensive: 'verify',
   inmoai_estimate_value: 'valuation',
   inmoai_publish_social: 'social_media',
   inmoai_generate_content: 'content',
   inmoai_find_services: 'service_match',
+  inmoai_search_directory: 'service_match',
+  inmoai_recommend_provider: 'service_match',
   inmoai_delegate_task: 'coordinator',
   inmoai_create_workflow: 'coordinator',
   inmoai_get_social_analytics: 'social_media',
@@ -116,10 +119,13 @@ const TOOL_TO_AGENT_MAP: Record<string, AgentTypeName> = {
 const TOOL_COSTS: Record<string, number> = {
   inmoai_search_properties: 1,
   inmoai_verify_property: 2,
+  inmoai_verify_comprehensive: 5,
   inmoai_estimate_value: 3,
   inmoai_publish_social: 5,
   inmoai_generate_content: 2,
   inmoai_find_services: 2,
+  inmoai_search_directory: 1,
+  inmoai_recommend_provider: 1,
   inmoai_delegate_task: 0,
   inmoai_create_workflow: 1,
   inmoai_get_social_analytics: 1,
@@ -187,8 +193,17 @@ function buildMessageFromParams(tool: string, params: Record<string, unknown>): 
     case 'inmoai_generate_content':
       return `Generar ${params.contentType} para propiedad ${params.listingId}`;
 
+    case 'inmoai_verify_comprehensive':
+      return `Verificacion integral de propiedad ${params.cadastralRef || params.listingId || (params.address as Record<string,unknown>)?.city || ''}`;
+
     case 'inmoai_find_services':
       return `Buscar ${params.serviceType} cerca de ${params.location || 'la propiedad'}`;
+
+    case 'inmoai_search_directory':
+      return `Buscar ${params.category} en ${params.city || params.province || 'España'}${params.query ? `: ${params.query}` : ''}`;
+
+    case 'inmoai_recommend_provider':
+      return `Recomendar ${params.category} en ${params.city}${params.context ? ` para ${params.context}` : ''}`;
 
     case 'inmoai_delegate_task':
       return params.task as string;

@@ -364,7 +364,7 @@ class ScrapingSchedulerService {
 export const scrapingSchedulerService = new ScrapingSchedulerService();
 
 // Register with orchestrator
-aiOrchestrator.registerHandler("scraping", async (context) => {
+aiOrchestrator.registerHandler("data_pipeline", async (context) => {
   const startTime = Date.now();
   const { params } = context;
 

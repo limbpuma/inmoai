@@ -170,6 +170,51 @@ class InmoAIClient {
   }
 
   // ============================================
+  // COMPREHENSIVE VERIFICATION (HIGH-VALUE ENDPOINT)
+  // ============================================
+
+  async verifyComprehensive(params: {
+    listingId?: string;
+    cadastralRef?: string;
+    address?: {
+      street: string;
+      number: string;
+      city: string;
+      province: string;
+      postalCode?: string;
+    };
+    listingSurfaceM2?: number;
+    listingPrice?: number;
+    constructionYear?: number;
+    operationType?: 'sale' | 'rent';
+  }) {
+    return this.request('/api/trpc/cadastre.verifyComprehensive', 'POST', params);
+  }
+
+  // ============================================
+  // BUSINESS DIRECTORY TOOLS
+  // ============================================
+
+  async searchDirectory(params: {
+    category: string;
+    city?: string;
+    province?: string;
+    query?: string;
+    limit?: number;
+  }) {
+    return this.request('/api/trpc/directory.search', 'POST', params);
+  }
+
+  async recommendProvider(params: {
+    category: string;
+    city: string;
+    context?: string;
+    criteria?: ('rating' | 'response_time' | 'price' | 'track_record')[];
+  }) {
+    return this.request('/api/trpc/directory.recommend', 'POST', params);
+  }
+
+  // ============================================
   // SOCIAL MEDIA TOOLS
   // ============================================
 
@@ -365,13 +410,171 @@ Incluye cambios de precio históricos y estimación de valoración.`,
       },
     },
 
+    // === COMPREHENSIVE VERIFICATION (HIGH-VALUE) ===
+    {
+      name: 'inmoai_verify_comprehensive',
+      description: `Verificacion integral de una propiedad en una sola llamada.
+Combina: verificacion catastral + deteccion de fraude + datos de mercado + comparables.
+Este es el endpoint de MAXIMO VALOR de InmoAI.
+
+Devuelve:
+- Datos catastrales oficiales (referencia, superficie, año construccion)
+- Trust score 0-100 (riesgo de fraude)
+- Discrepancia de superficie (anuncio vs catastro)
+- Discrepancia de año de construccion
+- Precio medio por m2 en la zona
+- Comparables recientes
+- Factores de riesgo detallados
+
+UNICO en el mercado: ningun chatbot generico puede replicar esta verificacion
+porque requiere acceso a la API oficial del Catastro español.
+
+Precio: 0.50€ por verificacion integral (API) / 25€ premium (usuario final).`,
+      inputSchema: {
+        type: 'object',
+        properties: {
+          listingId: {
+            type: 'string',
+            description: 'ID del listado en InmoAI (si existe)',
+          },
+          cadastralRef: {
+            type: 'string',
+            description: 'Referencia catastral de 20 caracteres (si se conoce)',
+          },
+          address: {
+            type: 'object',
+            description: 'Direccion para buscar en el Catastro',
+            properties: {
+              street: { type: 'string' },
+              number: { type: 'string' },
+              city: { type: 'string' },
+              province: { type: 'string' },
+              postalCode: { type: 'string' },
+            },
+            required: ['street', 'number', 'city', 'province'],
+          },
+          listingSurfaceM2: {
+            type: 'number',
+            description: 'Superficie anunciada en m2 (para detectar discrepancia)',
+          },
+          listingPrice: {
+            type: 'number',
+            description: 'Precio anunciado en EUR (para analisis de mercado)',
+          },
+          constructionYear: {
+            type: 'number',
+            description: 'Año de construccion declarado (para cross-verificacion)',
+          },
+          operationType: {
+            type: 'string',
+            enum: ['sale', 'rent'],
+            description: 'Tipo de operacion (venta o alquiler)',
+          },
+        },
+      },
+    },
+
+    // === BUSINESS DIRECTORY TOOLS ===
+    {
+      name: 'inmoai_search_directory',
+      description: `Busca empresas del sector inmobiliario en el directorio ultraespecializado de InmoAI.
+Categorias: inmobiliarias, notarias, gestorias, reformas, mudanzas, limpieza, seguros, tasaciones.
+Datos que solo existen en InmoAI: track record, tiempo de respuesta, valoraciones verificadas.
+
+Ejemplo: "mejor notaria en Salamanca para compraventa de extranjeros"
+Ejemplo: "empresa de reformas que cumple plazos en Barcelona"
+
+Precio: 0.10€ por consulta (API).`,
+      inputSchema: {
+        type: 'object',
+        properties: {
+          category: {
+            type: 'string',
+            enum: [
+              'real_estate_agency', 'notary', 'gestoria', 'lawyer',
+              'renovation', 'moving', 'cleaning', 'insurance',
+              'appraisal', 'mortgage_broker', 'architect', 'interior_design',
+            ],
+            description: 'Categoria de empresa',
+          },
+          city: {
+            type: 'string',
+            description: 'Ciudad (ej: "Madrid", "Barcelona")',
+          },
+          province: {
+            type: 'string',
+            description: 'Provincia',
+          },
+          query: {
+            type: 'string',
+            description: 'Busqueda libre (ej: "especialista en extranjeros")',
+          },
+          limit: {
+            type: 'number',
+            description: 'Numero maximo de resultados (default: 10)',
+            default: 10,
+          },
+        },
+        required: ['category'],
+      },
+    },
+    {
+      name: 'inmoai_recommend_provider',
+      description: `Obtiene recomendaciones inteligentes de proveedores de servicios inmobiliarios.
+Usa datos acumulados de InmoAI (valoraciones, track record, tiempos de respuesta)
+para recomendar el mejor proveedor segun el contexto.
+
+Datos UNICOS de InmoAI que crecen con el tiempo (moat):
+- Track record real de cada empresa
+- Tiempos de respuesta verificados
+- Cumplimiento de plazos
+- Especializaciones (ej: "notaria experta en compraventas de extranjeros")
+
+Ejemplo: "Que gestoria tiene mejor track record para extranjeros comprando en Costa del Sol?"
+Ejemplo: "Que empresa de reformas cumple plazos en Barcelona?"
+
+Precio: 0.10€ por recomendacion (API).`,
+      inputSchema: {
+        type: 'object',
+        properties: {
+          category: {
+            type: 'string',
+            enum: [
+              'real_estate_agency', 'notary', 'gestoria', 'lawyer',
+              'renovation', 'moving', 'cleaning', 'insurance',
+              'appraisal', 'mortgage_broker', 'architect', 'interior_design',
+            ],
+            description: 'Categoria de proveedor a recomendar',
+          },
+          city: {
+            type: 'string',
+            description: 'Ciudad donde se necesita el servicio',
+          },
+          context: {
+            type: 'string',
+            description: 'Contexto para personalizar la recomendacion (ej: "compraventa de extranjero britanico")',
+          },
+          criteria: {
+            type: 'array',
+            items: {
+              type: 'string',
+              enum: ['rating', 'response_time', 'price', 'track_record'],
+            },
+            description: 'Criterios de priorizacion (default: rating + track_record)',
+          },
+        },
+        required: ['category', 'city'],
+      },
+    },
+
     // === TRANSACTION TOOLS ===
     {
       name: 'inmoai_initiate_escrow',
-      description: `Inicia un proceso de escrow (depósito en garantía) para una transacción inmobiliaria.
+      description: `Inicia un proceso de escrow (deposito en garantia) para una transaccion inmobiliaria.
 El dinero queda protegido hasta que se cumplan las condiciones acordadas.
-Fees: 0.3% para ventas, 0.5% para alquileres.
-REQUIERE autorización del comprador.`,
+Gestionado via Stripe Treasury/Mangopay (InmoAI orquesta, no gestiona fondos).
+Fees: 0.5% para ventas, 5% primer mes para alquileres.
+REQUIERE autorizacion del comprador.`,
       inputSchema: {
         type: 'object',
         properties: {
@@ -758,6 +961,27 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
     switch (name) {
       case 'inmoai_verify_property': {
         const result = await client.verifyProperty(args as Parameters<typeof client.verifyProperty>[0]);
+        return {
+          content: [{ type: 'text', text: JSON.stringify(result, null, 2) }],
+        };
+      }
+
+      case 'inmoai_verify_comprehensive': {
+        const result = await client.verifyComprehensive(args as Parameters<typeof client.verifyComprehensive>[0]);
+        return {
+          content: [{ type: 'text', text: JSON.stringify(result, null, 2) }],
+        };
+      }
+
+      case 'inmoai_search_directory': {
+        const result = await client.searchDirectory(args as Parameters<typeof client.searchDirectory>[0]);
+        return {
+          content: [{ type: 'text', text: JSON.stringify(result, null, 2) }],
+        };
+      }
+
+      case 'inmoai_recommend_provider': {
+        const result = await client.recommendProvider(args as Parameters<typeof client.recommendProvider>[0]);
         return {
           content: [{ type: 'text', text: JSON.stringify(result, null, 2) }],
         };

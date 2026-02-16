@@ -122,10 +122,11 @@ export interface EscrowSummary {
 }
 
 // Platform fee structure
+// InmoAI orquesta; fondos gestionados via Stripe Treasury/Mangopay (partnership)
 export const PLATFORM_FEES = {
-  property_sale: 0.003, // 0.3%
-  property_rent: 0.005, // 0.5% of annual rent
-  service_completion: 0.10, // 10%
+  property_sale: 0.005, // 0.5% of sale price
+  property_rent: 0.05, // 5% of first month rent
+  service_completion: 0.10, // 10% of service cost
   custom: 0.05, // 5%
 } as const;
 

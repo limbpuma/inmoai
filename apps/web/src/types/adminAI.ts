@@ -11,7 +11,7 @@ export type AIStatus = 'idle' | 'working' | 'waiting' | 'error' | 'paused';
 
 // Delegable AI Functions
 export type AIFunction =
-  | 'scraping'
+  | 'data_pipeline'
   | 'fraud_detection'
   | 'price_analysis'
   | 'moderation'
@@ -176,9 +176,9 @@ export interface AdminAIState {
 
 // Default function configurations
 export const DEFAULT_FUNCTION_CONFIGS: Record<AIFunction, Omit<AIFunctionConfig, 'id'>> = {
-  scraping: {
-    name: 'Scraping',
-    description: 'Extraccion automatica de listings de portales inmobiliarios',
+  data_pipeline: {
+    name: 'Pipeline de Datos',
+    description: 'Ingestion automatica de listings desde CRM, API y usuarios',
     enabled: true,
     mode: 'lazy',
     schedule: '0 */6 * * *', // Every 6 hours
