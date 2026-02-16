@@ -14,6 +14,7 @@ import {
 import { eq, and, desc, sql, inArray, asc } from 'drizzle-orm';
 import { proximityService } from '@/server/services/marketplace';
 import { notifications } from '@/server/infrastructure/database/schema';
+import { PROVIDER_PLANS, stripe, createCheckoutSession } from '@/server/services/stripe/stripe.service';
 
 const serviceCategoryEnum = z.enum([
   'painting',
@@ -1090,4 +1091,131 @@ export const marketplaceRouter = createTRPCRouter({
 
       return { success: true };
     }),
+
+  // ==========================================
+  // Provider Billing
+  // ==========================================
+
+  /**
+   * Get provider plans
+   */
+  getProviderPlans: publicProcedure.query(() => {
+    return Object.entries(PROVIDER_PLANS).map(([key, plan]) => ({
+      id: key,
+      name: plan.name,
+      description: plan.description,
+      price: plan.price,
+      features: plan.features,
+      limits: plan.limits,
+    }));
+  }),
+
+  /**
+   * Create checkout session for provider tier upgrade
+   */
+  createProviderCheckout: protectedProcedure
+    .input(
+      z.object({
+        tier: z.enum(['premium', 'enterprise']),
+        successUrl: z.string().url(),
+        cancelUrl: z.string().url(),
+      })
+    )
+    .mutation(async ({ ctx, input }) => {
+      if (!stripe) {
+        throw new TRPCError({
+          code: 'INTERNAL_SERVER_ERROR',
+          message: 'Sistema de pagos no configurado',
+        });
+      }
+
+      const provider = await db.query.serviceProviders.findFirst({
+        where: eq(serviceProviders.userId, ctx.session.user.id),
+        columns: { id: true, tier: true, stripeCustomerId: true },
+      });
+
+      if (!provider) {
+        throw new TRPCError({ code: 'NOT_FOUND', message: 'No tienes un perfil de profesional' });
+      }
+
+      const plan = PROVIDER_PLANS[input.tier];
+      if (!plan.priceId) {
+        throw new TRPCError({
+          code: 'BAD_REQUEST',
+          message: 'Plan no disponible para compra',
+        });
+      }
+
+      // Create or get Stripe customer
+      let customerId = provider.stripeCustomerId;
+      if (!customerId) {
+        const customer = await stripe.customers.create({
+          email: ctx.session.user.email,
+          name: ctx.session.user.name ?? undefined,
+          metadata: {
+            userId: ctx.session.user.id,
+            providerId: provider.id,
+            type: 'provider',
+          },
+        });
+        customerId = customer.id;
+
+        await db
+          .update(serviceProviders)
+          .set({ stripeCustomerId: customerId, updatedAt: new Date() })
+          .where(eq(serviceProviders.id, provider.id));
+      }
+
+      // Create checkout session
+      const session = await stripe.checkout.sessions.create({
+        customer: customerId,
+        payment_method_types: ['card'],
+        line_items: [{ price: plan.priceId, quantity: 1 }],
+        mode: 'subscription',
+        success_url: input.successUrl,
+        cancel_url: input.cancelUrl,
+        metadata: {
+          providerId: provider.id,
+          tier: input.tier,
+          type: 'provider_subscription',
+        },
+      });
+
+      return { url: session.url };
+    }),
+
+  /**
+   * Get current provider subscription status
+   */
+  getProviderSubscription: protectedProcedure.query(async ({ ctx }) => {
+    const provider = await db.query.serviceProviders.findFirst({
+      where: eq(serviceProviders.userId, ctx.session.user.id),
+      columns: {
+        id: true,
+        tier: true,
+        stripeSubscriptionId: true,
+        stripeCurrentPeriodEnd: true,
+      },
+    });
+
+    if (!provider) {
+      return null;
+    }
+
+    const plan = PROVIDER_PLANS[provider.tier as keyof typeof PROVIDER_PLANS] || PROVIDER_PLANS.free;
+    const isActive = provider.tier !== 'free' &&
+      provider.stripeCurrentPeriodEnd !== null &&
+      new Date(provider.stripeCurrentPeriodEnd) > new Date();
+
+    return {
+      tier: provider.tier,
+      planName: plan.name,
+      price: plan.price,
+      features: plan.features,
+      limits: plan.limits,
+      isActive: provider.tier === 'free' || isActive,
+      currentPeriodEnd: provider.stripeCurrentPeriodEnd,
+      hasSubscription: !!provider.stripeSubscriptionId,
+    };
+  }),
 });

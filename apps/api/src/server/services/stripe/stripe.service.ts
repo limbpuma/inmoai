@@ -154,6 +154,77 @@ export const AI_CREDIT_COSTS = AI_OPERATION_COSTS;
 
 export type PlanType = keyof typeof PLANS;
 
+/**
+ * PROVIDER PLANS - Tiers for service providers
+ *
+ * Revenue: lead fees (€5/lead) + subscription + service_completion (10%)
+ */
+export const PROVIDER_PLANS = {
+  free: {
+    name: 'Basico',
+    description: 'Empieza a recibir leads gratis',
+    priceId: env.STRIPE_PRICE_ID_PROVIDER_PREMIUM ? null : null,
+    price: 0,
+    features: [
+      '3 leads/mes incluidos',
+      'Perfil basico',
+      '3 fotos en portfolio',
+      'Aparicion en busquedas',
+    ],
+    limits: {
+      leadsPerMonth: 3,
+      portfolioItems: 3,
+      rankingBoost: 0,
+      canRespondReviews: false,
+      analytics: false,
+    },
+  },
+  premium: {
+    name: 'Premium',
+    description: 'Mas visibilidad y leads ilimitados',
+    priceId: env.STRIPE_PRICE_ID_PROVIDER_PREMIUM || null,
+    price: 29,
+    features: [
+      '50 leads/mes incluidos',
+      'Perfil destacado',
+      '20 fotos en portfolio',
+      'Badge Premium',
+      'Responder opiniones',
+      'Ranking +50% boost',
+    ],
+    limits: {
+      leadsPerMonth: 50,
+      portfolioItems: 20,
+      rankingBoost: 50,
+      canRespondReviews: true,
+      analytics: true,
+    },
+  },
+  enterprise: {
+    name: 'Destacado',
+    description: 'Maxima visibilidad y herramientas avanzadas',
+    priceId: env.STRIPE_PRICE_ID_PROVIDER_ENTERPRISE || null,
+    price: 79,
+    features: [
+      'Leads ilimitados',
+      'Perfil destacado con badge',
+      'Portfolio ilimitado',
+      'Ranking +100% boost',
+      'Analytics avanzados',
+      'Soporte prioritario',
+    ],
+    limits: {
+      leadsPerMonth: -1,
+      portfolioItems: -1,
+      rankingBoost: 100,
+      canRespondReviews: true,
+      analytics: true,
+    },
+  },
+} as const;
+
+export type ProviderPlanType = keyof typeof PROVIDER_PLANS;
+
 export async function createCheckoutSession(
   userId: string,
   priceId: string,

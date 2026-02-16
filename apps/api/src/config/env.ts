@@ -46,6 +46,8 @@ export const env = createEnv({
     STRIPE_PRICE_ID_FREE: z.string().optional(),
     STRIPE_PRICE_ID_PRO: z.string().optional(),
     STRIPE_PRICE_ID_AGENCY: z.string().optional(),
+    STRIPE_PRICE_ID_PROVIDER_PREMIUM: z.string().optional(),
+    STRIPE_PRICE_ID_PROVIDER_ENTERPRISE: z.string().optional(),
 
     // Rate Limiting
     RATE_LIMIT_REQUESTS_PER_HOUR: z.coerce.number().default(100),
@@ -112,6 +114,8 @@ export const env = createEnv({
     STRIPE_PRICE_ID_FREE: process.env.STRIPE_PRICE_ID_FREE,
     STRIPE_PRICE_ID_PRO: process.env.STRIPE_PRICE_ID_PRO,
     STRIPE_PRICE_ID_AGENCY: process.env.STRIPE_PRICE_ID_AGENCY,
+    STRIPE_PRICE_ID_PROVIDER_PREMIUM: process.env.STRIPE_PRICE_ID_PROVIDER_PREMIUM,
+    STRIPE_PRICE_ID_PROVIDER_ENTERPRISE: process.env.STRIPE_PRICE_ID_PROVIDER_ENTERPRISE,
     RATE_LIMIT_REQUESTS_PER_HOUR: process.env.RATE_LIMIT_REQUESTS_PER_HOUR,
     NEXT_PUBLIC_APP_URL: process.env.NEXT_PUBLIC_APP_URL,
 
