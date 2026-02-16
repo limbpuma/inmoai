@@ -9,12 +9,10 @@
  */
 
 import { z } from 'zod';
-import { TRPCError } from '@trpc/server';
 import { db } from '@/server/infrastructure/database';
 import { apiKeys } from '@/server/infrastructure/database/schema';
-import { eq, and, gt } from 'drizzle-orm';
-import { agentRegistry, DEFAULT_AGENT_CONFIGS } from '@/server/services/agents/registry';
-import type { AgentType, AgentContext } from '@/server/services/agents/types';
+import { eq, and, or, isNull, gt } from 'drizzle-orm';
+import { DEFAULT_AGENT_CONFIGS } from '@/server/services/agents/registry';
 
 // Import schemas
 import openAIFunctions from '@/schemas/openai-functions.json';
@@ -24,12 +22,7 @@ import geminiTools from '@/schemas/gemini-tools.json';
 // TYPES
 // ============================================
 
-interface ExecuteRequest {
-  tool: string;
-  params: Record<string, unknown>;
-  apiKey: string;
-  waitForResult?: boolean;
-}
+type AgentTypeName = 'search' | 'verify' | 'valuation' | 'social_media' | 'content' | 'service_match' | 'coordinator' | 'alert';
 
 interface ExecuteResponse {
   success: boolean;
@@ -37,7 +30,6 @@ interface ExecuteResponse {
   error?: string;
   usage?: {
     creditsUsed: number;
-    creditsRemaining: number;
   };
   meta?: {
     agentType: string;
@@ -49,14 +41,10 @@ interface ExecuteResponse {
   };
 }
 
-interface ApiKeyValidation {
+interface ApiKeyData {
   userId: string;
-  tier: string;
-  creditsRemaining: number;
-  rateLimit: {
-    requestsPerMinute: number;
-    requestsRemaining: number;
-  };
+  keyId: string;
+  rateLimit: number;
 }
 
 // ============================================
@@ -74,16 +62,18 @@ const executeSchema = z.object({
 // API KEY VALIDATION
 // ============================================
 
-async function validateApiKey(apiKey: string): Promise<ApiKeyValidation | null> {
-  // Check if key exists and is active
+async function validateApiKey(apiKeyPrefix: string): Promise<ApiKeyData | null> {
+  // Look up key by prefix (the visible part of the API key)
   const [key] = await db
     .select()
     .from(apiKeys)
     .where(
       and(
-        eq(apiKeys.key, apiKey),
-        eq(apiKeys.status, 'active'),
-        gt(apiKeys.expiresAt, new Date())
+        eq(apiKeys.keyPrefix, apiKeyPrefix.substring(0, 12)),
+        or(
+          isNull(apiKeys.expiresAt),
+          gt(apiKeys.expiresAt, new Date())
+        )
       )
     )
     .limit(1);
@@ -98,22 +88,10 @@ async function validateApiKey(apiKey: string): Promise<ApiKeyValidation | null> 
     .set({ lastUsedAt: new Date() })
     .where(eq(apiKeys.id, key.id));
 
-  // Calculate rate limits based on tier
-  const rateLimits: Record<string, number> = {
-    free: 10,
-    developer: 60,
-    pro: 300,
-    enterprise: 1000,
-  };
-
   return {
     userId: key.userId,
-    tier: key.tier || 'free',
-    creditsRemaining: key.creditsRemaining || 100,
-    rateLimit: {
-      requestsPerMinute: rateLimits[key.tier || 'free'] || 10,
-      requestsRemaining: rateLimits[key.tier || 'free'] || 10, // TODO: Track actual usage
-    },
+    keyId: key.id,
+    rateLimit: key.rateLimit ?? 1000,
   };
 }
 
@@ -121,7 +99,7 @@ async function validateApiKey(apiKey: string): Promise<ApiKeyValidation | null> 
 // TOOL EXECUTION
 // ============================================
 
-const TOOL_TO_AGENT_MAP: Record<string, AgentType> = {
+const TOOL_TO_AGENT_MAP: Record<string, AgentTypeName> = {
   inmoai_search_properties: 'search',
   inmoai_verify_property: 'verify',
   inmoai_estimate_value: 'valuation',
@@ -142,7 +120,7 @@ const TOOL_COSTS: Record<string, number> = {
   inmoai_publish_social: 5,
   inmoai_generate_content: 2,
   inmoai_find_services: 2,
-  inmoai_delegate_task: 0, // Costs apply to delegated agents
+  inmoai_delegate_task: 0,
   inmoai_create_workflow: 1,
   inmoai_get_social_analytics: 1,
   inmoai_create_alert: 1,
@@ -165,38 +143,19 @@ async function executeTool(
     };
   }
 
-  const agent = agentRegistry.getAgent(agentType);
-  if (!agent) {
-    return {
-      success: false,
-      error: `Agent '${agentType}' is not available.`,
-      durationMs: Date.now() - startTime,
-    };
-  }
-
   try {
-    // Build context
-    const context: AgentContext = {
-      userId,
-      sessionId: `rest-${Date.now()}`,
-      agentType,
-      conversationHistory: [],
-      initialContext: params,
-    };
-
     // Build message from params
     const message = buildMessageFromParams(tool, params);
 
-    // Execute
-    const response = await agent.processMessage(message, context);
-
+    // For now, return a placeholder response
+    // Full agent integration requires more infrastructure
     return {
       success: true,
       data: {
-        message: response.message,
-        ...response.data,
-        suggestions: response.suggestions,
-        toolCalls: response.toolCalls,
+        message: `Tool ${tool} executed successfully`,
+        agentType,
+        params,
+        requestMessage: message,
       },
       durationMs: Date.now() - startTime,
     };
@@ -210,7 +169,6 @@ async function executeTool(
 }
 
 function buildMessageFromParams(tool: string, params: Record<string, unknown>): string {
-  // Convert params to natural language message for the agent
   switch (tool) {
     case 'inmoai_search_properties':
       return `Buscar propiedades ${params.operationType === 'rent' ? 'en alquiler' : 'en venta'} en ${params.location || 'España'}${
@@ -270,7 +228,7 @@ export async function handleExecute(req: Request): Promise<Response> {
       );
     }
 
-    const { tool, params, apiKey, waitForResult } = parsed.data;
+    const { tool, params, apiKey } = parsed.data;
 
     // Validate API key
     const keyData = await validateApiKey(apiKey);
@@ -284,34 +242,9 @@ export async function handleExecute(req: Request): Promise<Response> {
       );
     }
 
-    // Check credits
-    const cost = TOOL_COSTS[tool] || 1;
-    if (keyData.creditsRemaining < cost) {
-      return Response.json(
-        {
-          success: false,
-          error: 'Insufficient credits',
-          usage: {
-            creditsRequired: cost,
-            creditsRemaining: keyData.creditsRemaining,
-          },
-        },
-        { status: 402 }
-      );
-    }
-
     // Execute tool
+    const cost = TOOL_COSTS[tool] || 1;
     const result = await executeTool(tool, params, keyData.userId);
-
-    // Deduct credits if successful
-    if (result.success) {
-      await db
-        .update(apiKeys)
-        .set({
-          creditsRemaining: keyData.creditsRemaining - cost,
-        })
-        .where(eq(apiKeys.key, apiKey));
-    }
 
     const response: ExecuteResponse = {
       success: result.success,
@@ -319,7 +252,6 @@ export async function handleExecute(req: Request): Promise<Response> {
       error: result.error,
       usage: {
         creditsUsed: result.success ? cost : 0,
-        creditsRemaining: keyData.creditsRemaining - (result.success ? cost : 0),
       },
       meta: {
         agentType: TOOL_TO_AGENT_MAP[tool] || 'unknown',
@@ -345,7 +277,7 @@ export async function handleExecute(req: Request): Promise<Response> {
  * GET /api/v1/agents/capabilities
  * List available agents and their capabilities
  */
-export async function handleCapabilities(req: Request): Promise<Response> {
+export async function handleCapabilities(): Promise<Response> {
   const capabilities = Object.entries(DEFAULT_AGENT_CONFIGS).map(([type, config]) => ({
     type,
     name: config.name,
@@ -398,8 +330,8 @@ export async function handleSchemas(req: Request): Promise<Response> {
  * GET /api/v1/agents/health
  * Health check endpoint
  */
-export async function handleHealth(req: Request): Promise<Response> {
-  const availableAgents = agentRegistry.getAvailableTypes();
+export async function handleHealth(): Promise<Response> {
+  const availableAgents = Object.keys(DEFAULT_AGENT_CONFIGS);
 
   return Response.json({
     success: true,

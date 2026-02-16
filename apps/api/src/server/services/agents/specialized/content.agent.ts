@@ -229,7 +229,6 @@ const generateHashtagsTool: AgentTool = {
         content: hashtags.join(' '),
         metadata: {
           model: 'gemini-2.0-flash',
-          hashtagCount: hashtags.length,
         },
       })
       .returning();
@@ -308,7 +307,6 @@ const generateSocialPostTool: AgentTool = {
         content: generatedContent,
         metadata: {
           model: 'gemini-2.0-flash',
-          includesHashtags: includeHashtags,
         },
       })
       .returning();
@@ -371,9 +369,6 @@ const generateAdCopyTool: AgentTool = {
         content: generatedContent,
         metadata: {
           model: 'gemini-2.0-flash',
-          adType,
-          objective,
-          components: adComponents,
         },
       })
       .returning();
@@ -436,8 +431,6 @@ const generateEmailTool: AgentTool = {
         content: generatedContent,
         metadata: {
           model: 'gemini-2.0-flash',
-          emailType,
-          components: emailComponents,
         },
       })
       .returning();
@@ -858,11 +851,13 @@ Responde en español de forma concisa indicando qué contenido has generado.`;
     const parsed = this.parseModelResponse(modelResponse);
 
     if (parsed?.tool) {
-      const toolResult = await this.executeTool(parsed.tool, parsed.params || {}, context);
+      const toolName = parsed.tool as string;
+      const toolParams = (parsed.params as Record<string, unknown>) || {};
+      const toolResult = await this.executeTool(toolName, toolParams, context);
 
       toolCalls.push({
-        name: parsed.tool,
-        args: parsed.params || {},
+        name: toolName,
+        args: toolParams,
         result: JSON.stringify(toolResult),
       });
 

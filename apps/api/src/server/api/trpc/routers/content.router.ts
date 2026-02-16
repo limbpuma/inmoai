@@ -92,7 +92,7 @@ export const contentRouter = router({
       .insert(aiGeneratedContent)
       .values({
         listingId,
-        userId: ctx.session.userId,
+        userId: ctx.session.user.id,
         contentType,
         platform,
         language,
@@ -100,7 +100,6 @@ export const contentRouter = router({
         content: generatedText,
         metadata: {
           model: 'gemini-2.0-flash',
-          generatedAt: new Date().toISOString(),
         },
       })
       .returning();
@@ -131,7 +130,7 @@ export const contentRouter = router({
       let query = db
         .select()
         .from(aiGeneratedContent)
-        .where(eq(aiGeneratedContent.userId, ctx.session.userId))
+        .where(eq(aiGeneratedContent.userId, ctx.session.user.id))
         .orderBy(desc(aiGeneratedContent.createdAt))
         .limit(input.limit);
 
@@ -166,7 +165,7 @@ export const contentRouter = router({
         .where(eq(aiGeneratedContent.id, input.contentId))
         .limit(1);
 
-      if (!content || content.userId !== ctx.session.userId) {
+      if (!content || content.userId !== ctx.session.user.id) {
         throw new TRPCError({ code: 'NOT_FOUND', message: 'Content not found' });
       }
 
@@ -193,7 +192,7 @@ export const contentRouter = router({
         .where(eq(aiGeneratedContent.id, input.contentId))
         .limit(1);
 
-      if (!content || content.userId !== ctx.session.userId) {
+      if (!content || content.userId !== ctx.session.user.id) {
         throw new TRPCError({ code: 'NOT_FOUND', message: 'Content not found' });
       }
 
@@ -252,7 +251,7 @@ export const contentRouter = router({
             .insert(aiGeneratedContent)
             .values({
               listingId,
-              userId: ctx.session.userId,
+              userId: ctx.session.user.id,
               contentType,
               platform,
               language,
@@ -260,8 +259,6 @@ export const contentRouter = router({
               content: generatedText,
               metadata: {
                 model: 'gemini-2.0-flash',
-                generatedAt: new Date().toISOString(),
-                bulkGeneration: true,
               },
             })
             .returning();

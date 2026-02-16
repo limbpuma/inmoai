@@ -38,7 +38,7 @@ const publishToSocialTool: AgentTool = {
       type: 'array',
       description: 'Plataformas donde publicar',
       required: true,
-      items: { type: 'string' },
+      items: { type: 'string', description: 'Nombre de plataforma (facebook, instagram, etc.)' },
     },
     customMessage: { type: 'string', description: 'Mensaje personalizado' },
   },
@@ -84,11 +84,11 @@ const publishToSocialTool: AgentTool = {
           continue;
         }
 
-        // Build post data
+        // Build post data (TODO: fetch images from listingImages table)
         const postData: PostData = {
           content: customMessage || buildDefaultContent(listing, platform),
           hashtags: generateHashtags(listing, platform),
-          mediaUrls: listing.images as string[] | undefined,
+          mediaUrls: undefined,
           mediaType: 'image',
           listing: listing as unknown as PostData['listing'],
         };
@@ -280,7 +280,7 @@ const schedulePostTool: AgentTool = {
           platform,
           content: customMessage || buildDefaultContent(listing, platform),
           hashtags: generateHashtags(listing, platform),
-          mediaUrls: listing.images as string[] | undefined,
+          mediaUrls: [],
           status: 'scheduled',
           scheduledAt: scheduledDate,
         })
@@ -461,11 +461,13 @@ Responde en español de forma concisa.`;
     const parsed = this.parseModelResponse(modelResponse);
 
     if (parsed?.tool) {
-      const toolResult = await this.executeTool(parsed.tool, parsed.params || {}, context);
+      const toolName = parsed.tool as string;
+      const toolParams = (parsed.params as Record<string, unknown>) || {};
+      const toolResult = await this.executeTool(toolName, toolParams, context);
 
       toolCalls.push({
-        name: parsed.tool,
-        args: parsed.params || {},
+        name: toolName,
+        args: toolParams,
         result: JSON.stringify(toolResult),
       });
 

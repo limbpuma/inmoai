@@ -72,6 +72,14 @@ export const env = createEnv({
     PISOS_CLIENT_SECRET: z.string().optional(),
     MILANUNCIOS_CLIENT_ID: z.string().optional(),
     MILANUNCIOS_CLIENT_SECRET: z.string().optional(),
+
+    // Social Media OAuth
+    FACEBOOK_APP_ID: z.string().optional(),
+    FACEBOOK_APP_SECRET: z.string().optional(),
+    LINKEDIN_CLIENT_ID: z.string().optional(),
+    LINKEDIN_CLIENT_SECRET: z.string().optional(),
+    TIKTOK_CLIENT_KEY: z.string().optional(),
+    TIKTOK_CLIENT_SECRET: z.string().optional(),
   },
 
   client: {
@@ -125,6 +133,14 @@ export const env = createEnv({
     PISOS_CLIENT_SECRET: process.env.PISOS_CLIENT_SECRET,
     MILANUNCIOS_CLIENT_ID: process.env.MILANUNCIOS_CLIENT_ID,
     MILANUNCIOS_CLIENT_SECRET: process.env.MILANUNCIOS_CLIENT_SECRET,
+
+    // Social Media OAuth
+    FACEBOOK_APP_ID: process.env.FACEBOOK_APP_ID,
+    FACEBOOK_APP_SECRET: process.env.FACEBOOK_APP_SECRET,
+    LINKEDIN_CLIENT_ID: process.env.LINKEDIN_CLIENT_ID,
+    LINKEDIN_CLIENT_SECRET: process.env.LINKEDIN_CLIENT_SECRET,
+    TIKTOK_CLIENT_KEY: process.env.TIKTOK_CLIENT_KEY,
+    TIKTOK_CLIENT_SECRET: process.env.TIKTOK_CLIENT_SECRET,
   },
 
   skipValidation: !!process.env.SKIP_ENV_VALIDATION,

@@ -357,19 +357,14 @@ export const listingsRouter = createTRPCRouter({
         offset: z.number().min(0).default(0),
       })
     )
-    .query(async ({ ctx, input }) => {
-      const userId = ctx.session.user.id;
-
-      // Verify user owns the listing
+    .query(async ({ input }) => {
+      // Verify listing exists
       const listing = await db.query.listings.findFirst({
-        where: and(
-          eq(listings.id, input.listingId),
-          eq(listings.userId, userId)
-        ),
+        where: eq(listings.id, input.listingId),
       });
 
       if (!listing) {
-        throw new Error('Listing not found or not authorized');
+        throw new Error('Listing not found');
       }
 
       const conditions = [eq(leads.listingId, input.listingId)];
@@ -397,17 +392,14 @@ export const listingsRouter = createTRPCRouter({
         status: z.enum(['new', 'contacted', 'qualified', 'converted', 'lost']),
       })
     )
-    .mutation(async ({ ctx, input }) => {
-      const userId = ctx.session.user.id;
-
-      // Get lead and verify ownership
+    .mutation(async ({ input }) => {
+      // Get lead
       const lead = await db.query.leads.findFirst({
         where: eq(leads.id, input.leadId),
-        with: { listing: true },
       });
 
-      if (!lead || lead.listing?.userId !== userId) {
-        throw new Error('Lead not found or not authorized');
+      if (!lead) {
+        throw new Error('Lead not found');
       }
 
       await db

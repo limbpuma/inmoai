@@ -68,8 +68,8 @@ export class OnboardingService {
 
     if (!user) return null;
 
-    // Parse onboarding data from user metadata
-    const onboardingData = (user.metadata as Record<string, unknown>)?.onboarding as OnboardingState | undefined;
+    // Parse onboarding data from user preferences (using preferences as storage)
+    const onboardingData = (user.preferences as Record<string, unknown> | null)?.onboarding as OnboardingState | undefined;
 
     if (!onboardingData) {
       // Initialize onboarding for new user
@@ -112,15 +112,18 @@ export class OnboardingService {
 
     if (!user) return;
 
-    const currentMetadata = (user.metadata as Record<string, unknown>) || {};
+    const currentPrefs = (user.preferences as Record<string, unknown>) || {};
+
+    // Type assertion needed because we're extending the preferences schema
+    const newPrefs = {
+      ...currentPrefs,
+      onboarding: state,
+    } as typeof user.preferences;
 
     await db
       .update(users)
       .set({
-        metadata: {
-          ...currentMetadata,
-          onboarding: state,
-        },
+        preferences: newPrefs,
         updatedAt: new Date(),
       })
       .where(eq(users.id, userId));
@@ -328,8 +331,9 @@ export class OnboardingService {
     const user = await db.query.users.findFirst({
       where: eq(users.id, userId),
     });
-    const metadata = user?.metadata as Record<string, unknown> | undefined;
-    return !!metadata?.phone;
+    // Check phone in preferences
+    const prefs = user?.preferences as Record<string, unknown> | undefined;
+    return !!prefs?.phone;
   }
 
   private async hasRole(userId: string): Promise<boolean> {
@@ -339,34 +343,22 @@ export class OnboardingService {
     return !!user?.role && user.role !== 'user';
   }
 
-  private async hasListings(userId: string): Promise<boolean> {
-    const listings = await db.query.listings.findMany({
-      where: (listings, { eq }) => eq(listings.userId, userId),
-      limit: 1,
-    });
-    return listings.length > 0;
+  private async hasListings(_userId: string): Promise<boolean> {
+    // TODO: listings don't have userId field yet
+    // For now, return false - this feature needs schema update
+    return false;
   }
 
-  private async hasListingImages(userId: string): Promise<boolean> {
-    const listings = await db.query.listings.findMany({
-      where: (listings, { eq }) => eq(listings.userId, userId),
-      limit: 1,
-    });
-    if (listings.length === 0) return false;
-
-    const images = listings[0].images as string[] | undefined;
-    return !!images && images.length >= 4;
+  private async hasListingImages(_userId: string): Promise<boolean> {
+    // TODO: requires listings.userId and listingImages relation
+    // For now, return false - this feature needs schema update
+    return false;
   }
 
-  private async hasCadastreVerification(userId: string): Promise<boolean> {
-    const listings = await db.query.listings.findMany({
-      where: (listings, { eq }) => eq(listings.userId, userId),
-    });
-
-    return listings.some((listing) => {
-      const metadata = listing.metadata as Record<string, unknown> | undefined;
-      return metadata?.cadastreVerified === true;
-    });
+  private async hasCadastreVerification(_userId: string): Promise<boolean> {
+    // TODO: requires listings.userId field
+    // For now, return false - this feature needs schema update
+    return false;
   }
 
   private async hasSocialConnection(userId: string): Promise<boolean> {

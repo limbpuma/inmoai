@@ -110,7 +110,7 @@ export const socialRouter = router({
         .from(socialConnections)
         .where(
           and(
-            eq(socialConnections.userId, ctx.session.userId),
+            eq(socialConnections.userId, ctx.session.user.id),
             eq(socialConnections.platform, platform),
             pageId ? eq(socialConnections.pageId, pageId) : undefined
           )
@@ -140,7 +140,7 @@ export const socialRouter = router({
       const [connection] = await db
         .insert(socialConnections)
         .values({
-          userId: ctx.session.userId,
+          userId: ctx.session.user.id,
           platform,
           platformUserId: accountInfo.id,
           platformUsername: accountInfo.username,
@@ -179,7 +179,7 @@ export const socialRouter = router({
         createdAt: socialConnections.createdAt,
       })
       .from(socialConnections)
-      .where(eq(socialConnections.userId, ctx.session.userId))
+      .where(eq(socialConnections.userId, ctx.session.user.id))
       .orderBy(desc(socialConnections.createdAt));
 
     return { connections };
@@ -197,7 +197,7 @@ export const socialRouter = router({
         .where(
           and(
             eq(socialConnections.id, input.connectionId),
-            eq(socialConnections.userId, ctx.session.userId)
+            eq(socialConnections.userId, ctx.session.user.id)
           )
         )
         .limit(1);
@@ -251,7 +251,7 @@ export const socialRouter = router({
         .from(socialConnections)
         .where(
           and(
-            eq(socialConnections.userId, ctx.session.userId),
+            eq(socialConnections.userId, ctx.session.user.id),
             eq(socialConnections.platform, platform),
             eq(socialConnections.status, 'active')
           )
@@ -269,10 +269,11 @@ export const socialRouter = router({
       const content = customMessage || buildDefaultContent(listing, platform);
       const hashtags = generateHashtags(listing, platform);
 
+      // TODO: Fetch listing images from listingImages table
       const postData = {
         content,
         hashtags,
-        mediaUrls: (listing.images as string[]) || [],
+        mediaUrls: [] as string[],
         mediaType: 'image' as const,
         listing,
       };
@@ -285,7 +286,7 @@ export const socialRouter = router({
             .values({
               listingId,
               connectionId: connection.id,
-              userId: ctx.session.userId,
+              userId: ctx.session.user.id,
               platform,
               content,
               hashtags,
@@ -310,7 +311,7 @@ export const socialRouter = router({
               .values({
                 listingId,
                 connectionId: connection.id,
-                userId: ctx.session.userId,
+                userId: ctx.session.user.id,
                 platform,
                 platformPostId: result.platformPostId,
                 postUrl: result.postUrl,
@@ -381,7 +382,7 @@ export const socialRouter = router({
           createdAt: socialPosts.createdAt,
         })
         .from(socialPosts)
-        .where(eq(socialPosts.userId, ctx.session.userId))
+        .where(eq(socialPosts.userId, ctx.session.user.id))
         .orderBy(desc(socialPosts.createdAt))
         .limit(input.limit);
 
@@ -425,7 +426,7 @@ export const socialRouter = router({
         .from(socialPosts)
         .where(
           and(
-            eq(socialPosts.userId, ctx.session.userId),
+            eq(socialPosts.userId, ctx.session.user.id),
             eq(socialPosts.status, 'published')
           )
         );
@@ -501,7 +502,7 @@ export const socialRouter = router({
         .select()
         .from(socialPosts)
         .where(
-          and(eq(socialPosts.id, input.postId), eq(socialPosts.userId, ctx.session.userId))
+          and(eq(socialPosts.id, input.postId), eq(socialPosts.userId, ctx.session.user.id))
         )
         .limit(1);
 

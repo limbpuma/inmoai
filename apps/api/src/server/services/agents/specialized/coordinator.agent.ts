@@ -133,6 +133,7 @@ const executeParallelTool: AgentTool = {
       required: true,
       items: {
         type: 'object',
+        description: 'Objeto con agentType, message, y params opcionales',
       },
     },
   },

@@ -260,4 +260,67 @@ export const DEFAULT_AGENT_CONFIGS: Record<AgentType, Partial<AgentConfig>> = {
       maxConcurrentSessions: 1,
     },
   },
+  coordinator: {
+    name: 'Coordinator Agent',
+    description: 'Orquesta múltiples agentes para tareas complejas',
+    capabilities: [
+      'Interpretación de intent natural',
+      'Delegación a agentes especializados',
+      'Ejecución paralela',
+      'Síntesis de resultados',
+    ],
+    pricing: {
+      sessionCost: 0,
+      outcomeCost: 0, // Cost applies to delegated agents
+      billableOutcomes: [],
+    },
+    limits: {
+      maxTokensPerRequest: 8192,
+      maxTurns: 30,
+      sessionTimeoutMinutes: 60,
+      maxConcurrentSessions: 3,
+    },
+  },
+  social_media: {
+    name: 'Social Media Agent',
+    description: 'Publica propiedades en redes sociales automáticamente',
+    capabilities: [
+      'Publicación en Facebook, Instagram, LinkedIn, TikTok',
+      'Programación de posts',
+      'Generación de hashtags',
+      'Analytics de engagement',
+    ],
+    pricing: {
+      sessionCost: 0,
+      outcomeCost: 0.50, // 0.50 EUR per post published
+      billableOutcomes: ['social_post'],
+    },
+    limits: {
+      maxTokensPerRequest: 4096,
+      maxTurns: 10,
+      sessionTimeoutMinutes: 30,
+      maxConcurrentSessions: 5,
+    },
+  },
+  content: {
+    name: 'Content Agent',
+    description: 'Genera contenido de marketing inmobiliario con IA',
+    capabilities: [
+      'Descripciones optimizadas para SEO',
+      'Hashtags por plataforma',
+      'Copys para anuncios',
+      'Scripts para video/reels',
+    ],
+    pricing: {
+      sessionCost: 0,
+      outcomeCost: 0.25, // 0.25 EUR per content generated
+      billableOutcomes: ['content_generated'],
+    },
+    limits: {
+      maxTokensPerRequest: 4096,
+      maxTurns: 15,
+      sessionTimeoutMinutes: 30,
+      maxConcurrentSessions: 5,
+    },
+  },
 };
