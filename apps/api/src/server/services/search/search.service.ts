@@ -43,60 +43,265 @@ class SearchServiceImpl implements SearchService {
   }
 
   /**
-   * Basic filter extraction from query text (fallback when AI is unavailable)
+   * Enhanced filter extraction from query text (fallback when AI is unavailable)
+   * Handles Spanish real estate vocabulary with synonyms
    */
   private extractBasicFilters(query: string): Partial<SearchFilters> {
     const filters: Partial<SearchFilters> = {};
-    const queryLower = query.toLowerCase();
+    // Normalize: lowercase, remove accents for matching
+    const queryLower = this.normalizeText(query);
+    const queryOriginal = query.toLowerCase();
 
-    // Extract city names (Spanish cities)
-    const cities = ['madrid', 'barcelona', 'valencia', 'sevilla', 'malaga', 'bilbao', 'zaragoza'];
-    for (const city of cities) {
-      if (queryLower.includes(city)) {
-        filters.city = city.charAt(0).toUpperCase() + city.slice(1);
+    // ============================================
+    // 1. EXTRACT CITY (with aliases and neighborhoods)
+    // ============================================
+    const cityMap: Record<string, string> = {
+      // Main cities
+      'madrid': 'Madrid', 'mad': 'Madrid',
+      'barcelona': 'Barcelona', 'bcn': 'Barcelona', 'barna': 'Barcelona',
+      'valencia': 'Valencia', 'vlc': 'Valencia',
+      'sevilla': 'Sevilla', 'seville': 'Sevilla',
+      'malaga': 'Málaga', 'mlg': 'Málaga',
+      'bilbao': 'Bilbao',
+      'zaragoza': 'Zaragoza', 'zgz': 'Zaragoza',
+      'alicante': 'Alicante',
+      'murcia': 'Murcia',
+      'palma': 'Palma de Mallorca', 'mallorca': 'Palma de Mallorca',
+      'las palmas': 'Las Palmas', 'gran canaria': 'Las Palmas',
+      'san sebastian': 'San Sebastián', 'donosti': 'San Sebastián',
+      'cordoba': 'Córdoba',
+      'granada': 'Granada',
+      'vigo': 'Vigo',
+      'gijon': 'Gijón',
+      'hospitalet': 'L\'Hospitalet de Llobregat',
+      'vitoria': 'Vitoria-Gasteiz',
+      'santander': 'Santander',
+      'pamplona': 'Pamplona', 'iruna': 'Pamplona',
+      'tarragona': 'Tarragona',
+      'marbella': 'Marbella',
+      'sitges': 'Sitges',
+      'ibiza': 'Ibiza', 'eivissa': 'Ibiza',
+    };
+
+    // Neighborhoods that imply a city
+    const neighborhoodToCity: Record<string, { neighborhood: string; city: string }> = {
+      'chamberi': { neighborhood: 'Chamberí', city: 'Madrid' },
+      'salamanca': { neighborhood: 'Salamanca', city: 'Madrid' },
+      'retiro': { neighborhood: 'Retiro', city: 'Madrid' },
+      'chamartin': { neighborhood: 'Chamartín', city: 'Madrid' },
+      'latina': { neighborhood: 'La Latina', city: 'Madrid' },
+      'malasana': { neighborhood: 'Malasaña', city: 'Madrid' },
+      'chueca': { neighborhood: 'Chueca', city: 'Madrid' },
+      'lavapies': { neighborhood: 'Lavapiés', city: 'Madrid' },
+      'arguelles': { neighborhood: 'Argüelles', city: 'Madrid' },
+      'moncloa': { neighborhood: 'Moncloa', city: 'Madrid' },
+      'eixample': { neighborhood: 'Eixample', city: 'Barcelona' },
+      'gracia': { neighborhood: 'Gràcia', city: 'Barcelona' },
+      'sarria': { neighborhood: 'Sarrià', city: 'Barcelona' },
+      'sant gervasi': { neighborhood: 'Sant Gervasi', city: 'Barcelona' },
+      'born': { neighborhood: 'El Born', city: 'Barcelona' },
+      'barceloneta': { neighborhood: 'Barceloneta', city: 'Barcelona' },
+      'poblenou': { neighborhood: 'Poblenou', city: 'Barcelona' },
+      'poble sec': { neighborhood: 'Poble Sec', city: 'Barcelona' },
+      'ruzafa': { neighborhood: 'Ruzafa', city: 'Valencia' },
+      'russafa': { neighborhood: 'Ruzafa', city: 'Valencia' },
+      'ciutat vella': { neighborhood: 'Ciutat Vella', city: 'Valencia' },
+      'triana': { neighborhood: 'Triana', city: 'Sevilla' },
+      'nervion': { neighborhood: 'Nervión', city: 'Sevilla' },
+    };
+
+    // Check neighborhoods first (more specific)
+    for (const [key, value] of Object.entries(neighborhoodToCity)) {
+      if (queryLower.includes(key)) {
+        filters.neighborhood = value.neighborhood;
+        filters.city = value.city;
         break;
       }
     }
 
-    // Extract operation type
-    if (queryLower.includes('alquil') || queryLower.includes('rent')) {
+    // If no neighborhood matched, check cities
+    if (!filters.city) {
+      for (const [key, value] of Object.entries(cityMap)) {
+        if (queryLower.includes(key)) {
+          filters.city = value;
+          break;
+        }
+      }
+    }
+
+    // ============================================
+    // 2. EXTRACT OPERATION TYPE
+    // ============================================
+    const rentPatterns = ['alquil', 'alquilar', 'alquiler', 'rent', 'arrendar', 'arriendo'];
+    const salePatterns = ['compr', 'comprar', 'compra', 'venta', 'en venta', 'buy', 'adquirir'];
+
+    if (rentPatterns.some(p => queryLower.includes(p))) {
       filters.operationType = 'rent';
-    } else if (queryLower.includes('compr') || queryLower.includes('venta') || queryLower.includes('buy')) {
+    } else if (salePatterns.some(p => queryLower.includes(p))) {
       filters.operationType = 'sale';
     }
 
-    // Extract property type
-    if (queryLower.includes('piso') || queryLower.includes('apartamento')) {
-      filters.propertyType = ['apartment'];
-    } else if (queryLower.includes('casa') || queryLower.includes('chalet')) {
-      filters.propertyType = ['house', 'villa'];
-    } else if (queryLower.includes('local') || queryLower.includes('oficina')) {
-      filters.propertyType = ['commercial'];
+    // ============================================
+    // 3. EXTRACT PROPERTY TYPE (with synonyms)
+    // ============================================
+    const propertyTypeMap: Record<string, string[]> = {
+      'apartment': ['piso', 'apartamento', 'apartament', 'flat'],
+      'house': ['casa', 'chalet', 'chale', 'unifamiliar'],
+      'penthouse': ['atico', 'ático', 'penthouse'],
+      'studio': ['estudio', 'loft'],
+      'duplex': ['duplex', 'dúplex'],
+      'villa': ['villa', 'mansion', 'mansión', 'finca'],
+      'townhouse': ['adosado', 'pareado', 'townhouse'],
+      'commercial': ['local', 'oficina', 'comercial', 'nave'],
+      'garage': ['garaje', 'parking', 'plaza de garaje'],
+      'land': ['terreno', 'parcela', 'suelo'],
+    };
+
+    const detectedTypes: string[] = [];
+    for (const [type, patterns] of Object.entries(propertyTypeMap)) {
+      if (patterns.some(p => queryLower.includes(p))) {
+        detectedTypes.push(type);
+      }
+    }
+    if (detectedTypes.length > 0) {
+      filters.propertyType = detectedTypes;
     }
 
-    // Extract price range (e.g., "menos de 300k", "por debajo de 500000")
-    const priceMatch = queryLower.match(/(?:menos de|por debajo de|hasta|max(?:imo)?)\s*(\d+)k?/);
-    if (priceMatch) {
-      let price = parseInt(priceMatch[1], 10);
-      if (queryLower.includes('k')) price *= 1000;
-      else if (price < 10000) price *= 1000; // Assume "300" means "300k"
-      filters.priceMax = price;
+    // ============================================
+    // 4. EXTRACT PRICE (with better patterns)
+    // ============================================
+    // Max price patterns
+    const priceMaxPatterns = [
+      /(?:menos de|por debajo de|hasta|max(?:imo)?|maximo|<)\s*(\d+(?:[.,]\d{3})*)\s*k?(?:€|euros?)?/i,
+      /(\d+(?:[.,]\d{3})*)\s*k?\s*(?:€|euros?)?\s*(?:como maximo|max)/i,
+      /presupuesto(?:\s+de)?\s*(\d+(?:[.,]\d{3})*)\s*k?/i,
+    ];
+
+    // Min price patterns
+    const priceMinPatterns = [
+      /(?:mas de|desde|minimo|a partir de|>)\s*(\d+(?:[.,]\d{3})*)\s*k?(?:€|euros?)?/i,
+    ];
+
+    // Range pattern
+    const priceRangePattern = /entre\s*(\d+(?:[.,]\d{3})*)\s*k?\s*y\s*(\d+(?:[.,]\d{3})*)\s*k?/i;
+
+    const rangeMatch = queryOriginal.match(priceRangePattern);
+    if (rangeMatch) {
+      filters.priceMin = this.parsePrice(rangeMatch[1], filters.operationType);
+      filters.priceMax = this.parsePrice(rangeMatch[2], filters.operationType);
+    } else {
+      for (const pattern of priceMaxPatterns) {
+        const match = queryOriginal.match(pattern);
+        if (match) {
+          filters.priceMax = this.parsePrice(match[1], filters.operationType);
+          break;
+        }
+      }
+
+      for (const pattern of priceMinPatterns) {
+        const match = queryOriginal.match(pattern);
+        if (match) {
+          filters.priceMin = this.parsePrice(match[1], filters.operationType);
+          break;
+        }
+      }
     }
 
-    // Extract features
-    if (queryLower.includes('terraza')) filters.hasTerrace = true;
-    if (queryLower.includes('parking') || queryLower.includes('garaje')) filters.hasParking = true;
-    if (queryLower.includes('ascensor')) filters.hasElevator = true;
-    if (queryLower.includes('jardin') || queryLower.includes('jardín')) filters.hasGarden = true;
-    if (queryLower.includes('piscina')) filters.hasPool = true;
+    // Infer operation type from price if not set
+    if (!filters.operationType && (filters.priceMax || filters.priceMin)) {
+      const referencePrice = filters.priceMax || filters.priceMin || 0;
+      filters.operationType = referencePrice > 5000 ? 'sale' : 'rent';
+    }
 
-    // Extract bedrooms
-    const bedroomMatch = queryLower.match(/(\d+)\s*(?:habitacion|dormitorio|bedroom)/);
-    if (bedroomMatch) {
-      filters.bedroomsMin = parseInt(bedroomMatch[1], 10);
+    // ============================================
+    // 5. EXTRACT FEATURES (with synonyms)
+    // ============================================
+    const featurePatterns: Record<string, string[]> = {
+      hasTerrace: ['terraza', 'balcon', 'balcón', 'solarium'],
+      hasParking: ['parking', 'garaje', 'plaza de garaje', 'aparcamiento', 'cochera'],
+      hasElevator: ['ascensor', 'elevador'],
+      hasGarden: ['jardin', 'jardín', 'patio', 'zona verde'],
+      hasPool: ['piscina', 'pool'],
+    };
+
+    for (const [filter, patterns] of Object.entries(featurePatterns)) {
+      if (patterns.some(p => queryLower.includes(p))) {
+        (filters as Record<string, boolean>)[filter] = true;
+      }
+    }
+
+    // ============================================
+    // 6. EXTRACT ROOMS/BEDROOMS (with variations)
+    // ============================================
+    const bedroomPatterns = [
+      /(\d+)\s*(?:habitacion|habitaciones|hab|dormitorio|dormitorios|dorm|bedroom|bedrooms)/i,
+      /(?:de\s+)?(\d+)\s*(?:hab|dorm)/i,
+    ];
+
+    for (const pattern of bedroomPatterns) {
+      const match = queryOriginal.match(pattern);
+      if (match) {
+        filters.bedroomsMin = parseInt(match[1], 10);
+        break;
+      }
+    }
+
+    // ============================================
+    // 7. EXTRACT SIZE (with variations)
+    // ============================================
+    const sizePatterns = [
+      /(?:mas de|desde|minimo)\s*(\d+)\s*(?:m2|m²|metros)/i,
+      /(\d+)\s*(?:m2|m²|metros)\s*(?:o mas|minimo)/i,
+    ];
+
+    for (const pattern of sizePatterns) {
+      const match = queryOriginal.match(pattern);
+      if (match) {
+        filters.sizeMin = parseInt(match[1], 10);
+        break;
+      }
+    }
+
+    // Infer size from descriptive words
+    if (!filters.sizeMin && !filters.sizeMax) {
+      if (queryLower.includes('grande') || queryLower.includes('amplio') || queryLower.includes('espacioso')) {
+        filters.sizeMin = 80;
+      } else if (queryLower.includes('pequeno') || queryLower.includes('compacto')) {
+        filters.sizeMax = 60;
+      }
     }
 
     return filters;
+  }
+
+  /**
+   * Normalize text for matching: lowercase and remove accents
+   */
+  private normalizeText(text: string): string {
+    return text
+      .toLowerCase()
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '');
+  }
+
+  /**
+   * Parse price string to number, handling k suffix and rent vs sale context
+   */
+  private parsePrice(priceStr: string, operationType?: 'sale' | 'rent' | null): number {
+    // Remove dots used as thousands separator, replace comma with dot
+    let cleaned = priceStr.replace(/\./g, '').replace(',', '.');
+    let price = parseFloat(cleaned);
+
+    // Handle 'k' suffix
+    if (priceStr.toLowerCase().includes('k')) {
+      price *= 1000;
+    }
+    // If price seems too low for sale (e.g., "300" without k), assume it's in thousands
+    else if (operationType !== 'rent' && price < 10000 && price > 50) {
+      price *= 1000;
+    }
+
+    return Math.round(price);
   }
 
   async filterSearch(filters: SearchFilters): Promise<SearchResult> {
@@ -421,7 +626,7 @@ class SearchServiceImpl implements SearchService {
     return conditions;
   }
 
-  private applySorting(query: any, sortBy?: string) {
+  private applySorting(query: any, sortBy?: string | null) {
     switch (sortBy) {
       case 'price_asc':
         return query.orderBy(asc(listings.price));

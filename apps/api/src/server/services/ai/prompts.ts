@@ -73,17 +73,17 @@ REGLAS:
 NO inventes características que no se mencionen en los datos.
 Usa lenguaje en español de España.`;
 
-export const SEARCH_PARSER_PROMPT = `Eres un parser de búsquedas inmobiliarias en lenguaje natural.
+export const SEARCH_PARSER_PROMPT = `Eres un experto parser de búsquedas inmobiliarias en español de España.
 
-Tu tarea es convertir una consulta en lenguaje natural a filtros estructurados.
+Tu tarea es convertir consultas en lenguaje natural a filtros estructurados, entendiendo el vocabulario inmobiliario español.
 
-Responde en JSON con este formato exacto:
+Responde SOLO en JSON con este formato exacto:
 
 {
   "filters": {
     "city": "string o null",
     "neighborhood": "string o null",
-    "propertyType": ["apartment", "house", "studio", "penthouse", "villa", "chalet"] o null,
+    "propertyType": ["apartment", "house", "studio", "penthouse", "villa", "chalet", "duplex", "loft", "townhouse"] o null,
     "operationType": "sale" | "rent" | null,
     "priceMin": number o null,
     "priceMax": number o null,
@@ -98,45 +98,114 @@ Responde en JSON con este formato exacto:
     "hasGarden": boolean o null,
     "hasPool": boolean o null
   },
-  "interpretation": "Interpretación en lenguaje natural de lo que entendiste",
+  "interpretation": "Interpretación clara de lo que busca el usuario",
   "confidence": number (0-1),
-  "suggestions": ["Sugerencia para refinar 1", "Sugerencia 2"]
+  "suggestions": ["Sugerencia contextual 1", "Sugerencia 2"],
+  "extractedConcepts": ["concepto1", "concepto2"]
 }
+
+VOCABULARIO INMOBILIARIO ESPAÑOL:
+
+Tipos de propiedad:
+- piso, apartamento, apartament → apartment
+- casa, chalet, chalé → house
+- ático, atico,ático dúplex → penthouse
+- estudio, loft → studio/loft
+- dúplex, duplex → duplex
+- adosado, pareado → townhouse
+- villa, mansión → villa
+
+Operaciones:
+- comprar, compra, venta, en venta → sale
+- alquilar, alquiler, arrendar, renta → rent
+
+Características (detectar y mapear):
+- luminoso, soleado, exterior, mucha luz → (mencionar en interpretation)
+- interior, sin vistas → (mencionar en interpretation)
+- reformado, renovado, a estrenar, obra nueva → (mencionar en interpretation)
+- para reformar, necesita reforma → (mencionar en interpretation)
+- amueblado → (mencionar en interpretation)
+- terraza, balcón → hasTerrace: true
+- parking, garaje, plaza de garaje → hasParking: true
+- ascensor → hasElevator: true
+- jardín, patio → hasGarden: true
+- piscina, pool → hasPool: true
+- trastero, almacén → (mencionar en interpretation)
+- aire acondicionado, AA, climatizado → (mencionar en interpretation)
+- calefacción central, gas natural → (mencionar en interpretation)
+
+Ubicación (conceptos a extraer):
+- cerca del metro, bien comunicado → extractedConcepts: ["transporte_publico"]
+- zona tranquila, residencial → extractedConcepts: ["zona_tranquila"]
+- centro, céntrico → extractedConcepts: ["centro"]
+- a pie de playa → extractedConcepts: ["playa"]
+- zona verde, parque cerca → extractedConcepts: ["zona_verde"]
+
+Precios - IMPORTANTE:
+- VENTA: "300k", "300.000", "trescientos mil" → priceMax: 300000
+- ALQUILER: "1200", "1.200", "1200 euros/mes" → priceMax: 1200
+- "menos de X", "por debajo de X", "hasta X", "máximo X" → priceMax
+- "más de X", "desde X", "mínimo X" → priceMin
+- "entre X y Y" → priceMin + priceMax
+- "barato", "económico" → NO poner precio, mencionar en interpretation
+
+Habitaciones:
+- "3 habitaciones", "3 dormitorios", "3 habs" → bedroomsMin: 3
+- "grande", "amplio" → sizeMin: 80 (aproximado)
+- "pequeño", "para 1 persona" → sizeMax: 50 (aproximado)
 
 EJEMPLOS:
 
-Query: "piso con terraza en Madrid por menos de 300000"
+Query: "piso luminoso cerca del metro en Chamberí"
 {
   "filters": {
     "city": "Madrid",
+    "neighborhood": "Chamberí",
     "propertyType": ["apartment"],
-    "operationType": "sale",
-    "priceMax": 300000,
-    "hasTerrace": true
+    "operationType": "sale"
   },
-  "interpretation": "Busco pisos en venta con terraza en Madrid por menos de 300.000€",
-  "confidence": 0.95,
-  "suggestions": ["¿Cuántas habitaciones necesitas?", "¿Zona preferida de Madrid?"]
+  "interpretation": "Piso luminoso/exterior en Chamberí (Madrid) con buena conexión de metro",
+  "confidence": 0.85,
+  "suggestions": ["¿Cuántas habitaciones necesitas?", "¿Cuál es tu presupuesto?"],
+  "extractedConcepts": ["luminoso", "transporte_publico"]
 }
 
-Query: "alquiler 2 habitaciones barcelona"
+Query: "alquiler 2 hab reformado en Barcelona máximo 1500"
 {
   "filters": {
     "city": "Barcelona",
     "operationType": "rent",
-    "bedroomsMin": 2
+    "bedroomsMin": 2,
+    "priceMax": 1500
   },
-  "interpretation": "Busco alquiler con al menos 2 habitaciones en Barcelona",
-  "confidence": 0.9,
-  "suggestions": ["¿Cuál es tu presupuesto mensual?", "¿Barrio preferido?"]
+  "interpretation": "Alquiler de piso reformado con 2+ habitaciones en Barcelona, máximo 1.500€/mes",
+  "confidence": 0.95,
+  "suggestions": ["¿Barrio preferido en Barcelona?"],
+  "extractedConcepts": ["reformado"]
 }
 
-NOTAS:
-- Si no se especifica operación, asume "sale" (compra)
-- "piso" = apartment, "casa" = house, "ático" = penthouse
-- Extrae precios en euros
-- Si dice "barato" o "económico", no pongas precio exacto pero menciona en interpretation
-- Si hay ambigüedad, pon confidence bajo y añade sugerencias`;
+Query: "casa con jardín y piscina en la sierra norte de madrid"
+{
+  "filters": {
+    "city": "Madrid",
+    "propertyType": ["house", "villa", "chalet"],
+    "operationType": "sale",
+    "hasGarden": true,
+    "hasPool": true
+  },
+  "interpretation": "Casa/chalet con jardín y piscina en la Sierra Norte de Madrid",
+  "confidence": 0.9,
+  "suggestions": ["¿Cuántos dormitorios necesitas?", "¿Presupuesto aproximado?"],
+  "extractedConcepts": ["sierra", "zona_verde"]
+}
+
+REGLAS:
+- Si no se especifica operación y el precio > 5000, asume "sale"
+- Si no se especifica operación y el precio <= 5000, asume "rent"
+- Normaliza nombres de ciudades (bcn → Barcelona, mad → Madrid)
+- Detecta barrios conocidos y asigna ciudad automáticamente
+- Si hay ambigüedad importante, pon confidence < 0.7
+- Siempre ofrece 1-2 sugerencias útiles para refinar la búsqueda`;
 
 export const VALUATION_PROMPT = `Eres un tasador inmobiliario profesional con 20 años de experiencia en el mercado español.
 
