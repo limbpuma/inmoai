@@ -20,7 +20,6 @@ import {
   MapPin,
   Star,
   BadgeCheck,
-  Phone,
   Clock,
   PaintBucket,
   Wrench,

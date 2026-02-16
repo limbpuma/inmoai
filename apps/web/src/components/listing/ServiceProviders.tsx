@@ -152,8 +152,7 @@ export function ServiceProviders({
         setSubmitSuccess(false);
       }, 2000);
     },
-    onError: (error) => {
-      console.error("Error requesting quote:", error);
+    onError: () => {
       setIsSubmitting(false);
     },
   });

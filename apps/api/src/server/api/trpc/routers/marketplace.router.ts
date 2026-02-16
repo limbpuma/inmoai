@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { createTRPCRouter, publicProcedure, protectedProcedure } from '../trpc';
+import { createTRPCRouter, publicProcedure, protectedProcedure, rateLimitedPublicProcedure } from '../trpc';
 import { TRPCError } from '@trpc/server';
 import { db } from '@/server/infrastructure/database';
 import {
@@ -31,7 +31,7 @@ export const marketplaceRouter = createTRPCRouter({
   /**
    * Search providers by proximity
    */
-  searchProviders: publicProcedure
+  searchProviders: rateLimitedPublicProcedure
     .input(
       z.object({
         listingId: z.string().uuid().optional(),
@@ -58,7 +58,7 @@ export const marketplaceRouter = createTRPCRouter({
   /**
    * Get recommended providers for a listing
    */
-  getRecommendedProviders: publicProcedure
+  getRecommendedProviders: rateLimitedPublicProcedure
     .input(
       z.object({
         listingId: z.string().uuid(),
@@ -82,10 +82,32 @@ export const marketplaceRouter = createTRPCRouter({
    * Get provider by slug
    */
   getProviderBySlug: publicProcedure
-    .input(z.object({ slug: z.string() }))
+    .input(z.object({ slug: z.string().min(1).max(100).regex(/^[a-z0-9-]+$/) }))
     .query(async ({ input }) => {
       const provider = await db.query.serviceProviders.findFirst({
         where: and(eq(serviceProviders.slug, input.slug), eq(serviceProviders.status, 'active')),
+        columns: {
+          id: true,
+          businessName: true,
+          slug: true,
+          description: true,
+          logoUrl: true,
+          address: true,
+          city: true,
+          province: true,
+          tier: true,
+          averageRating: true,
+          totalReviews: true,
+          totalLeads: true,
+          responseTimeMinutes: true,
+          isVerified: true,
+          coverageRadiusKm: true,
+          contactPhone: true,
+          contactEmail: true,
+          website: true,
+          latitude: true,
+          longitude: true,
+        },
         with: {
           services: {
             where: eq(providerServices.isActive, true),
@@ -94,6 +116,21 @@ export const marketplaceRouter = createTRPCRouter({
             where: eq(providerReviews.isPublished, true),
             orderBy: [desc(providerReviews.createdAt)],
             limit: 10,
+            columns: {
+              id: true,
+              rating: true,
+              title: true,
+              content: true,
+              authorName: true,
+              qualityRating: true,
+              communicationRating: true,
+              timelinessRating: true,
+              valueRating: true,
+              category: true,
+              isVerified: true,
+              providerResponse: true,
+              createdAt: true,
+            },
           },
           portfolio: {
             where: eq(providerPortfolio.isPublished, true),
@@ -120,10 +157,7 @@ export const marketplaceRouter = createTRPCRouter({
           priceMin: s.priceMin ? Number(s.priceMin) : null,
           priceMax: s.priceMax ? Number(s.priceMax) : null,
         })),
-        reviews: provider.reviews.map((r) => ({
-          ...r,
-          createdAt: r.createdAt,
-        })),
+        reviews: provider.reviews,
         portfolio: provider.portfolio.map((p) => ({
           ...p,
           projectCost: p.projectCost ? Number(p.projectCost) : null,
@@ -137,6 +171,26 @@ export const marketplaceRouter = createTRPCRouter({
   getProviderById: publicProcedure.input(z.object({ id: z.string().uuid() })).query(async ({ input }) => {
     const provider = await db.query.serviceProviders.findFirst({
       where: and(eq(serviceProviders.id, input.id), eq(serviceProviders.status, 'active')),
+      columns: {
+        id: true,
+        businessName: true,
+        slug: true,
+        description: true,
+        logoUrl: true,
+        city: true,
+        tier: true,
+        averageRating: true,
+        totalReviews: true,
+        totalLeads: true,
+        responseTimeMinutes: true,
+        isVerified: true,
+        coverageRadiusKm: true,
+        contactPhone: true,
+        contactEmail: true,
+        website: true,
+        latitude: true,
+        longitude: true,
+      },
       with: {
         services: {
           where: eq(providerServices.isActive, true),
@@ -255,40 +309,43 @@ export const marketplaceRouter = createTRPCRouter({
         }
       }
 
-      // Create lead
-      const [lead] = await db
-        .insert(serviceLeads)
-        .values({
-          providerId: input.providerId,
-          listingId: input.listingId,
-          improvementId: input.improvementId,
-          category: input.category,
-          title: input.title,
-          description: input.description,
-          clientName: input.clientName,
-          clientEmail: input.clientEmail,
-          clientPhone: input.clientPhone,
-          workAddress: workLocation.address,
-          workCity: workLocation.city,
-          workLatitude: workLocation.latitude?.toString(),
-          workLongitude: workLocation.longitude?.toString(),
-          budget: input.budget?.toString(),
-          urgency: input.urgency,
-          preferredDate: input.preferredDate,
-          status: 'new',
-          source: input.listingId ? 'listing' : 'marketplace',
-        })
-        .returning();
+      // Create lead and update counter in a transaction
+      const lead = await db.transaction(async (tx) => {
+        const [newLead] = await tx
+          .insert(serviceLeads)
+          .values({
+            providerId: input.providerId,
+            listingId: input.listingId,
+            improvementId: input.improvementId,
+            category: input.category,
+            title: input.title,
+            description: input.description,
+            clientName: input.clientName,
+            clientEmail: input.clientEmail,
+            clientPhone: input.clientPhone,
+            workAddress: workLocation.address,
+            workCity: workLocation.city,
+            workLatitude: workLocation.latitude?.toString(),
+            workLongitude: workLocation.longitude?.toString(),
+            budget: input.budget?.toString(),
+            urgency: input.urgency,
+            preferredDate: input.preferredDate,
+            status: 'new',
+            source: input.listingId ? 'listing' : 'marketplace',
+          })
+          .returning();
 
-      // Update provider's lead count
-      await db
-        .update(serviceProviders)
-        .set({
-          totalLeads: sql`${serviceProviders.totalLeads} + 1`,
-          leadsThisMonth: sql`${serviceProviders.leadsThisMonth} + 1`,
-          updatedAt: new Date(),
-        })
-        .where(eq(serviceProviders.id, input.providerId));
+        await tx
+          .update(serviceProviders)
+          .set({
+            totalLeads: sql`${serviceProviders.totalLeads} + 1`,
+            leadsThisMonth: sql`${serviceProviders.leadsThisMonth} + 1`,
+            updatedAt: new Date(),
+          })
+          .where(eq(serviceProviders.id, input.providerId));
+
+        return newLead;
+      });
 
       return {
         id: lead.id,
@@ -385,60 +442,80 @@ export const marketplaceRouter = createTRPCRouter({
         });
       }
 
-      // Check if user can verify review via service lead
+      // Prevent duplicate reviews from the same user
+      const existingReview = await db.query.providerReviews.findFirst({
+        where: and(
+          eq(providerReviews.userId, ctx.session.user.id),
+          eq(providerReviews.providerId, input.providerId),
+        ),
+      });
+
+      if (existingReview) {
+        throw new TRPCError({
+          code: 'CONFLICT',
+          message: 'Ya has enviado una opinion para este profesional',
+        });
+      }
+
+      // Check if user can verify review via service lead (must belong to this user)
       let isVerified = false;
       if (input.serviceLeadId) {
         const lead = await db.query.serviceLeads.findFirst({
           where: and(
             eq(serviceLeads.id, input.serviceLeadId),
             eq(serviceLeads.providerId, input.providerId),
-            eq(serviceLeads.status, 'completed')
+            eq(serviceLeads.status, 'completed'),
+            eq(serviceLeads.clientEmail, ctx.session.user.email)
           ),
         });
         isVerified = !!lead;
       }
 
-      // Create review
-      const [review] = await db
-        .insert(providerReviews)
-        .values({
-          providerId: input.providerId,
-          serviceLeadId: input.serviceLeadId,
-          userId: ctx.session.user.id,
-          authorName: ctx.session.user.name ?? 'Usuario',
-          authorEmail: ctx.session.user.email,
-          rating: input.rating,
-          title: input.title,
-          content: input.content,
-          qualityRating: input.qualityRating,
-          communicationRating: input.communicationRating,
-          timelinessRating: input.timelinessRating,
-          valueRating: input.valueRating,
-          category: input.category,
-          isVerified,
-          isPublished: true,
-        })
-        .returning();
+      // Create review and update rating in a transaction
+      const review = await db.transaction(async (tx) => {
+        const [newReview] = await tx
+          .insert(providerReviews)
+          .values({
+            providerId: input.providerId,
+            serviceLeadId: input.serviceLeadId,
+            userId: ctx.session.user.id,
+            authorName: ctx.session.user.name ?? 'Usuario',
+            authorEmail: ctx.session.user.email,
+            rating: input.rating,
+            title: input.title,
+            content: input.content,
+            qualityRating: input.qualityRating,
+            communicationRating: input.communicationRating,
+            timelinessRating: input.timelinessRating,
+            valueRating: input.valueRating,
+            category: input.category,
+            isVerified,
+            isPublished: true,
+          })
+          .returning();
 
-      // Update provider's rating stats
-      const allReviews = await db
-        .select({ rating: providerReviews.rating })
-        .from(providerReviews)
-        .where(
-          and(eq(providerReviews.providerId, input.providerId), eq(providerReviews.isPublished, true))
-        );
+        // Recalculate rating atomically within the transaction
+        const allReviews = await tx
+          .select({ rating: providerReviews.rating })
+          .from(providerReviews)
+          .where(
+            and(eq(providerReviews.providerId, input.providerId), eq(providerReviews.isPublished, true))
+          );
 
-      const avgRating =
-        allReviews.reduce((sum, r) => sum + r.rating, 0) / allReviews.length;
+        const avgRating =
+          allReviews.reduce((sum, r) => sum + r.rating, 0) / allReviews.length;
 
-      await db
-        .update(serviceProviders)
-        .set({
-          totalReviews: allReviews.length,
-          averageRating: avgRating.toFixed(1),
-          updatedAt: new Date(),
-        })
-        .where(eq(serviceProviders.id, input.providerId));
+        await tx
+          .update(serviceProviders)
+          .set({
+            totalReviews: allReviews.length,
+            averageRating: avgRating.toFixed(1),
+            updatedAt: new Date(),
+          })
+          .where(eq(serviceProviders.id, input.providerId));
+
+        return newReview;
+      });
 
       return {
         id: review.id,
