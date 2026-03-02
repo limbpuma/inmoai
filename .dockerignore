@@ -7,3 +7,11 @@ docker-compose*.yml
 .vercel
 .github
 docs
+*.png
+*.jpg
+.claude
+.playwright-mcp
+.turbo
+tmpclaude-*
+nul
+vercel.json
