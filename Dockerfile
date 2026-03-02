@@ -1,19 +1,10 @@
 FROM node:20-alpine AS base
 
-# Install dependencies only
-FROM base AS deps
-WORKDIR /app
-COPY package.json package-lock.json ./
-COPY apps/web/package.json ./apps/web/
-COPY apps/api/package.json ./apps/api/
-COPY packages/shared/package.json ./packages/shared/
-RUN npm ci --ignore-scripts
-
-# Build the web app
+# Build the web app (single stage to preserve npm workspace symlinks)
 FROM base AS builder
 WORKDIR /app
-COPY --from=deps /app/node_modules ./node_modules
 COPY . .
+RUN npm install
 ENV NEXT_TELEMETRY_DISABLED=1
 ENV SKIP_ENV_VALIDATION=true
 RUN npm run build --workspace=apps/web
