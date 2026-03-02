@@ -1,0 +1,23 @@
+version: '3.8'
+
+services:
+  inmoai_web:
+    image: ghcr.io/limbpuma/inmoai:latest
+    container_name: inmoai_web
+    restart: unless-stopped
+    environment:
+      - NODE_ENV=production
+      - NEXT_PUBLIC_APP_URL=https://inmoai.limbermartinez.com
+    networks:
+      - docker_network
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.inmoai.rule=Host(`inmoai.limbermartinez.com`)"
+      - "traefik.http.routers.inmoai.entrypoints=websecure"
+      - "traefik.http.routers.inmoai.tls.certresolver=letsencrypt"
+      - "traefik.http.services.inmoai.loadbalancer.server.port=3000"
+      - "traefik.docker.network=docker_network"
+
+networks:
+  docker_network:
+    external: true

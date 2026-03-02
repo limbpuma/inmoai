@@ -1,5 +1,6 @@
 import { Header } from "@/components/layout/Header";
 import { Footer } from "@/components/layout/Footer";
+import { PortfolioDisclaimer } from "@/components/legal/PortfolioDisclaimer";
 
 export const metadata = {
   title: "Politica de Privacidad - InmoAI",
@@ -14,8 +15,10 @@ export default function PrivacyPage() {
         <h1 className="text-3xl font-bold mb-8">Politica de Privacidad</h1>
 
         <div className="prose prose-neutral dark:prose-invert max-w-none space-y-8">
+          <PortfolioDisclaimer />
+
           <p className="text-muted-foreground">
-            Ultima actualizacion: Enero 2026
+            Ultima actualizacion: Marzo 2026
           </p>
 
           <section>
@@ -24,8 +27,8 @@ export default function PrivacyPage() {
               En InmoAI, nos tomamos muy en serio la proteccion de tus datos
               personales. Esta politica de privacidad explica como recopilamos,
               usamos, almacenamos y protegemos tu informacion de acuerdo con el
-              Reglamento General de Proteccion de Datos (RGPD) y la legislacion
-              espanola aplicable.
+              Reglamento General de Proteccion de Datos (RGPD/DSGVO) y la
+              legislacion alemana y europea aplicable.
             </p>
           </section>
 
@@ -154,8 +157,14 @@ export default function PrivacyPage() {
               </li>
             </ul>
             <p className="text-muted-foreground mt-4">
-              Para ejercer estos derechos, contacta con nuestro DPO en
-              dpo@inmoai.com
+              Para ejercer estos derechos, contacta al responsable del proyecto
+              en{" "}
+              <a
+                href="mailto:info@limbermartinez.com"
+                className="text-primary hover:underline"
+              >
+                info@limbermartinez.com
+              </a>
             </p>
           </section>
 
@@ -184,20 +193,34 @@ export default function PrivacyPage() {
           </section>
 
           <section>
-            <h2 className="text-xl font-semibold mb-4">10. Contacto DPO</h2>
+            <h2 className="text-xl font-semibold mb-4">
+              10. Contacto
+            </h2>
             <p className="text-muted-foreground mb-4">
               Para cualquier cuestion relacionada con la privacidad:
             </p>
             <p className="text-muted-foreground">
-              Delegado de Proteccion de Datos
+              Responsable del Proyecto
               <br />
-              Email: dpo@inmoai.com
+              Limber Martinez
               <br />
-              Direccion: Calle Gran Via 28, 28013 Madrid, Espana
+              Email:{" "}
+              <a
+                href="mailto:info@limbermartinez.com"
+                className="text-primary hover:underline"
+              >
+                info@limbermartinez.com
+              </a>
+              <br />
+              Dortmund, Germany
             </p>
             <p className="text-muted-foreground mt-4">
-              Tambien puedes presentar una reclamacion ante la Agencia Espanola
-              de Proteccion de Datos (AEPD) en www.aepd.es
+              Tambien puedes presentar una reclamacion ante la autoridad de
+              proteccion de datos competente. En Alemania:{" "}
+              <span className="font-medium">
+                Landesbeauftragte fur Datenschutz und Informationsfreiheit
+                Nordrhein-Westfalen (LDI NRW)
+              </span>
             </p>
           </section>
         </div>

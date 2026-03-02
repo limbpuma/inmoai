@@ -1,5 +1,6 @@
 import { Header } from "@/components/layout/Header";
 import { Footer } from "@/components/layout/Footer";
+import { PortfolioDisclaimer } from "@/components/legal/PortfolioDisclaimer";
 
 export const metadata = {
   title: "Politica de Cookies - InmoAI",
@@ -14,8 +15,10 @@ export default function CookiesPage() {
         <h1 className="text-3xl font-bold mb-8">Politica de Cookies</h1>
 
         <div className="prose prose-neutral dark:prose-invert max-w-none space-y-8">
+          <PortfolioDisclaimer />
+
           <p className="text-muted-foreground">
-            Ultima actualizacion: Enero 2026
+            Ultima actualizacion: Marzo 2026
           </p>
 
           <section>
@@ -25,8 +28,8 @@ export default function CookiesPage() {
             <p className="text-muted-foreground mb-4">
               Las cookies son pequenos archivos de texto que se almacenan en tu
               dispositivo cuando visitas un sitio web. Nos ayudan a recordar tus
-              preferencias, entender como usas nuestra plataforma y mejorar tu
-              experiencia.
+              preferencias y garantizar el correcto funcionamiento de la
+              plataforma.
             </p>
           </section>
 
@@ -61,7 +64,6 @@ export default function CookiesPage() {
                 </p>
                 <ul className="list-disc list-inside text-muted-foreground space-y-1 text-sm">
                   <li>Preferencias de busqueda guardadas</li>
-                  <li>Idioma preferido</li>
                   <li>Modo oscuro/claro</li>
                   <li>Ultima ciudad buscada</li>
                 </ul>
@@ -69,29 +71,14 @@ export default function CookiesPage() {
 
               <div>
                 <h3 className="text-lg font-medium mb-2">
-                  Cookies Analiticas
+                  Cookies Analiticas y de Marketing
                 </h3>
                 <p className="text-muted-foreground mb-2">
-                  Nos ayudan a entender como se usa el sitio para mejorarlo.
+                  Actualmente <strong>no utilizamos</strong> cookies analiticas
+                  ni de marketing. No se emplean servicios de seguimiento como
+                  Google Analytics, Google Ads ni Facebook Pixel en esta version
+                  del proyecto.
                 </p>
-                <ul className="list-disc list-inside text-muted-foreground space-y-1 text-sm">
-                  <li>Google Analytics (_ga, _gid)</li>
-                  <li>Metricas de rendimiento</li>
-                  <li>Patrones de navegacion anonimos</li>
-                </ul>
-              </div>
-
-              <div>
-                <h3 className="text-lg font-medium mb-2">
-                  Cookies de Marketing
-                </h3>
-                <p className="text-muted-foreground mb-2">
-                  Utilizadas para mostrarte anuncios relevantes.
-                </p>
-                <ul className="list-disc list-inside text-muted-foreground space-y-1 text-sm">
-                  <li>Google Ads (conversion tracking)</li>
-                  <li>Facebook Pixel (si aplica)</li>
-                </ul>
               </div>
             </div>
           </section>
@@ -125,16 +112,6 @@ export default function CookiesPage() {
                     <td className="py-2">Funcionalidad</td>
                     <td className="py-2">6 meses</td>
                   </tr>
-                  <tr className="border-b">
-                    <td className="py-2">_ga</td>
-                    <td className="py-2">Analitica</td>
-                    <td className="py-2">2 anos</td>
-                  </tr>
-                  <tr className="border-b">
-                    <td className="py-2">_gid</td>
-                    <td className="py-2">Analitica</td>
-                    <td className="py-2">24 horas</td>
-                  </tr>
                 </tbody>
               </table>
             </div>
@@ -150,15 +127,11 @@ export default function CookiesPage() {
             <ul className="list-disc list-inside text-muted-foreground space-y-2">
               <li>
                 <strong>Banner de cookies:</strong> Al visitar el sitio por
-                primera vez, puedes aceptar o rechazar categorias de cookies
+                primera vez, puedes aceptar las cookies necesarias
               </li>
               <li>
                 <strong>Configuracion del navegador:</strong> Puedes bloquear o
                 eliminar cookies desde la configuracion de tu navegador
-              </li>
-              <li>
-                <strong>Herramientas de opt-out:</strong> Para Google Analytics,
-                visita tools.google.com/dlpage/gaoptout
               </li>
             </ul>
           </section>
@@ -192,31 +165,7 @@ export default function CookiesPage() {
 
           <section>
             <h2 className="text-xl font-semibold mb-4">
-              6. Cookies de Terceros
-            </h2>
-            <p className="text-muted-foreground mb-4">
-              Algunos servicios de terceros pueden establecer sus propias
-              cookies:
-            </p>
-            <ul className="list-disc list-inside text-muted-foreground space-y-2">
-              <li>
-                <strong>Google:</strong> Analytics y Ads - Politica de
-                privacidad en policies.google.com
-              </li>
-              <li>
-                <strong>Mapas:</strong> Google Maps o Mapbox para visualizar
-                ubicaciones
-              </li>
-            </ul>
-            <p className="text-muted-foreground mt-4">
-              No tenemos control sobre estas cookies de terceros. Consulta sus
-              politicas de privacidad para mas informacion.
-            </p>
-          </section>
-
-          <section>
-            <h2 className="text-xl font-semibold mb-4">
-              7. Cambios en esta Politica
+              6. Cambios en esta Politica
             </h2>
             <p className="text-muted-foreground mb-4">
               Podemos actualizar esta politica periodicamente. Te notificaremos
@@ -226,13 +175,19 @@ export default function CookiesPage() {
           </section>
 
           <section>
-            <h2 className="text-xl font-semibold mb-4">8. Contacto</h2>
+            <h2 className="text-xl font-semibold mb-4">7. Contacto</h2>
             <p className="text-muted-foreground">
               Para preguntas sobre cookies:
               <br />
-              Email: privacidad@inmoai.com
+              Email:{" "}
+              <a
+                href="mailto:info@limbermartinez.com"
+                className="text-primary hover:underline"
+              >
+                info@limbermartinez.com
+              </a>
               <br />
-              Direccion: Calle Gran Via 28, 28013 Madrid, Espana
+              Dortmund, Germany
             </p>
           </section>
         </div>

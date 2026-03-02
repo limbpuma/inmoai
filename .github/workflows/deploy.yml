@@ -1,0 +1,85 @@
+name: Deploy to Hostinger VPS
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - 'apps/web/**'
+      - 'packages/**'
+      - 'Dockerfile'
+      - 'docker-compose.prod.yml'
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository }}
+
+jobs:
+  build-and-push:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          push: true
+          tags: |
+            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest
+            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.sha }}
+
+  deploy:
+    needs: build-and-push
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Deploy to VPS via SSH
+        uses: appleboy/ssh-action@v1
+        with:
+          host: 148.230.70.123
+          username: root
+          key: ${{ secrets.VPS_SSH_KEY }}
+          script: |
+            mkdir -p /root/docker-projects/inmoai
+            cd /root/docker-projects/inmoai
+            cat > docker-compose.yml << 'COMPOSE'
+            version: '3.8'
+            services:
+              inmoai_web:
+                image: ghcr.io/limbpuma/inmoai:latest
+                container_name: inmoai_web
+                restart: unless-stopped
+                environment:
+                  - NODE_ENV=production
+                  - NEXT_PUBLIC_APP_URL=https://inmoai.limbermartinez.com
+                networks:
+                  - docker_network
+                labels:
+                  - "traefik.enable=true"
+                  - "traefik.http.routers.inmoai.rule=Host(`inmoai.limbermartinez.com`)"
+                  - "traefik.http.routers.inmoai.entrypoints=websecure"
+                  - "traefik.http.routers.inmoai.tls.certresolver=letsencrypt"
+                  - "traefik.http.services.inmoai.loadbalancer.server.port=3000"
+                  - "traefik.docker.network=docker_network"
+            networks:
+              docker_network:
+                external: true
+            COMPOSE
+            docker pull ghcr.io/limbpuma/inmoai:latest
+            docker compose down || true
+            docker compose up -d
+            echo "InmoAI deployed at https://inmoai.limbermartinez.com"

@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Poppins, Inter, JetBrains_Mono } from "next/font/google";
 import { Providers } from "@/components/providers/Providers";
+import { CookieBanner } from "@/components/legal/CookieBanner";
 import "./globals.css";
 
 const poppins = Poppins({
@@ -37,7 +38,10 @@ export default function RootLayout({
       <body
         className={`${poppins.variable} ${inter.variable} ${jetbrainsMono.variable} antialiased bg-background text-foreground font-sans`}
       >
-        <Providers>{children}</Providers>
+        <Providers>
+          {children}
+          <CookieBanner />
+        </Providers>
       </body>
     </html>
   );

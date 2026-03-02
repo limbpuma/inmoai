@@ -1,5 +1,6 @@
 import { Header } from "@/components/layout/Header";
 import { Footer } from "@/components/layout/Footer";
+import { PortfolioDisclaimer } from "@/components/legal/PortfolioDisclaimer";
 
 export const metadata = {
   title: "Terminos y Condiciones - InmoAI",
@@ -14,8 +15,10 @@ export default function TermsPage() {
         <h1 className="text-3xl font-bold mb-8">Terminos y Condiciones</h1>
 
         <div className="prose prose-neutral dark:prose-invert max-w-none space-y-8">
+          <PortfolioDisclaimer />
+
           <p className="text-muted-foreground">
-            Ultima actualizacion: Enero 2026
+            Ultima actualizacion: Marzo 2026
           </p>
 
           <section>
@@ -32,10 +35,10 @@ export default function TermsPage() {
           <section>
             <h2 className="text-xl font-semibold mb-4">2. Uso del Servicio</h2>
             <p className="text-muted-foreground mb-4">
-              InmoAI es una plataforma de busqueda inmobiliaria que utiliza
-              inteligencia artificial para ayudarte a encontrar tu vivienda
-              ideal. El servicio esta destinado unicamente para uso personal y
-              no comercial, salvo acuerdo especifico.
+              InmoAI es un proyecto de portfolio que demuestra una plataforma de
+              busqueda inmobiliaria con inteligencia artificial. El servicio
+              esta destinado unicamente para fines demostrativos y de
+              evaluacion tecnica.
             </p>
             <ul className="list-disc list-inside text-muted-foreground space-y-2">
               <li>
@@ -49,7 +52,7 @@ export default function TermsPage() {
                 autorizacion
               </li>
               <li>
-                No publicar contenido falso o enganoso sobre propiedades
+                No publicar contenido falso o enganoso
               </li>
             </ul>
           </section>
@@ -61,9 +64,9 @@ export default function TermsPage() {
             <p className="text-muted-foreground mb-4">
               Todo el contenido de InmoAI, incluyendo pero no limitado a textos,
               graficos, logos, iconos, imagenes, clips de audio, descargas
-              digitales y compilaciones de datos, es propiedad de InmoAI o sus
-              proveedores de contenido y esta protegido por las leyes de
-              propiedad intelectual.
+              digitales y compilaciones de datos, es propiedad de Limber
+              Martinez y esta protegido por las leyes de propiedad intelectual
+              aplicables.
             </p>
           </section>
 
@@ -82,11 +85,10 @@ export default function TermsPage() {
               5. Informacion de Propiedades
             </h2>
             <p className="text-muted-foreground mb-4">
-              InmoAI recopila y muestra informacion de propiedades de diversas
-              fuentes. Aunque nos esforzamos por mantener la informacion
-              actualizada y precisa, no garantizamos la exactitud, integridad o
-              actualidad de los listados. Te recomendamos verificar siempre la
-              informacion directamente con el anunciante.
+              Los listados de propiedades mostrados en InmoAI son de caracter
+              demostrativo. No garantizamos la exactitud, integridad o
+              actualidad de los datos. Los precios, ubicaciones y
+              caracteristicas son ilustrativos y no representan ofertas reales.
             </p>
           </section>
 
@@ -95,11 +97,10 @@ export default function TermsPage() {
               6. Limitacion de Responsabilidad
             </h2>
             <p className="text-muted-foreground mb-4">
-              InmoAI no sera responsable por danos directos, indirectos,
-              incidentales, especiales, consecuentes o punitivos, incluyendo
-              pero no limitado a la perdida de beneficios, datos u otras
-              perdidas intangibles, resultantes del uso o la imposibilidad de
-              usar el servicio.
+              Al tratarse de un proyecto de portfolio/demostracion, InmoAI no
+              sera responsable por danos directos, indirectos, incidentales,
+              especiales, consecuentes o punitivos resultantes del uso o la
+              imposibilidad de usar el servicio.
             </p>
           </section>
 
@@ -119,8 +120,8 @@ export default function TermsPage() {
             <h2 className="text-xl font-semibold mb-4">8. Ley Aplicable</h2>
             <p className="text-muted-foreground mb-4">
               Estos terminos se regiran e interpretaran de acuerdo con las leyes
-              de Espana, sin dar efecto a ninguna disposicion sobre conflicto de
-              leyes. Cualquier disputa se sometera a los tribunales de Madrid.
+              de Alemania y la Union Europea. Cualquier disputa se sometera a
+              los tribunales competentes de Dortmund, Alemania.
             </p>
           </section>
 
@@ -130,9 +131,15 @@ export default function TermsPage() {
               Si tienes preguntas sobre estos terminos, puedes contactarnos en:
             </p>
             <p className="text-muted-foreground">
-              Email: legal@inmoai.com
+              Email:{" "}
+              <a
+                href="mailto:info@limbermartinez.com"
+                className="text-primary hover:underline"
+              >
+                info@limbermartinez.com
+              </a>
               <br />
-              Direccion: Calle Gran Via 28, 28013 Madrid, Espana
+              Dortmund, Germany
             </p>
           </section>
         </div>

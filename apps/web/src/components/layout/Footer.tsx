@@ -16,6 +16,12 @@ export function Footer() {
         </div>
         <nav className="flex gap-6 text-sm text-muted-foreground">
           <Link
+            href="/impressum"
+            className="hover:text-foreground transition-colors"
+          >
+            Impressum
+          </Link>
+          <Link
             href="/terms"
             className="hover:text-foreground transition-colors"
           >
@@ -35,7 +41,7 @@ export function Footer() {
           </Link>
         </nav>
         <p className="text-sm text-muted-foreground text-center md:text-right">
-          &copy; 2026 InmoAI. Todos los derechos reservados.
+          &copy; 2026 Limber Martinez. Proyecto de portfolio.
         </p>
       </div>
     </footer>
