@@ -21,6 +21,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { trpc } from "@/lib/trpc/client";
+import { getMockListingById } from "@/data/mock-listings";
 import {
   ArrowLeft,
   Heart,
@@ -59,16 +60,16 @@ const propertyTypeLabels: Record<string, string> = {
 export default function ListingPage({ params }: ListingPageProps) {
   const { id } = use(params);
 
-  const { data: listing, isLoading, error } = trpc.listings.getById.useQuery(
+  const { data: apiListing, isLoading, error } = trpc.listings.getById.useQuery(
     { id },
-    { retry: false }
+    { retry: 1 }
   );
 
-  if (error) {
-    notFound();
-  }
+  // Fallback to mock data when API is unavailable (demo mode)
+  const mockListing = getMockListingById(id);
+  const listing = apiListing ?? (error || !isLoading ? mockListing : null);
 
-  if (isLoading) {
+  if (isLoading && !mockListing) {
     return <ListingPageSkeleton />;
   }
 

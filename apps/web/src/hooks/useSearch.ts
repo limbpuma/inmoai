@@ -1,6 +1,7 @@
 "use client";
 
 import { trpc } from "@/lib/trpc";
+import { getMockRecentListings, getMockListingById } from "@/data/mock-listings";
 import type { SearchFilters } from "@inmoai/shared";
 
 export function useSearchListings(filters: Partial<SearchFilters>) {
@@ -12,7 +13,7 @@ export function useSearchListings(filters: Partial<SearchFilters>) {
     },
     {
       enabled: true,
-      staleTime: 30000, // 30 seconds
+      staleTime: 30000,
     }
   );
 }
@@ -32,26 +33,55 @@ export function useAutocomplete(query: string, limit = 10) {
     { query, limit },
     {
       enabled: query.length >= 2,
-      staleTime: 10000, // 10 seconds
+      staleTime: 10000,
     }
   );
 }
 
 export function useRecentListings(city?: string, limit = 12, operationType?: "sale" | "rent") {
-  return trpc.listings.getRecent.useQuery(
+  const query = trpc.listings.getRecent.useQuery(
     { city, limit, operationType },
     {
-      staleTime: 60000, // 1 minute
+      staleTime: 60000,
+      retry: 1,
     }
   );
+
+  // Fallback to mock data when API is unavailable (portfolio demo mode)
+  if (query.isError || (query.isFetched && !query.data)) {
+    return {
+      ...query,
+      data: getMockRecentListings(city, limit, operationType),
+      isLoading: false,
+      isError: false,
+    };
+  }
+
+  return query;
 }
 
 export function useListingDetail(id: string) {
-  return trpc.listings.getById.useQuery(
+  const query = trpc.listings.getById.useQuery(
     { id },
     {
       enabled: !!id,
       staleTime: 60000,
+      retry: 1,
     }
   );
+
+  // Fallback to mock data when API is unavailable
+  if (query.isError || (query.isFetched && !query.data)) {
+    const mockListing = getMockListingById(id);
+    if (mockListing) {
+      return {
+        ...query,
+        data: mockListing,
+        isLoading: false,
+        isError: false,
+      };
+    }
+  }
+
+  return query;
 }

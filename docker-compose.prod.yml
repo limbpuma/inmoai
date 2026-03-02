@@ -1,5 +1,3 @@
-version: '3.8'
-
 services:
   inmoai_web:
     image: ghcr.io/limbpuma/inmoai:latest
