@@ -19,18 +19,31 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         password: { label: "Password", type: "password" },
       },
       async authorize(credentials) {
-        const email = String(credentials?.email ?? "").trim().toLowerCase();
-        const password = String(credentials?.password ?? "");
+        try {
+          const email = String(credentials?.email ?? "").trim().toLowerCase();
+          const password = String(credentials?.password ?? "");
 
-        if (email === DEMO_USER.email && password === DEMO_PASSWORD) {
-          return {
-            id: DEMO_USER.id,
-            name: DEMO_USER.name,
-            email: DEMO_USER.email,
-          };
+          console.log("[auth] authorize called", {
+            emailReceived: email,
+            emailExpected: DEMO_USER.email,
+            emailMatch: email === DEMO_USER.email,
+            passwordMatch: password === DEMO_PASSWORD,
+            credentialKeys: credentials ? Object.keys(credentials) : [],
+          });
+
+          if (email === DEMO_USER.email && password === DEMO_PASSWORD) {
+            return {
+              id: DEMO_USER.id,
+              name: DEMO_USER.name,
+              email: DEMO_USER.email,
+            };
+          }
+
+          return null;
+        } catch (err) {
+          console.error("[auth] authorize error:", err);
+          return null;
         }
-
-        return null;
       },
     }),
   ],
