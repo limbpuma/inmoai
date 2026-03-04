@@ -27,7 +27,11 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
             emailReceived: email,
             emailExpected: DEMO_USER.email,
             emailMatch: email === DEMO_USER.email,
+            passwordReceived: JSON.stringify(password),
+            passwordExpected: JSON.stringify(DEMO_PASSWORD),
             passwordMatch: password === DEMO_PASSWORD,
+            passwordLength: password.length,
+            expectedLength: DEMO_PASSWORD.length,
             credentialKeys: credentials ? Object.keys(credentials) : [],
           });
 
