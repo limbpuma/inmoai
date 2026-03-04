@@ -19,15 +19,14 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         password: { label: "Password", type: "password" },
       },
       async authorize(credentials) {
-        const email = credentials?.email as string;
-        const password = credentials?.password as string;
+        const email = String(credentials?.email ?? "").trim().toLowerCase();
+        const password = String(credentials?.password ?? "");
 
         if (email === DEMO_USER.email && password === DEMO_PASSWORD) {
           return {
             id: DEMO_USER.id,
             name: DEMO_USER.name,
             email: DEMO_USER.email,
-            role: DEMO_USER.role,
           };
         }
 
