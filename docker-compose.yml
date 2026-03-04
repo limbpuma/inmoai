@@ -1,23 +1,113 @@
 version: '3.8'
 
 services:
+  # ============================================
+  # DATABASE
+  # ============================================
   postgres:
     image: postgres:16-alpine
     container_name: inmoai-db
     restart: unless-stopped
     environment:
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres
-      POSTGRES_DB: inmoai
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+      POSTGRES_DB: ${POSTGRES_DB:-inmoai}
     ports:
-      - "5432:5432"
+      - '5432:5432'
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      test: ['CMD-SHELL', 'pg_isready -U ${POSTGRES_USER:-postgres}']
       interval: 5s
       timeout: 5s
       retries: 5
 
+  # ============================================
+  # REDIS (Cache + Rate Limiting)
+  # ============================================
+  redis:
+    image: redis:7-alpine
+    container_name: inmoai-redis
+    restart: unless-stopped
+    ports:
+      - '6379:6379'
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ['CMD', 'redis-cli', 'ping']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ============================================
+  # QDRANT (Vector Search)
+  # ============================================
+  qdrant:
+    image: qdrant/qdrant:v1.12.6
+    container_name: inmoai-qdrant
+    restart: unless-stopped
+    ports:
+      - '6333:6333'
+      - '6334:6334'
+    volumes:
+      - qdrant_data:/qdrant/storage
+
+  # ============================================
+  # API (Backend - Next.js + tRPC)
+  # ============================================
+  api:
+    build:
+      context: .
+      dockerfile: apps/api/Dockerfile
+    container_name: inmoai-api
+    restart: unless-stopped
+    ports:
+      - '9091:9091'
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      qdrant:
+        condition: service_started
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@postgres:5432/${POSTGRES_DB:-inmoai}
+      REDIS_URL: redis://redis:6379
+      QDRANT_URL: http://qdrant:6333
+      NEXTAUTH_URL: ${NEXTAUTH_URL:-http://localhost:9091}
+      NEXTAUTH_SECRET: ${NEXTAUTH_SECRET}
+      GEMINI_API_KEY: ${GEMINI_API_KEY}
+      OPENAI_API_KEY: ${OPENAI_API_KEY}
+      STRIPE_SECRET_KEY: ${STRIPE_SECRET_KEY:-}
+      STRIPE_WEBHOOK_SECRET: ${STRIPE_WEBHOOK_SECRET:-}
+      RESEND_API_KEY: ${RESEND_API_KEY:-}
+      NODE_ENV: production
+    healthcheck:
+      test: ['CMD', 'wget', '--no-verbose', '--tries=1', '--spider', 'http://localhost:9091']
+      interval: 30s
+      timeout: 5s
+      retries: 3
+
+  # ============================================
+  # WEB (Frontend - Next.js)
+  # ============================================
+  web:
+    build:
+      context: .
+      dockerfile: apps/web/Dockerfile
+    container_name: inmoai-web
+    restart: unless-stopped
+    ports:
+      - '9090:9090'
+    depends_on:
+      api:
+        condition: service_healthy
+    environment:
+      NEXT_PUBLIC_API_URL: http://api:9091
+      NEXTAUTH_URL: ${NEXTAUTH_URL_WEB:-http://localhost:9090}
+      NODE_ENV: production
+
 volumes:
   postgres_data:
+  redis_data:
+  qdrant_data:
