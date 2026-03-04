@@ -10,9 +10,12 @@ export function useBilling() {
   const { data: subscription, isLoading: isLoadingSubscription } =
     trpc.billing.getSubscription.useQuery(undefined, {
       enabled: !!session?.user,
+      retry: false,
     });
 
-  const { data: plans } = trpc.billing.getPlans.useQuery();
+  const { data: plans } = trpc.billing.getPlans.useQuery(undefined, {
+    retry: false,
+  });
 
   const checkoutMutation = trpc.billing.createCheckoutSession.useMutation({
     onSuccess: (data) => {

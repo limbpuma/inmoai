@@ -215,7 +215,9 @@
     "reqUppercase": "One uppercase letter",
     "reqNumber": "One number",
     "rightsReserved": "© {year} InmoAI. All rights reserved.",
-    "and": "and"
+    "and": "and",
+    "demoLogin": "Demo Access",
+    "demoHint": "Sign in with demo user to explore the dashboard"
   },
   "servicios": {
     "title": "Find Trusted Professionals",
@@ -465,5 +467,37 @@
     "s8Text": "These terms shall be governed by and construed in accordance with the laws of Germany and the European Union. Any dispute shall be submitted to the competent courts of Dortmund, Germany.",
     "s9Title": "9. Contact",
     "s9Intro": "If you have questions about these terms, you can contact us at:"
+  },
+  "dashboard": {
+    "title": "Dashboard",
+    "favorites": "Favorites",
+    "history": "History",
+    "subscription": "Subscription",
+    "settings": "Settings",
+    "professional": "Professional",
+    "myBusiness": "My Business",
+    "leads": "Leads",
+    "reviews": "Reviews",
+    "services": "Services",
+    "hello": "Hello, {name}",
+    "welcome": "Welcome to your dashboard",
+    "upgradePro": "Upgrade to Pro",
+    "searchesToday": "Searches today",
+    "of": "of {count} available",
+    "savedProperties": "Saved properties",
+    "inFavorites": "in your favorites list",
+    "activeAlerts": "Active alerts",
+    "avgScore": "Average score",
+    "authenticityFavorites": "favorites authenticity",
+    "recentSearches": "Recent searches",
+    "viewAll": "View all",
+    "recentSearchesDesc": "Your latest searches on InmoAI",
+    "results": "{count} results",
+    "savedPropertiesTitle": "Saved properties",
+    "yourFavorites": "Your favorite properties",
+    "unlockTitle": "Unlock the full potential of InmoAI",
+    "unlockDesc": "Unlimited searches, real-time alerts, and advanced fraud detection.",
+    "viewPlans": "View plans",
+    "unlimited": "Unlimited"
   }
 }

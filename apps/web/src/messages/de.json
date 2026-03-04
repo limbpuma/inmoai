@@ -215,7 +215,9 @@
     "reqUppercase": "Ein Großbuchstabe",
     "reqNumber": "Eine Zahl",
     "rightsReserved": "© {year} InmoAI. Alle Rechte vorbehalten.",
-    "and": "und"
+    "and": "und",
+    "demoLogin": "Demo-Zugang",
+    "demoHint": "Melden Sie sich mit dem Demo-Benutzer an, um das Dashboard zu erkunden"
   },
   "servicios": {
     "title": "Vertrauenswürdige Fachleute finden",
@@ -465,5 +467,37 @@
     "s8Text": "Diese Bedingungen unterliegen dem Recht der Bundesrepublik Deutschland und der Europäischen Union. Für Streitigkeiten sind die zuständigen Gerichte in Dortmund, Deutschland, zuständig.",
     "s9Title": "9. Kontakt",
     "s9Intro": "Wenn Sie Fragen zu diesen Bedingungen haben, können Sie uns kontaktieren unter:"
+  },
+  "dashboard": {
+    "title": "Dashboard",
+    "favorites": "Favoriten",
+    "history": "Verlauf",
+    "subscription": "Abonnement",
+    "settings": "Einstellungen",
+    "professional": "Professionell",
+    "myBusiness": "Mein Unternehmen",
+    "leads": "Leads",
+    "reviews": "Bewertungen",
+    "services": "Dienstleistungen",
+    "hello": "Hallo, {name}",
+    "welcome": "Willkommen in Ihrem Dashboard",
+    "upgradePro": "Auf Pro upgraden",
+    "searchesToday": "Suchen heute",
+    "of": "von {count} verfügbar",
+    "savedProperties": "Gespeicherte Immobilien",
+    "inFavorites": "in Ihrer Favoritenliste",
+    "activeAlerts": "Aktive Benachrichtigungen",
+    "avgScore": "Durchschnittlicher Score",
+    "authenticityFavorites": "Authentizität der Favoriten",
+    "recentSearches": "Letzte Suchen",
+    "viewAll": "Alle anzeigen",
+    "recentSearchesDesc": "Ihre letzten Suchen auf InmoAI",
+    "results": "{count} Ergebnisse",
+    "savedPropertiesTitle": "Gespeicherte Immobilien",
+    "yourFavorites": "Ihre Lieblingsimmobilien",
+    "unlockTitle": "Schalten Sie das volle Potenzial von InmoAI frei",
+    "unlockDesc": "Unbegrenzte Suchen, Echtzeit-Benachrichtigungen und erweiterte Betrugserkennung.",
+    "viewPlans": "Pläne ansehen",
+    "unlimited": "Unbegrenzt"
   }
 }

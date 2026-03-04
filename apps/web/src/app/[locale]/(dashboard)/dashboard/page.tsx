@@ -1,13 +1,13 @@
 "use client";
 
 import { useSession } from "next-auth/react";
-import { trpc } from "@/lib/trpc";
 import { useBilling } from "@/hooks/useBilling";
+import { useTranslations } from "next-intl";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import Link from "next/link";
+import { Link } from "@/i18n/navigation";
 import {
   Search,
   Heart,
@@ -21,27 +21,22 @@ import {
 
 export default function DashboardPage() {
   const { data: session } = useSession();
-  const { subscription, isPro, isAgency, hasActiveSubscription, isLoadingSubscription } = useBilling();
+  const { isPro, isAgency, hasActiveSubscription, isLoadingSubscription } = useBilling();
+  const t = useTranslations("dashboard");
 
-  // Mock data - in production this would come from tRPC
-  const stats = {
-    searchesToday: 7,
-    maxSearches: isPro || isAgency ? "Ilimitadas" : "10",
-    savedProperties: 12,
-    activeAlerts: isPro || isAgency ? 8 : 3,
-    maxAlerts: isPro || isAgency ? "Ilimitadas" : "3",
-  };
+  const maxSearches = isPro || isAgency ? t("unlimited") : "10";
+  const maxAlerts = isPro || isAgency ? t("unlimited") : "3";
 
   const recentSearches = [
-    { id: 1, query: "Piso 3 habitaciones Barcelona", date: "Hace 2 horas", results: 24 },
-    { id: 2, query: "Casa con jardin Madrid norte", date: "Hace 5 horas", results: 8 },
-    { id: 3, query: "Atico luminoso Valencia", date: "Ayer", results: 15 },
+    { id: 1, query: "Piso 3 habitaciones Barcelona", date: "2h", results: 24 },
+    { id: 2, query: "Casa con jardin Madrid norte", date: "5h", results: 8 },
+    { id: 3, query: "Atico luminoso Valencia", date: "1d", results: 15 },
   ];
 
   const savedProperties = [
-    { id: 1, title: "Piso en Eixample", price: "385.000€", location: "Barcelona", image: "/placeholder.jpg" },
-    { id: 2, title: "Casa adosada", price: "520.000€", location: "Madrid", image: "/placeholder.jpg" },
-    { id: 3, title: "Atico con terraza", price: "295.000€", location: "Valencia", image: "/placeholder.jpg" },
+    { id: 1, title: "Piso en Eixample", price: "385.000€", location: "Barcelona" },
+    { id: 2, title: "Casa adosada", price: "520.000€", location: "Madrid" },
+    { id: 3, title: "Atico con terraza", price: "295.000€", location: "Valencia" },
   ];
 
   return (
@@ -50,11 +45,9 @@ export default function DashboardPage() {
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold">
-            Hola, {session?.user?.name || "Usuario"}
+            {t("hello", { name: session?.user?.name || "Usuario" })}
           </h1>
-          <p className="text-muted-foreground">
-            Bienvenido a tu panel de control
-          </p>
+          <p className="text-muted-foreground">{t("welcome")}</p>
         </div>
         <div className="flex items-center gap-2">
           {isLoadingSubscription ? (
@@ -62,13 +55,13 @@ export default function DashboardPage() {
           ) : hasActiveSubscription ? (
             <Badge variant="default" className="bg-gradient-to-r from-amber-500 to-orange-500">
               <Crown className="h-3 w-3 mr-1" />
-              {isAgency ? "Agencia" : "Pro"}
+              {isAgency ? "Agency" : "Pro"}
             </Badge>
           ) : (
             <Link href="/pricing">
               <Button size="sm" variant="outline">
                 <Crown className="h-3 w-3 mr-1" />
-                Actualizar a Pro
+                {t("upgradePro")}
               </Button>
             </Link>
           )}
@@ -79,50 +72,46 @@ export default function DashboardPage() {
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Busquedas hoy</CardTitle>
+            <CardTitle className="text-sm font-medium">{t("searchesToday")}</CardTitle>
             <Search className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{stats.searchesToday}</div>
+            <div className="text-2xl font-bold">7</div>
             <p className="text-xs text-muted-foreground">
-              de {stats.maxSearches} disponibles
+              {t("of", { count: maxSearches })}
             </p>
           </CardContent>
         </Card>
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Propiedades guardadas</CardTitle>
+            <CardTitle className="text-sm font-medium">{t("savedProperties")}</CardTitle>
             <Heart className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{stats.savedProperties}</div>
-            <p className="text-xs text-muted-foreground">
-              en tu lista de favoritos
-            </p>
+            <div className="text-2xl font-bold">12</div>
+            <p className="text-xs text-muted-foreground">{t("inFavorites")}</p>
           </CardContent>
         </Card>
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Alertas activas</CardTitle>
+            <CardTitle className="text-sm font-medium">{t("activeAlerts")}</CardTitle>
             <Bell className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{stats.activeAlerts}</div>
+            <div className="text-2xl font-bold">{isPro || isAgency ? 8 : 3}</div>
             <p className="text-xs text-muted-foreground">
-              de {stats.maxAlerts} disponibles
+              {t("of", { count: maxAlerts })}
             </p>
           </CardContent>
         </Card>
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Score promedio</CardTitle>
+            <CardTitle className="text-sm font-medium">{t("avgScore")}</CardTitle>
             <TrendingUp className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-green-600">87%</div>
-            <p className="text-xs text-muted-foreground">
-              autenticidad de favoritos
-            </p>
+            <p className="text-xs text-muted-foreground">{t("authenticityFavorites")}</p>
           </CardContent>
         </Card>
       </div>
@@ -133,17 +122,15 @@ export default function DashboardPage() {
         <Card>
           <CardHeader>
             <div className="flex items-center justify-between">
-              <CardTitle>Busquedas recientes</CardTitle>
+              <CardTitle>{t("recentSearches")}</CardTitle>
               <Link href="/dashboard/history">
                 <Button variant="ghost" size="sm">
-                  Ver todo
+                  {t("viewAll")}
                   <ArrowRight className="h-4 w-4 ml-1" />
                 </Button>
               </Link>
             </div>
-            <CardDescription>
-              Tus ultimas busquedas en InmoAI
-            </CardDescription>
+            <CardDescription>{t("recentSearchesDesc")}</CardDescription>
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
@@ -161,7 +148,7 @@ export default function DashboardPage() {
                       <p className="text-xs text-muted-foreground">{search.date}</p>
                     </div>
                   </div>
-                  <Badge variant="secondary">{search.results} resultados</Badge>
+                  <Badge variant="secondary">{t("results", { count: search.results })}</Badge>
                 </div>
               ))}
             </div>
@@ -172,17 +159,15 @@ export default function DashboardPage() {
         <Card>
           <CardHeader>
             <div className="flex items-center justify-between">
-              <CardTitle>Propiedades guardadas</CardTitle>
+              <CardTitle>{t("savedPropertiesTitle")}</CardTitle>
               <Link href="/dashboard/favorites">
                 <Button variant="ghost" size="sm">
-                  Ver todo
+                  {t("viewAll")}
                   <ArrowRight className="h-4 w-4 ml-1" />
                 </Button>
               </Link>
             </div>
-            <CardDescription>
-              Tus propiedades favoritas
-            </CardDescription>
+            <CardDescription>{t("yourFavorites")}</CardDescription>
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
@@ -220,15 +205,13 @@ export default function DashboardPage() {
                 <Crown className="h-6 w-6 text-primary" />
               </div>
               <div>
-                <h3 className="font-semibold">Desbloquea todo el potencial de InmoAI</h3>
-                <p className="text-sm text-muted-foreground">
-                  Busquedas ilimitadas, alertas en tiempo real y deteccion de fraude avanzada.
-                </p>
+                <h3 className="font-semibold">{t("unlockTitle")}</h3>
+                <p className="text-sm text-muted-foreground">{t("unlockDesc")}</p>
               </div>
             </div>
             <Link href="/pricing">
               <Button>
-                Ver planes
+                {t("viewPlans")}
                 <ArrowRight className="h-4 w-4 ml-2" />
               </Button>
             </Link>

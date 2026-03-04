@@ -3,7 +3,8 @@
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import { useEffect } from "react";
-import Link from "next/link";
+import { Link } from "@/i18n/navigation";
+import { useTranslations } from "next-intl";
 import { cn } from "@/lib/utils";
 import { usePathname } from "next/navigation";
 import { Header } from "@/components/layout/Header";
@@ -20,57 +21,6 @@ import {
   Wrench,
 } from "lucide-react";
 
-const sidebarLinks = [
-  {
-    href: "/dashboard",
-    label: "Dashboard",
-    icon: LayoutDashboard,
-  },
-  {
-    href: "/dashboard/favorites",
-    label: "Favoritos",
-    icon: Heart,
-  },
-  {
-    href: "/dashboard/history",
-    label: "Historial",
-    icon: History,
-  },
-  {
-    href: "/dashboard/subscription",
-    label: "Suscripcion",
-    icon: CreditCard,
-  },
-  {
-    href: "/dashboard/settings",
-    label: "Ajustes",
-    icon: Settings,
-  },
-];
-
-const providerLinks = [
-  {
-    href: "/dashboard/proveedor",
-    label: "Mi negocio",
-    icon: Briefcase,
-  },
-  {
-    href: "/dashboard/proveedor/leads",
-    label: "Leads",
-    icon: FileText,
-  },
-  {
-    href: "/dashboard/proveedor/reviews",
-    label: "Opiniones",
-    icon: MessageSquare,
-  },
-  {
-    href: "/dashboard/proveedor/servicios",
-    label: "Servicios",
-    icon: Wrench,
-  },
-];
-
 export default function DashboardLayout({
   children,
 }: {
@@ -79,6 +29,22 @@ export default function DashboardLayout({
   const { data: session, status } = useSession();
   const router = useRouter();
   const pathname = usePathname();
+  const t = useTranslations("dashboard");
+
+  const sidebarLinks = [
+    { href: "/dashboard", label: t("title"), icon: LayoutDashboard },
+    { href: "/dashboard/favorites", label: t("favorites"), icon: Heart },
+    { href: "/dashboard/history", label: t("history"), icon: History },
+    { href: "/dashboard/subscription", label: t("subscription"), icon: CreditCard },
+    { href: "/dashboard/settings", label: t("settings"), icon: Settings },
+  ];
+
+  const providerLinks = [
+    { href: "/dashboard/proveedor", label: t("myBusiness"), icon: Briefcase },
+    { href: "/dashboard/proveedor/leads", label: t("leads"), icon: FileText },
+    { href: "/dashboard/proveedor/reviews", label: t("reviews"), icon: MessageSquare },
+    { href: "/dashboard/proveedor/servicios", label: t("services"), icon: Wrench },
+  ];
 
   useEffect(() => {
     if (status === "unauthenticated") {
@@ -107,7 +73,7 @@ export default function DashboardLayout({
           <nav className="flex-1 p-4 space-y-1">
             {sidebarLinks.map((link) => {
               const Icon = link.icon;
-              const isActive = pathname === link.href;
+              const isActive = pathname === link.href || pathname.endsWith(link.href);
               return (
                 <Link
                   key={link.href}
@@ -126,16 +92,16 @@ export default function DashboardLayout({
             })}
 
             {/* Provider section */}
-            {pathname.startsWith("/dashboard/proveedor") && (
+            {pathname.includes("/dashboard/proveedor") && (
               <>
                 <div className="pt-4 pb-2">
                   <p className="px-3 text-xs font-semibold uppercase text-muted-foreground tracking-wider">
-                    Profesional
+                    {t("professional")}
                   </p>
                 </div>
                 {providerLinks.map((link) => {
                   const Icon = link.icon;
-                  const isActive = pathname === link.href;
+                  const isActive = pathname === link.href || pathname.endsWith(link.href);
                   return (
                     <Link
                       key={link.href}

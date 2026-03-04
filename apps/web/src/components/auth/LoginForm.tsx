@@ -8,7 +8,7 @@ import { signIn } from "next-auth/react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { Loader2, Mail, Lock, Eye, EyeOff } from "lucide-react";
+import { Loader2, Mail, Lock, Eye, EyeOff, Play } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -33,6 +33,7 @@ export function LoginForm() {
   const {
     register,
     handleSubmit,
+    setValue,
     formState: { errors },
   } = useForm<LoginFormData>({
     resolver: zodResolver(loginSchema),
@@ -187,6 +188,26 @@ export function LoginForm() {
         </svg>
         {t("google")}
       </Button>
+
+      {/* Demo Login */}
+      <div className="rounded-lg border border-dashed border-primary/40 bg-primary/5 p-4 space-y-3">
+        <p className="text-sm text-muted-foreground text-center">
+          {t("demoHint")}
+        </p>
+        <Button
+          variant="outline"
+          className="w-full border-primary/40 hover:bg-primary/10"
+          onClick={() => {
+            setValue("email", "demo@inmoai.es");
+            setValue("password", "Demo2026!");
+            handleSubmit(onSubmit)();
+          }}
+          disabled={isLoading}
+        >
+          <Play className="mr-2 h-4 w-4" />
+          {t("demoLogin")}
+        </Button>
+      </div>
 
       <p className="text-center text-sm text-muted-foreground">
         {t("noAccount")}{" "}

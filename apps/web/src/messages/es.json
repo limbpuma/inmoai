@@ -215,7 +215,9 @@
     "reqUppercase": "Una letra mayúscula",
     "reqNumber": "Un número",
     "rightsReserved": "© {year} InmoAI. Todos los derechos reservados.",
-    "and": "y"
+    "and": "y",
+    "demoLogin": "Acceso Demo",
+    "demoHint": "Accede con usuario demo para explorar el dashboard"
   },
   "servicios": {
     "title": "Encuentra Profesionales de Confianza",
@@ -465,5 +467,37 @@
     "s8Text": "Estos términos se regirán e interpretarán de acuerdo con las leyes de Alemania y la Unión Europea. Cualquier disputa se someterá a los tribunales competentes de Dortmund, Alemania.",
     "s9Title": "9. Contacto",
     "s9Intro": "Si tienes preguntas sobre estos términos, puedes contactarnos en:"
+  },
+  "dashboard": {
+    "title": "Dashboard",
+    "favorites": "Favoritos",
+    "history": "Historial",
+    "subscription": "Suscripción",
+    "settings": "Ajustes",
+    "professional": "Profesional",
+    "myBusiness": "Mi negocio",
+    "leads": "Leads",
+    "reviews": "Opiniones",
+    "services": "Servicios",
+    "hello": "Hola, {name}",
+    "welcome": "Bienvenido a tu panel de control",
+    "upgradePro": "Actualizar a Pro",
+    "searchesToday": "Búsquedas hoy",
+    "of": "de {count} disponibles",
+    "savedProperties": "Propiedades guardadas",
+    "inFavorites": "en tu lista de favoritos",
+    "activeAlerts": "Alertas activas",
+    "avgScore": "Score promedio",
+    "authenticityFavorites": "autenticidad de favoritos",
+    "recentSearches": "Búsquedas recientes",
+    "viewAll": "Ver todo",
+    "recentSearchesDesc": "Tus últimas búsquedas en InmoAI",
+    "results": "{count} resultados",
+    "savedPropertiesTitle": "Propiedades guardadas",
+    "yourFavorites": "Tus propiedades favoritas",
+    "unlockTitle": "Desbloquea todo el potencial de InmoAI",
+    "unlockDesc": "Búsquedas ilimitadas, alertas en tiempo real y detección de fraude avanzada.",
+    "viewPlans": "Ver planes",
+    "unlimited": "Ilimitadas"
   }
 }
