@@ -1,7 +1,8 @@
 "use client";
 
 import { Suspense, useState } from "react";
-import Link from "next/link";
+import { Link } from "@/i18n/navigation";
+import { useTranslations } from "next-intl";
 import { Header } from "@/components/layout/Header";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -15,6 +16,7 @@ import {
 } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
 import { trpc } from "@/lib/trpc/client";
+import { getMockProviders } from "@/data/mock-providers";
 import {
   Search,
   MapPin,
@@ -33,34 +35,42 @@ import {
 import { cn } from "@/lib/utils";
 import { useSearchParams } from "next/navigation";
 
-const categoryConfig: Record<string, { icon: LucideIcon; label: string; color: string }> = {
-  painting: { icon: PaintBucket, label: "Pintura", color: "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300" },
-  renovation: { icon: Wrench, label: "Reformas", color: "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300" },
-  electrical: { icon: Zap, label: "Electricidad", color: "bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-300" },
-  plumbing: { icon: Droplets, label: "Fontaneria", color: "bg-cyan-100 text-cyan-700 dark:bg-cyan-900/30 dark:text-cyan-300" },
-  garden: { icon: TreeDeciduous, label: "Jardin", color: "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300" },
-  general: { icon: Lightbulb, label: "General", color: "bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300" },
+const categoryConfig: Record<string, { icon: LucideIcon; labelKey: string; color: string }> = {
+  painting: { icon: PaintBucket, labelKey: "catPainting", color: "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300" },
+  renovation: { icon: Wrench, labelKey: "catRenovation", color: "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300" },
+  electrical: { icon: Zap, labelKey: "catElectrical", color: "bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-300" },
+  plumbing: { icon: Droplets, labelKey: "catPlumbing", color: "bg-cyan-100 text-cyan-700 dark:bg-cyan-900/30 dark:text-cyan-300" },
+  garden: { icon: TreeDeciduous, labelKey: "catGarden", color: "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300" },
+  general: { icon: Lightbulb, labelKey: "catGeneral", color: "bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300" },
 };
 
-const tierConfig: Record<string, { label: string; color: string }> = {
-  free: { label: "", color: "" },
-  premium: { label: "Premium", color: "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300" },
-  enterprise: { label: "Destacado", color: "bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300" },
+const tierConfig: Record<string, { labelKey: string; color: string }> = {
+  free: { labelKey: "", color: "" },
+  premium: { labelKey: "tierPremium", color: "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300" },
+  enterprise: { labelKey: "tierFeatured", color: "bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300" },
 };
 
 function ServiciosPageContent({ initialCity }: { initialCity: string }) {
+  const t = useTranslations("servicios");
+  const tc = useTranslations("common");
   const [city, setCity] = useState(initialCity);
   const [category, setCategory] = useState<string>("");
   const [searchQuery, setSearchQuery] = useState("");
 
-  const { data, isLoading } = trpc.marketplace.searchProviders.useQuery(
+  const query = trpc.marketplace.searchProviders.useQuery(
     {
       city: city || undefined,
       categories: category ? [category] : undefined,
       limit: 20,
     },
-    { keepPreviousData: true }
+    { keepPreviousData: true, retry: 1 }
   );
+
+  // Fallback to mock data when API is unavailable (portfolio demo mode)
+  const data = query.data ?? (query.isError || (query.isFetched && !query.data)
+    ? getMockProviders(city || undefined, category ? [category] : undefined, 20)
+    : undefined);
+  const isLoading = query.isLoading && !data;
 
   const formatCurrency = (amount: number) =>
     new Intl.NumberFormat("es-ES", {
@@ -87,16 +97,15 @@ function ServiciosPageContent({ initialCity }: { initialCity: string }) {
       <div className="bg-gradient-to-b from-primary/5 to-background border-b">
         <div className="container mx-auto px-4 py-12">
           <h1 className="text-3xl md:text-4xl font-bold text-center mb-4">
-            Encuentra Profesionales de Confianza
+            {t("title")}
           </h1>
           <p className="text-muted-foreground text-center mb-8 max-w-2xl mx-auto">
-            Conectamos propietarios con los mejores profesionales de reformas,
-            pintura, electricidad y mas. Verificados y cerca de ti.
+            {t("subtitle")}
           </p>
           <div className="text-center mb-8">
             <Link href="/servicios/registro">
               <Button variant="outline" size="sm">
-                ¿Eres profesional? Registrate gratis
+                {t("areYouPro")}
               </Button>
             </Link>
           </div>
@@ -107,7 +116,7 @@ function ServiciosPageContent({ initialCity }: { initialCity: string }) {
               <div className="relative flex-1">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                 <Input
-                  placeholder="Buscar por nombre o servicio..."
+                  placeholder={t("searchPlaceholder")}
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   className="pl-10"
@@ -116,7 +125,7 @@ function ServiciosPageContent({ initialCity }: { initialCity: string }) {
               <div className="relative flex-1 sm:max-w-[200px]">
                 <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                 <Input
-                  placeholder="Ciudad"
+                  placeholder={t("cityPlaceholder")}
                   value={city}
                   onChange={(e) => setCity(e.target.value)}
                   className="pl-10"
@@ -128,12 +137,12 @@ function ServiciosPageContent({ initialCity }: { initialCity: string }) {
                   <SelectValue placeholder="Categoria" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all">Todas</SelectItem>
+                  <SelectItem value="all">{t("allCategories")}</SelectItem>
                   {Object.entries(categoryConfig).map(([key, config]) => (
                     <SelectItem key={key} value={key}>
                       <span className="flex items-center gap-2">
                         <config.icon className="h-4 w-4" />
-                        {config.label}
+                        {t(config.labelKey)}
                       </span>
                     </SelectItem>
                   ))}
@@ -152,7 +161,7 @@ function ServiciosPageContent({ initialCity }: { initialCity: string }) {
             <Skeleton className="h-5 w-40" />
           ) : (
             <p className="text-muted-foreground">
-              {`${filteredProviders?.length || 0} profesionales encontrados`}
+              {t("resultsCount", { count: filteredProviders?.length || 0 })}
             </p>
           )}
         </div>
@@ -233,9 +242,9 @@ function ServiciosPageContent({ initialCity }: { initialCity: string }) {
 
                       {/* Badges */}
                       <div className="flex flex-wrap gap-1.5 mb-3">
-                        {tier.label && (
+                        {tier.labelKey && (
                           <Badge variant="outline" className={cn("text-xs", tier.color)}>
-                            {tier.label}
+                            {t(tier.labelKey)}
                           </Badge>
                         )}
                         {services.slice(0, 3).map((service) => {
@@ -276,7 +285,7 @@ function ServiciosPageContent({ initialCity }: { initialCity: string }) {
 
                         {services.length > 0 && services[0].priceMin && (
                           <div className="text-right">
-                            <span className="text-xs text-muted-foreground">Desde </span>
+                            <span className="text-xs text-muted-foreground">{tc("from")} </span>
                             <span className="font-semibold">
                               {formatCurrency(services[0].priceMin)}
                             </span>
@@ -294,12 +303,12 @@ function ServiciosPageContent({ initialCity }: { initialCity: string }) {
             <div className="w-16 h-16 rounded-full bg-muted flex items-center justify-center mx-auto mb-4">
               <Search className="h-8 w-8 text-muted-foreground" />
             </div>
-            <h3 className="font-semibold mb-2">No se encontraron profesionales</h3>
+            <h3 className="font-semibold mb-2">{t("noResultsTitle")}</h3>
             <p className="text-muted-foreground mb-4">
-              Intenta cambiar los filtros de busqueda
+              {t("noResultsDesc")}
             </p>
             <Button variant="outline" onClick={() => { setCity(""); setCategory(""); setSearchQuery(""); }}>
-              Limpiar filtros
+              {t("clearFilters")}
             </Button>
           </div>
         )}

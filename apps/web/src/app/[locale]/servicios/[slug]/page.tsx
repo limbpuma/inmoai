@@ -1,7 +1,8 @@
 "use client";
 
 import { use, useState } from "react";
-import Link from "next/link";
+import { Link } from "@/i18n/navigation";
+import { useTranslations } from "next-intl";
 import { notFound } from "next/navigation";
 import { Header } from "@/components/layout/Header";
 import { Button } from "@/components/ui/button";
@@ -12,6 +13,7 @@ import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { trpc } from "@/lib/trpc/client";
+import { getMockProviderBySlug } from "@/data/mock-providers";
 import {
   ArrowLeft,
   Star,
@@ -38,22 +40,24 @@ interface ProviderPageProps {
   params: Promise<{ slug: string }>;
 }
 
-const categoryConfig: Record<string, { icon: LucideIcon; label: string; color: string; bgColor: string }> = {
-  painting: { icon: PaintBucket, label: "Pintura", color: "text-blue-600", bgColor: "bg-blue-100 dark:bg-blue-900/30" },
-  renovation: { icon: Wrench, label: "Reformas", color: "text-amber-600", bgColor: "bg-amber-100 dark:bg-amber-900/30" },
-  electrical: { icon: Zap, label: "Electricidad", color: "text-yellow-600", bgColor: "bg-yellow-100 dark:bg-yellow-900/30" },
-  plumbing: { icon: Droplets, label: "Fontaneria", color: "text-cyan-600", bgColor: "bg-cyan-100 dark:bg-cyan-900/30" },
-  garden: { icon: TreeDeciduous, label: "Jardin", color: "text-green-600", bgColor: "bg-green-100 dark:bg-green-900/30" },
-  general: { icon: Lightbulb, label: "General", color: "text-purple-600", bgColor: "bg-purple-100 dark:bg-purple-900/30" },
+const categoryConfig: Record<string, { icon: LucideIcon; labelKey: string; color: string; bgColor: string }> = {
+  painting: { icon: PaintBucket, labelKey: "catPainting", color: "text-blue-600", bgColor: "bg-blue-100 dark:bg-blue-900/30" },
+  renovation: { icon: Wrench, labelKey: "catRenovation", color: "text-amber-600", bgColor: "bg-amber-100 dark:bg-amber-900/30" },
+  electrical: { icon: Zap, labelKey: "catElectrical", color: "text-yellow-600", bgColor: "bg-yellow-100 dark:bg-yellow-900/30" },
+  plumbing: { icon: Droplets, labelKey: "catPlumbing", color: "text-cyan-600", bgColor: "bg-cyan-100 dark:bg-cyan-900/30" },
+  garden: { icon: TreeDeciduous, labelKey: "catGarden", color: "text-green-600", bgColor: "bg-green-100 dark:bg-green-900/30" },
+  general: { icon: Lightbulb, labelKey: "catGeneral", color: "text-purple-600", bgColor: "bg-purple-100 dark:bg-purple-900/30" },
 };
 
-const tierConfig: Record<string, { label: string; color: string; bgColor: string }> = {
-  free: { label: "", color: "", bgColor: "" },
-  premium: { label: "Premium", color: "text-amber-700 dark:text-amber-300", bgColor: "bg-amber-100 dark:bg-amber-900/30" },
-  enterprise: { label: "Destacado", color: "text-purple-700 dark:text-purple-300", bgColor: "bg-purple-100 dark:bg-purple-900/30" },
+const tierConfig: Record<string, { labelKey: string; color: string; bgColor: string }> = {
+  free: { labelKey: "", color: "", bgColor: "" },
+  premium: { labelKey: "tierPremium", color: "text-amber-700 dark:text-amber-300", bgColor: "bg-amber-100 dark:bg-amber-900/30" },
+  enterprise: { labelKey: "tierFeatured", color: "text-purple-700 dark:text-purple-300", bgColor: "bg-purple-100 dark:bg-purple-900/30" },
 };
 
 export default function ProviderPage({ params }: ProviderPageProps) {
+  const t = useTranslations("servicios");
+  const tc = useTranslations("common");
   const { slug } = use(params);
 
   const [quoteForm, setQuoteForm] = useState({
@@ -65,14 +69,19 @@ export default function ProviderPage({ params }: ProviderPageProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitSuccess, setSubmitSuccess] = useState(false);
 
-  const { data: provider, isLoading, error } = trpc.marketplace.getProviderBySlug.useQuery(
+  const query = trpc.marketplace.getProviderBySlug.useQuery(
     { slug },
-    { retry: false }
+    { retry: 1 }
   );
+
+  // Fallback to mock data when API is unavailable (portfolio demo mode)
+  const mockProvider = getMockProviderBySlug(slug);
+  const provider = query.data ?? (query.isError || (query.isFetched && !query.data) ? mockProvider : null);
+  const isLoading = query.isLoading && !provider;
 
   const { data: reviewsData } = trpc.marketplace.getProviderReviews.useQuery(
     { providerId: provider?.id || "" },
-    { enabled: !!provider?.id }
+    { enabled: !!provider?.id && !query.isError }
   );
 
   const requestQuoteMutation = trpc.marketplace.requestQuote.useMutation({
@@ -91,6 +100,15 @@ export default function ProviderPage({ params }: ProviderPageProps) {
     if (!provider) return;
 
     setIsSubmitting(true);
+    // In demo mode, simulate success
+    if (query.isError || !query.data) {
+      setTimeout(() => {
+        setSubmitSuccess(true);
+        setIsSubmitting(false);
+        setQuoteForm({ name: "", email: "", phone: "", message: "" });
+      }, 1000);
+      return;
+    }
     requestQuoteMutation.mutate({
       providerId: provider.id,
       category: (provider.services[0]?.category as "painting" | "renovation" | "electrical" | "plumbing" | "garden" | "general") || "general",
@@ -101,10 +119,6 @@ export default function ProviderPage({ params }: ProviderPageProps) {
       clientPhone: quoteForm.phone,
     });
   };
-
-  if (error) {
-    notFound();
-  }
 
   if (isLoading) {
     return (
@@ -200,7 +214,7 @@ export default function ProviderPage({ params }: ProviderPageProps) {
               className="flex items-center gap-1 text-muted-foreground hover:text-foreground transition-colors"
             >
               <ArrowLeft className="h-4 w-4" />
-              Volver a profesionales
+              {t("backToList")}
             </Link>
             <span className="text-muted-foreground">/</span>
             <span className="text-foreground">{provider.businessName}</span>
@@ -259,31 +273,32 @@ export default function ProviderPage({ params }: ProviderPageProps) {
                         </span>
                       </div>
                       <p className="text-sm text-muted-foreground">
-                        {provider.totalReviews} opiniones
+                        {provider.totalReviews} {t("reviews")}
                       </p>
                     </div>
                   </div>
 
                   {/* Badges */}
                   <div className="flex flex-wrap gap-2">
-                    {tier.label && (
+                    {tier.labelKey && (
                       <Badge className={cn(tier.bgColor, tier.color)}>
-                        {tier.label}
+                        {t(tier.labelKey)}
                       </Badge>
                     )}
                     {provider.isVerified && (
                       <Badge variant="outline" className="bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300">
                         <BadgeCheck className="h-3 w-3 mr-1" />
-                        Verificado
+                        {tc("verified")}
                       </Badge>
                     )}
                     {provider.responseTimeMinutes && (
                       <Badge variant="outline">
                         <Clock className="h-3 w-3 mr-1" />
-                        Responde en{" "}
-                        {provider.responseTimeMinutes < 60
-                          ? `${provider.responseTimeMinutes}min`
-                          : `${Math.round(provider.responseTimeMinutes / 60)}h`}
+                        {t("respondsIn", {
+                          time: provider.responseTimeMinutes < 60
+                            ? `${provider.responseTimeMinutes}min`
+                            : `${Math.round(provider.responseTimeMinutes / 60)}h`,
+                        })}
                       </Badge>
                     )}
                   </div>
@@ -301,10 +316,10 @@ export default function ProviderPage({ params }: ProviderPageProps) {
             {/* Tabs */}
             <Tabs defaultValue="services" className="w-full">
               <TabsList className="w-full justify-start">
-                <TabsTrigger value="services">Servicios</TabsTrigger>
-                <TabsTrigger value="portfolio">Portfolio</TabsTrigger>
+                <TabsTrigger value="services">{t("tabServices")}</TabsTrigger>
+                <TabsTrigger value="portfolio">{t("tabPortfolio")}</TabsTrigger>
                 <TabsTrigger value="reviews">
-                  Opiniones ({reviewsData?.reviews?.length ?? 0})
+                  {t("tabReviews")} ({reviewsData?.reviews?.length ?? 0})
                 </TabsTrigger>
               </TabsList>
 
@@ -356,7 +371,7 @@ export default function ProviderPage({ params }: ProviderPageProps) {
                     })
                   ) : (
                     <div className="p-8 text-center text-muted-foreground">
-                      No hay servicios listados
+                      {t("noServices")}
                     </div>
                   )}
                 </div>
@@ -395,7 +410,7 @@ export default function ProviderPage({ params }: ProviderPageProps) {
                     </div>
                   ) : (
                     <div className="text-center py-8 text-muted-foreground">
-                      <p>No hay proyectos en el portfolio</p>
+                      <p>{t("noPortfolio")}</p>
                     </div>
                   )}
                 </div>
@@ -411,12 +426,12 @@ export default function ProviderPage({ params }: ProviderPageProps) {
                           <div>
                             <div className="flex items-center gap-2">
                               <span className="font-medium">
-                                {review.authorName || "Usuario"}
+                                {review.authorName || t("user")}
                               </span>
                               {review.isVerified && (
                                 <Badge variant="outline" className="text-xs">
                                   <CheckCircle2 className="h-3 w-3 mr-1" />
-                                  Verificado
+                                  {tc("verified")}
                                 </Badge>
                               )}
                             </div>
@@ -449,7 +464,7 @@ export default function ProviderPage({ params }: ProviderPageProps) {
                         {review.providerResponse && (
                           <div className="mt-3 pl-4 border-l-2 border-primary/20">
                             <p className="text-xs font-medium text-primary mb-1">
-                              Respuesta del profesional
+                              {t("proResponse")}
                             </p>
                             <p className="text-sm text-muted-foreground">
                               {review.providerResponse}
@@ -460,7 +475,7 @@ export default function ProviderPage({ params }: ProviderPageProps) {
                     ))
                   ) : (
                     <div className="rounded-xl border bg-card p-8 text-center text-muted-foreground">
-                      No hay opiniones todavia
+                      {t("noReviews")}
                     </div>
                   )}
                 </div>
@@ -473,7 +488,7 @@ export default function ProviderPage({ params }: ProviderPageProps) {
             <div className="sticky top-4 space-y-4">
               {/* Contact Card */}
               <div className="rounded-xl border bg-card p-6">
-                <h2 className="font-semibold mb-4">Contactar</h2>
+                <h2 className="font-semibold mb-4">{t("contact")}</h2>
 
                 <div className="space-y-3 mb-6">
                   {provider.contactPhone && (
@@ -496,67 +511,67 @@ export default function ProviderPage({ params }: ProviderPageProps) {
                     <Button variant="outline" className="w-full justify-start" asChild>
                       <a href={provider.website} target="_blank" rel="noopener noreferrer">
                         <Globe className="h-4 w-4 mr-2" />
-                        Web
+                        {t("web")}
                       </a>
                     </Button>
                   )}
                 </div>
 
                 <div className="border-t pt-4">
-                  <h3 className="font-medium mb-3">Solicitar presupuesto</h3>
+                  <h3 className="font-medium mb-3">{t("requestQuote")}</h3>
 
                   {submitSuccess ? (
                     <div className="text-center py-4">
                       <div className="w-12 h-12 rounded-full bg-green-100 dark:bg-green-900/30 flex items-center justify-center mx-auto mb-3">
                         <CheckCircle2 className="h-6 w-6 text-green-600" />
                       </div>
-                      <p className="font-medium">¡Solicitud enviada!</p>
+                      <p className="font-medium">{t("quoteSent")}</p>
                       <p className="text-sm text-muted-foreground">
-                        Te contactaremos pronto
+                        {t("quoteDesc")}
                       </p>
                     </div>
                   ) : (
                     <form onSubmit={handleSubmitQuote} className="space-y-3">
                       <div>
-                        <Label htmlFor="name" className="text-xs">Nombre *</Label>
+                        <Label htmlFor="name" className="text-xs">{t("nameLabel")}</Label>
                         <Input
                           id="name"
                           value={quoteForm.name}
                           onChange={(e) => setQuoteForm({ ...quoteForm, name: e.target.value })}
-                          placeholder="Tu nombre"
+                          placeholder={t("namePlaceholder")}
                           required
                           className="mt-1"
                         />
                       </div>
                       <div>
-                        <Label htmlFor="email" className="text-xs">Email *</Label>
+                        <Label htmlFor="email" className="text-xs">{t("emailLabel")}</Label>
                         <Input
                           id="email"
                           type="email"
                           value={quoteForm.email}
                           onChange={(e) => setQuoteForm({ ...quoteForm, email: e.target.value })}
-                          placeholder="tu@email.com"
+                          placeholder={t("emailPlaceholder")}
                           required
                           className="mt-1"
                         />
                       </div>
                       <div>
-                        <Label htmlFor="phone" className="text-xs">Telefono</Label>
+                        <Label htmlFor="phone" className="text-xs">{t("phoneLabel")}</Label>
                         <Input
                           id="phone"
                           value={quoteForm.phone}
                           onChange={(e) => setQuoteForm({ ...quoteForm, phone: e.target.value })}
-                          placeholder="+34 612 345 678"
+                          placeholder={t("phonePlaceholder")}
                           className="mt-1"
                         />
                       </div>
                       <div>
-                        <Label htmlFor="message" className="text-xs">Mensaje</Label>
+                        <Label htmlFor="message" className="text-xs">{t("messageLabel")}</Label>
                         <Textarea
                           id="message"
                           value={quoteForm.message}
                           onChange={(e) => setQuoteForm({ ...quoteForm, message: e.target.value })}
-                          placeholder="Describe lo que necesitas..."
+                          placeholder={t("messagePlaceholder")}
                           rows={3}
                           className="mt-1"
                         />
@@ -567,7 +582,7 @@ export default function ProviderPage({ params }: ProviderPageProps) {
                         disabled={isSubmitting || !quoteForm.name || !quoteForm.email}
                       >
                         <Send className="h-4 w-4 mr-2" />
-                        {isSubmitting ? "Enviando..." : "Enviar solicitud"}
+                        {isSubmitting ? t("sending") : t("sendRequest")}
                       </Button>
                     </form>
                   )}
@@ -576,26 +591,26 @@ export default function ProviderPage({ params }: ProviderPageProps) {
 
               {/* Stats Card */}
               <div className="rounded-xl border bg-card p-6">
-                <h3 className="font-semibold mb-4">Estadisticas</h3>
+                <h3 className="font-semibold mb-4">{t("stats")}</h3>
                 <div className="grid grid-cols-2 gap-4">
                   <div className="text-center p-3 rounded-lg bg-muted/50">
                     <p className="text-2xl font-bold">{provider.totalLeads}</p>
-                    <p className="text-xs text-muted-foreground">Proyectos</p>
+                    <p className="text-xs text-muted-foreground">{t("projects")}</p>
                   </div>
                   <div className="text-center p-3 rounded-lg bg-muted/50">
                     <p className="text-2xl font-bold">{provider.totalReviews}</p>
-                    <p className="text-xs text-muted-foreground">Opiniones</p>
+                    <p className="text-xs text-muted-foreground">{t("reviews")}</p>
                   </div>
                   <div className="text-center p-3 rounded-lg bg-muted/50">
                     <p className="text-2xl font-bold">{provider.coverageRadiusKm}km</p>
-                    <p className="text-xs text-muted-foreground">Cobertura</p>
+                    <p className="text-xs text-muted-foreground">{t("coverage")}</p>
                   </div>
                   <div className="text-center p-3 rounded-lg bg-muted/50">
                     <p className="text-2xl font-bold flex items-center justify-center gap-1">
                       <Star className="h-4 w-4 text-amber-500 fill-amber-500" />
                       {provider.averageRating.toFixed(1)}
                     </p>
-                    <p className="text-xs text-muted-foreground">Valoracion</p>
+                    <p className="text-xs text-muted-foreground">{t("rating")}</p>
                   </div>
                 </div>
               </div>

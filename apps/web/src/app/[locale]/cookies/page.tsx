@@ -1,83 +1,76 @@
+"use client";
+
+import { useTranslations } from "next-intl";
 import { Header } from "@/components/layout/Header";
 import { Footer } from "@/components/layout/Footer";
 import { PortfolioDisclaimer } from "@/components/legal/PortfolioDisclaimer";
 
-export const metadata = {
-  title: "Politica de Cookies - InmoAI",
-  description: "Informacion sobre el uso de cookies en InmoAI",
-};
-
 export default function CookiesPage() {
+  const t = useTranslations("cookiesPage");
+  const tLegal = useTranslations("legal");
+
   return (
     <div className="min-h-screen bg-background flex flex-col">
       <Header />
       <main className="flex-1 container mx-auto px-4 py-12 max-w-4xl">
-        <h1 className="text-3xl font-bold mb-8">Politica de Cookies</h1>
+        <h1 className="text-3xl font-bold mb-8">{t("title")}</h1>
 
         <div className="prose prose-neutral dark:prose-invert max-w-none space-y-8">
           <PortfolioDisclaimer />
 
           <p className="text-muted-foreground">
-            Ultima actualizacion: Marzo 2026
+            {tLegal("lastUpdated")}
           </p>
 
           <section>
             <h2 className="text-xl font-semibold mb-4">
-              1. Que son las Cookies
+              {t("s1Title")}
             </h2>
             <p className="text-muted-foreground mb-4">
-              Las cookies son pequenos archivos de texto que se almacenan en tu
-              dispositivo cuando visitas un sitio web. Nos ayudan a recordar tus
-              preferencias y garantizar el correcto funcionamiento de la
-              plataforma.
+              {t("s1Text")}
             </p>
           </section>
 
           <section>
             <h2 className="text-xl font-semibold mb-4">
-              2. Tipos de Cookies que Usamos
+              {t("s2Title")}
             </h2>
 
             <div className="space-y-6">
               <div>
                 <h3 className="text-lg font-medium mb-2">
-                  Cookies Estrictamente Necesarias
+                  {t("s2NecessaryTitle")}
                 </h3>
                 <p className="text-muted-foreground mb-2">
-                  Esenciales para el funcionamiento del sitio. No requieren
-                  consentimiento.
+                  {t("s2NecessaryDesc")}
                 </p>
                 <ul className="list-disc list-inside text-muted-foreground space-y-1 text-sm">
-                  <li>Sesion de usuario (session_id)</li>
-                  <li>Preferencias de cookies (cookie_consent)</li>
-                  <li>Token de seguridad CSRF</li>
+                  <li>{t("s2NecessaryItem1")}</li>
+                  <li>{t("s2NecessaryItem2")}</li>
+                  <li>{t("s2NecessaryItem3")}</li>
                 </ul>
               </div>
 
               <div>
                 <h3 className="text-lg font-medium mb-2">
-                  Cookies de Funcionalidad
+                  {t("s2FuncTitle")}
                 </h3>
                 <p className="text-muted-foreground mb-2">
-                  Permiten recordar tus preferencias y personalizar la
-                  experiencia.
+                  {t("s2FuncDesc")}
                 </p>
                 <ul className="list-disc list-inside text-muted-foreground space-y-1 text-sm">
-                  <li>Preferencias de busqueda guardadas</li>
-                  <li>Modo oscuro/claro</li>
-                  <li>Ultima ciudad buscada</li>
+                  <li>{t("s2FuncItem1")}</li>
+                  <li>{t("s2FuncItem2")}</li>
+                  <li>{t("s2FuncItem3")}</li>
                 </ul>
               </div>
 
               <div>
                 <h3 className="text-lg font-medium mb-2">
-                  Cookies Analiticas y de Marketing
+                  {t("s2AnalyticsTitle")}
                 </h3>
                 <p className="text-muted-foreground mb-2">
-                  Actualmente <strong>no utilizamos</strong> cookies analiticas
-                  ni de marketing. No se emplean servicios de seguimiento como
-                  Google Analytics, Google Ads ni Facebook Pixel en esta version
-                  del proyecto.
+                  {t("s2AnalyticsText")}
                 </p>
               </div>
             </div>
@@ -85,32 +78,32 @@ export default function CookiesPage() {
 
           <section>
             <h2 className="text-xl font-semibold mb-4">
-              3. Duracion de las Cookies
+              {t("s3Title")}
             </h2>
             <div className="overflow-x-auto">
               <table className="w-full text-sm text-muted-foreground">
                 <thead>
                   <tr className="border-b">
-                    <th className="text-left py-2 font-medium">Cookie</th>
-                    <th className="text-left py-2 font-medium">Tipo</th>
-                    <th className="text-left py-2 font-medium">Duracion</th>
+                    <th className="text-left py-2 font-medium">{t("s3ColCookie")}</th>
+                    <th className="text-left py-2 font-medium">{t("s3ColType")}</th>
+                    <th className="text-left py-2 font-medium">{t("s3ColDuration")}</th>
                   </tr>
                 </thead>
                 <tbody>
                   <tr className="border-b">
                     <td className="py-2">session_id</td>
-                    <td className="py-2">Necesaria</td>
-                    <td className="py-2">Sesion</td>
+                    <td className="py-2">{t("s3Necessary")}</td>
+                    <td className="py-2">{t("s3Session")}</td>
                   </tr>
                   <tr className="border-b">
                     <td className="py-2">cookie_consent</td>
-                    <td className="py-2">Necesaria</td>
-                    <td className="py-2">1 ano</td>
+                    <td className="py-2">{t("s3Necessary")}</td>
+                    <td className="py-2">{t("s3OneYear")}</td>
                   </tr>
                   <tr className="border-b">
                     <td className="py-2">user_preferences</td>
-                    <td className="py-2">Funcionalidad</td>
-                    <td className="py-2">6 meses</td>
+                    <td className="py-2">{t("s3Functionality")}</td>
+                    <td className="py-2">{t("s3SixMonths")}</td>
                   </tr>
                 </tbody>
               </table>
@@ -119,65 +112,45 @@ export default function CookiesPage() {
 
           <section>
             <h2 className="text-xl font-semibold mb-4">
-              4. Como Gestionar las Cookies
+              {t("s4Title")}
             </h2>
             <p className="text-muted-foreground mb-4">
-              Puedes controlar las cookies de varias formas:
+              {t("s4Intro")}
             </p>
             <ul className="list-disc list-inside text-muted-foreground space-y-2">
-              <li>
-                <strong>Banner de cookies:</strong> Al visitar el sitio por
-                primera vez, puedes aceptar las cookies necesarias
-              </li>
-              <li>
-                <strong>Configuracion del navegador:</strong> Puedes bloquear o
-                eliminar cookies desde la configuracion de tu navegador
-              </li>
+              <li>{t("s4Item1")}</li>
+              <li>{t("s4Item2")}</li>
             </ul>
           </section>
 
           <section>
             <h2 className="text-xl font-semibold mb-4">
-              5. Configuracion por Navegador
+              {t("s5Title")}
             </h2>
             <p className="text-muted-foreground mb-4">
-              Instrucciones para gestionar cookies en navegadores populares:
+              {t("s5Intro")}
             </p>
             <ul className="list-disc list-inside text-muted-foreground space-y-2">
-              <li>
-                <strong>Chrome:</strong> Configuracion &gt; Privacidad y
-                seguridad &gt; Cookies
-              </li>
-              <li>
-                <strong>Firefox:</strong> Opciones &gt; Privacidad y seguridad
-                &gt; Cookies
-              </li>
-              <li>
-                <strong>Safari:</strong> Preferencias &gt; Privacidad &gt;
-                Cookies
-              </li>
-              <li>
-                <strong>Edge:</strong> Configuracion &gt; Cookies y permisos del
-                sitio
-              </li>
+              <li>{t("s5Chrome")}</li>
+              <li>{t("s5Firefox")}</li>
+              <li>{t("s5Safari")}</li>
+              <li>{t("s5Edge")}</li>
             </ul>
           </section>
 
           <section>
             <h2 className="text-xl font-semibold mb-4">
-              6. Cambios en esta Politica
+              {t("s6Title")}
             </h2>
             <p className="text-muted-foreground mb-4">
-              Podemos actualizar esta politica periodicamente. Te notificaremos
-              de cambios significativos a traves del banner de cookies o por
-              email si tienes cuenta.
+              {t("s6Text")}
             </p>
           </section>
 
           <section>
-            <h2 className="text-xl font-semibold mb-4">7. Contacto</h2>
+            <h2 className="text-xl font-semibold mb-4">{t("s7Title")}</h2>
             <p className="text-muted-foreground">
-              Para preguntas sobre cookies:
+              {t("s7Intro")}
               <br />
               Email:{" "}
               <a

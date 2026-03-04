@@ -2,7 +2,8 @@
 
 import { useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import Link from "next/link";
+import { Link } from "@/i18n/navigation";
+import { useTranslations } from "next-intl";
 import { signIn } from "next-auth/react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -13,20 +14,21 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
 
-const loginSchema = z.object({
-  email: z.string().email("Email inválido"),
-  password: z.string().min(1, "La contraseña es requerida"),
-});
-
-type LoginFormData = z.infer<typeof loginSchema>;
-
 export function LoginForm() {
+  const t = useTranslations("auth");
   const router = useRouter();
   const searchParams = useSearchParams();
   const callbackUrl = searchParams.get("callbackUrl") || "/";
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+
+  const loginSchema = z.object({
+    email: z.string().email(t("invalidEmail")),
+    password: z.string().min(1, t("passwordRequired")),
+  });
+
+  type LoginFormData = z.infer<typeof loginSchema>;
 
   const {
     register,
@@ -48,13 +50,13 @@ export function LoginForm() {
       });
 
       if (result?.error) {
-        setError("Credenciales inválidas");
+        setError(t("invalidCredentials"));
       } else {
         router.push(callbackUrl);
         router.refresh();
       }
     } catch {
-      setError("Ocurrió un error. Por favor intenta de nuevo.");
+      setError(t("errorGeneric"));
     } finally {
       setIsLoading(false);
     }
@@ -68,9 +70,9 @@ export function LoginForm() {
   return (
     <div className="space-y-6">
       <div className="space-y-2 text-center">
-        <h1 className="text-2xl font-bold">Iniciar Sesión</h1>
+        <h1 className="text-2xl font-bold">{t("loginTitle")}</h1>
         <p className="text-muted-foreground">
-          Ingresa tus credenciales para acceder a tu cuenta
+          {t("loginSubtitle")}
         </p>
       </div>
 
@@ -82,13 +84,13 @@ export function LoginForm() {
 
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
         <div className="space-y-2">
-          <Label htmlFor="email">Email</Label>
+          <Label htmlFor="email">{t("email")}</Label>
           <div className="relative">
             <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input
               id="email"
               type="email"
-              placeholder="tu@email.com"
+              placeholder={t("emailPlaceholder")}
               className={cn("pl-10", errors.email && "border-destructive")}
               disabled={isLoading}
               {...register("email")}
@@ -101,12 +103,12 @@ export function LoginForm() {
 
         <div className="space-y-2">
           <div className="flex items-center justify-between">
-            <Label htmlFor="password">Contraseña</Label>
+            <Label htmlFor="password">{t("password")}</Label>
             <Link
               href="/forgot-password"
               className="text-sm text-primary hover:underline"
             >
-              ¿Olvidaste tu contraseña?
+              {t("forgotPassword")}
             </Link>
           </div>
           <div className="relative">
@@ -140,10 +142,10 @@ export function LoginForm() {
           {isLoading ? (
             <>
               <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-              Iniciando sesión...
+              {t("loggingIn")}
             </>
           ) : (
-            "Iniciar Sesión"
+            t("loginButton")
           )}
         </Button>
       </form>
@@ -154,7 +156,7 @@ export function LoginForm() {
         </div>
         <div className="relative flex justify-center text-xs uppercase">
           <span className="bg-background px-2 text-muted-foreground">
-            O continúa con
+            {t("orContinueWith")}
           </span>
         </div>
       </div>
@@ -183,13 +185,13 @@ export function LoginForm() {
             fill="#EA4335"
           />
         </svg>
-        Google
+        {t("google")}
       </Button>
 
       <p className="text-center text-sm text-muted-foreground">
-        ¿No tienes una cuenta?{" "}
+        {t("noAccount")}{" "}
         <Link href="/register" className="text-primary hover:underline">
-          Regístrate
+          {t("registerLink")}
         </Link>
       </p>
     </div>

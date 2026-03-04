@@ -6,6 +6,9 @@ import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { useVoiceSearch } from "@/hooks/useVoiceSearch";
 import { VoiceIndicator } from "./VoiceIndicator";
+import { useTranslations } from "next-intl";
+import { useLocale } from "next-intl";
+import { localeSpeechCodes, type Locale } from "@/i18n/config";
 
 interface SearchBarProps {
     onSearch?: (query: string) => void;
@@ -22,10 +25,14 @@ export function SearchBar({
     onQueryChange,
     className,
     variant = "default",
-    placeholder = "Describe tu vivienda ideal...",
+    placeholder,
     isLoading = false,
     defaultValue = "",
 }: SearchBarProps) {
+    const t = useTranslations("search");
+    const tc = useTranslations("common");
+    const locale = useLocale() as Locale;
+    const resolvedPlaceholder = placeholder ?? (variant === "minimal" ? t("placeholderMinimal") : t("placeholder"));
     const [query, setQuery] = useState(defaultValue);
     const [showSuggestions, setShowSuggestions] = useState(false);
     // Track if component is mounted to avoid hydration mismatch
@@ -46,7 +53,7 @@ export function SearchBar({
         startListening,
         stopListening,
     } = useVoiceSearch({
-        language: "es-ES",
+        language: localeSpeechCodes[locale],
         onResult: useCallback((text: string, isFinal: boolean) => {
             setQuery(text);
             onQueryChange?.(text);
@@ -119,7 +126,7 @@ export function SearchBar({
                 <Search className={cn("text-muted-foreground ml-2 mr-3", isHero ? "h-6 w-6" : "h-5 w-5")} />
                 <input
                     className="flex-1 bg-transparent outline-none placeholder:text-muted-foreground text-foreground w-full h-full"
-                    placeholder={isListening ? "Escuchando..." : placeholder}
+                    placeholder={isListening ? t("listening") : resolvedPlaceholder}
                     value={isListening && interimTranscript ? query + interimTranscript : query}
                     onChange={(e) => {
                         setQuery(e.target.value);
@@ -156,7 +163,7 @@ export function SearchBar({
                             )}
                             onClick={handleVoiceClick}
                             disabled={isLoading}
-                            title={isListening ? "Detener grabación" : "Buscar por voz"}
+                            title={isListening ? t("stopRecording") : t("voiceSearch")}
                         >
                             {isListening ? (
                                 <MicOff className={cn(isHero ? "h-5 w-5" : "h-4 w-4")} />
@@ -185,10 +192,10 @@ export function SearchBar({
                             {isLoading ? (
                                 <>
                                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                                    Buscando...
+                                    {t("searching")}
                                 </>
                             ) : (
-                                "Buscar"
+                                tc("search")
                             )}
                         </Button>
                     )}
@@ -208,11 +215,11 @@ export function SearchBar({
             {isHero && showSuggestions && !showVoiceIndicator && (
                 <div className="absolute top-full left-0 right-0 mt-3 bg-card rounded-2xl shadow-2xl border border-border/50 overflow-hidden z-50 animate-in fade-in slide-in-from-top-2 duration-200">
                     <div className="p-4 space-y-2">
-                        <div className="text-xs font-medium text-muted-foreground px-2 uppercase tracking-wider">Sugerencias</div>
+                        <div className="text-xs font-medium text-muted-foreground px-2 uppercase tracking-wider">{t("suggestions")}</div>
                         <button
                             className="w-full flex items-center px-4 py-3 hover:bg-muted/50 rounded-xl transition-colors text-left group"
                             onClick={() => {
-                                const suggestion = "Piso con terraza en Madrid";
+                                const suggestion = t("suggestion1");
                                 setQuery(suggestion);
                                 onQueryChange?.(suggestion);
                                 onSearch?.(suggestion);
@@ -220,13 +227,13 @@ export function SearchBar({
                             }}
                         >
                             <Search className="h-4 w-4 text-muted-foreground mr-3 group-hover:text-primary" />
-                            <span>Piso con <b>terraza</b> en Madrid</span>
+                            <span>{t("suggestion1")}</span>
                             <ArrowRight className="h-4 w-4 ml-auto text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
                         </button>
                         <button
                             className="w-full flex items-center px-4 py-3 hover:bg-muted/50 rounded-xl transition-colors text-left group"
                             onClick={() => {
-                                const suggestion = "Ático en Chamberí menos de 500k";
+                                const suggestion = t("suggestion2");
                                 setQuery(suggestion);
                                 onQueryChange?.(suggestion);
                                 onSearch?.(suggestion);
@@ -234,14 +241,14 @@ export function SearchBar({
                             }}
                         >
                             <Search className="h-4 w-4 text-muted-foreground mr-3 group-hover:text-primary" />
-                            <span>Ático en <b>Chamberí</b> &lt; 500k</span>
+                            <span>{t("suggestion2")}</span>
                             <ArrowRight className="h-4 w-4 ml-auto text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
                         </button>
                     </div>
                     <div className="bg-muted/30 px-4 py-3 text-xs text-muted-foreground flex justify-between items-center border-t border-border/50">
-                        <span>Presiona Enter para buscar</span>
+                        <span>{t("pressEnter")}</span>
                         <span className="flex items-center gap-2">
-                            <span className="bg-background border rounded px-1.5 py-0.5 shadow-sm">esc</span> para cerrar
+                            <span className="bg-background border rounded px-1.5 py-0.5 shadow-sm">esc</span> {t("toClose")}
                         </span>
                     </div>
                 </div>

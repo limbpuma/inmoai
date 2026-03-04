@@ -2,7 +2,8 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import Link from "next/link";
+import { Link } from "@/i18n/navigation";
+import { useTranslations } from "next-intl";
 import { signIn } from "next-auth/react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -14,34 +15,35 @@ import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
 import { trpc } from "@/lib/trpc";
 
-const registerSchema = z
-  .object({
-    name: z.string().min(2, "El nombre debe tener al menos 2 caracteres"),
-    email: z.string().email("Email inválido"),
-    password: z
-      .string()
-      .min(8, "La contraseña debe tener al menos 8 caracteres")
-      .regex(/[A-Z]/, "Debe contener al menos una mayúscula")
-      .regex(/[0-9]/, "Debe contener al menos un número"),
-    confirmPassword: z.string(),
-  })
-  .refine((data) => data.password === data.confirmPassword, {
-    message: "Las contraseñas no coinciden",
-    path: ["confirmPassword"],
-  });
-
-type RegisterFormData = z.infer<typeof registerSchema>;
-
-const passwordRequirements = [
-  { regex: /.{8,}/, label: "Al menos 8 caracteres" },
-  { regex: /[A-Z]/, label: "Una letra mayúscula" },
-  { regex: /[0-9]/, label: "Un número" },
-];
-
 export function RegisterForm() {
+  const t = useTranslations("auth");
   const router = useRouter();
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  const registerSchema = z
+    .object({
+      name: z.string().min(2, t("nameMin")),
+      email: z.string().email(t("invalidEmail")),
+      password: z
+        .string()
+        .min(8, t("passwordMin"))
+        .regex(/[A-Z]/, t("passwordUppercase"))
+        .regex(/[0-9]/, t("passwordNumber")),
+      confirmPassword: z.string(),
+    })
+    .refine((data) => data.password === data.confirmPassword, {
+      message: t("passwordsMismatch"),
+      path: ["confirmPassword"],
+    });
+
+  type RegisterFormData = z.infer<typeof registerSchema>;
+
+  const passwordRequirements = [
+    { regex: /.{8,}/, label: t("req8chars") },
+    { regex: /[A-Z]/, label: t("reqUppercase") },
+    { regex: /[0-9]/, label: t("reqNumber") },
+  ];
 
   const registerMutation = trpc.auth.register.useMutation({
     onSuccess: async (_, variables) => {
@@ -91,9 +93,9 @@ export function RegisterForm() {
   return (
     <div className="space-y-6">
       <div className="space-y-2 text-center">
-        <h1 className="text-2xl font-bold">Crear Cuenta</h1>
+        <h1 className="text-2xl font-bold">{t("registerTitle")}</h1>
         <p className="text-muted-foreground">
-          Regístrate para acceder a todas las funcionalidades
+          {t("registerSubtitle")}
         </p>
       </div>
 
@@ -105,13 +107,13 @@ export function RegisterForm() {
 
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
         <div className="space-y-2">
-          <Label htmlFor="name">Nombre</Label>
+          <Label htmlFor="name">{t("name")}</Label>
           <div className="relative">
             <User className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input
               id="name"
               type="text"
-              placeholder="Tu nombre"
+              placeholder={t("namePlaceholder")}
               className={cn("pl-10", errors.name && "border-destructive")}
               disabled={isLoading}
               {...register("name")}
@@ -123,13 +125,13 @@ export function RegisterForm() {
         </div>
 
         <div className="space-y-2">
-          <Label htmlFor="email">Email</Label>
+          <Label htmlFor="email">{t("email")}</Label>
           <div className="relative">
             <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input
               id="email"
               type="email"
-              placeholder="tu@email.com"
+              placeholder={t("emailPlaceholder")}
               className={cn("pl-10", errors.email && "border-destructive")}
               disabled={isLoading}
               {...register("email")}
@@ -141,7 +143,7 @@ export function RegisterForm() {
         </div>
 
         <div className="space-y-2">
-          <Label htmlFor="password">Contraseña</Label>
+          <Label htmlFor="password">{t("password")}</Label>
           <div className="relative">
             <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input
@@ -193,7 +195,7 @@ export function RegisterForm() {
         </div>
 
         <div className="space-y-2">
-          <Label htmlFor="confirmPassword">Confirmar Contraseña</Label>
+          <Label htmlFor="confirmPassword">{t("confirmPassword")}</Label>
           <div className="relative">
             <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input
@@ -216,10 +218,10 @@ export function RegisterForm() {
           {isLoading ? (
             <>
               <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-              Creando cuenta...
+              {t("creatingAccount")}
             </>
           ) : (
-            "Crear Cuenta"
+            t("createAccount")
           )}
         </Button>
       </form>
@@ -230,7 +232,7 @@ export function RegisterForm() {
         </div>
         <div className="relative flex justify-center text-xs uppercase">
           <span className="bg-background px-2 text-muted-foreground">
-            O continúa con
+            {t("orContinueWith")}
           </span>
         </div>
       </div>
@@ -259,24 +261,24 @@ export function RegisterForm() {
             fill="#EA4335"
           />
         </svg>
-        Google
+        {t("google")}
       </Button>
 
       <p className="text-center text-sm text-muted-foreground">
-        ¿Ya tienes una cuenta?{" "}
+        {t("hasAccount")}{" "}
         <Link href="/login" className="text-primary hover:underline">
-          Inicia Sesión
+          {t("loginLink")}
         </Link>
       </p>
 
       <p className="text-center text-xs text-muted-foreground">
-        Al registrarte, aceptas nuestros{" "}
+        {t("acceptTerms")}{" "}
         <Link href="/terms" className="underline hover:text-foreground">
-          Términos de Servicio
+          {t("termsLink")}
         </Link>{" "}
-        y{" "}
+        {t("and")}{" "}
         <Link href="/privacy" className="underline hover:text-foreground">
-          Política de Privacidad
+          {t("privacyLink")}
         </Link>
       </p>
     </div>

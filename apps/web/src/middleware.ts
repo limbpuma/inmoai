@@ -1,19 +1,28 @@
+import createMiddleware from "next-intl/middleware";
+import { routing } from "./i18n/navigation";
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 
-// Routes that require authentication
+const intlMiddleware = createMiddleware(routing);
+
+// Routes that require authentication (without locale prefix)
 const protectedRoutes = ["/dashboard", "/settings", "/favorites"];
-
-// Routes that require admin role
 const adminRoutes = ["/admin"];
-
-// Routes that should redirect to dashboard if already logged in
 const authRoutes = ["/login", "/register"];
 
-export function middleware(request: NextRequest) {
-  const { pathname } = request.nextUrl;
+// Strip locale prefix from pathname for auth checks
+function stripLocale(pathname: string): string {
+  const localePattern = /^\/(es|de|en)(\/|$)/;
+  return pathname.replace(localePattern, "/") || "/";
+}
 
-  // Get session token from cookies
+export function middleware(request: NextRequest) {
+  // Run intl middleware first (locale detection + redirect)
+  const response = intlMiddleware(request);
+
+  // Auth logic using locale-stripped pathname
+  const pathnameWithoutLocale = stripLocale(request.nextUrl.pathname);
+
   const sessionToken =
     request.cookies.get("next-auth.session-token")?.value ||
     request.cookies.get("__Secure-next-auth.session-token")?.value;
@@ -21,43 +30,38 @@ export function middleware(request: NextRequest) {
   const isAuthenticated = !!sessionToken;
 
   // Redirect authenticated users away from auth pages
-  if (isAuthenticated && authRoutes.some((route) => pathname.startsWith(route))) {
+  if (
+    isAuthenticated &&
+    authRoutes.some((route) => pathnameWithoutLocale.startsWith(route))
+  ) {
     return NextResponse.redirect(new URL("/", request.url));
   }
 
   // Protect routes that require authentication
   if (
     !isAuthenticated &&
-    protectedRoutes.some((route) => pathname.startsWith(route))
+    protectedRoutes.some((route) => pathnameWithoutLocale.startsWith(route))
   ) {
     const loginUrl = new URL("/login", request.url);
-    loginUrl.searchParams.set("callbackUrl", pathname);
+    loginUrl.searchParams.set("callbackUrl", request.nextUrl.pathname);
     return NextResponse.redirect(loginUrl);
   }
 
-  // Admin routes protection (basic check - full check done server-side)
+  // Admin routes protection
   if (
     !isAuthenticated &&
-    adminRoutes.some((route) => pathname.startsWith(route))
+    adminRoutes.some((route) => pathnameWithoutLocale.startsWith(route))
   ) {
     const loginUrl = new URL("/login", request.url);
-    loginUrl.searchParams.set("callbackUrl", pathname);
+    loginUrl.searchParams.set("callbackUrl", request.nextUrl.pathname);
     return NextResponse.redirect(loginUrl);
   }
 
-  return NextResponse.next();
+  return response;
 }
 
 export const config = {
   matcher: [
-    /*
-     * Match all request paths except for the ones starting with:
-     * - api (API routes)
-     * - _next/static (static files)
-     * - _next/image (image optimization files)
-     * - favicon.ico (favicon file)
-     * - public folder
-     */
     "/((?!api|_next/static|_next/image|favicon.ico|.*\\..*|public).*)",
   ],
 };

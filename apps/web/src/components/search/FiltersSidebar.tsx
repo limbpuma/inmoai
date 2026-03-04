@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
@@ -24,6 +25,7 @@ interface FiltersSidebarProps {
 }
 
 export function FiltersSidebar({ onClose, initialFilters, onFiltersChange }: FiltersSidebarProps) {
+  const t = useTranslations("filters");
   const [priceRange, setPriceRange] = useState([
     initialFilters?.minPrice ?? 100000,
     initialFilters?.maxPrice ?? 500000,
@@ -98,11 +100,11 @@ export function FiltersSidebar({ onClose, initialFilters, onFiltersChange }: Fil
     <div className="space-y-6">
       {/* Header */}
       <div className="flex items-center justify-between">
-        <h2 className="text-lg font-semibold">Filtros</h2>
+        <h2 className="text-lg font-semibold">{t("title")}</h2>
         <div className="flex items-center gap-2">
           <Button variant="ghost" size="sm" onClick={handleReset}>
             <RotateCcw className="h-4 w-4 mr-1" />
-            Limpiar
+            {t("clear")}
           </Button>
           {onClose && (
             <Button variant="ghost" size="icon" onClick={onClose} className="lg:hidden">
@@ -116,7 +118,7 @@ export function FiltersSidebar({ onClose, initialFilters, onFiltersChange }: Fil
 
       {/* Operation Type */}
       <div className="space-y-3">
-        <Label className="text-sm font-medium">Tipo de operación</Label>
+        <Label className="text-sm font-medium">{t("operationType")}</Label>
         <div className="flex gap-2">
           <Button
             variant={operationType === "sale" ? "secondary" : "outline"}
@@ -124,7 +126,7 @@ export function FiltersSidebar({ onClose, initialFilters, onFiltersChange }: Fil
             className="flex-1"
             onClick={() => setOperationType("sale")}
           >
-            Comprar
+            {t("buy")}
           </Button>
           <Button
             variant={operationType === "rent" ? "secondary" : "outline"}
@@ -132,7 +134,7 @@ export function FiltersSidebar({ onClose, initialFilters, onFiltersChange }: Fil
             className="flex-1"
             onClick={() => setOperationType("rent")}
           >
-            Alquilar
+            {t("rent")}
           </Button>
         </div>
       </div>
@@ -141,19 +143,19 @@ export function FiltersSidebar({ onClose, initialFilters, onFiltersChange }: Fil
 
       {/* Property Type */}
       <div className="space-y-3">
-        <Label className="text-sm font-medium">Tipo de inmueble</Label>
+        <Label className="text-sm font-medium">{t("propertyType")}</Label>
         <Select value={propertyType} onValueChange={setPropertyType}>
           <SelectTrigger>
-            <SelectValue placeholder="Todos los tipos" />
+            <SelectValue placeholder={t("allTypes")} />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="all">Todos los tipos</SelectItem>
-            <SelectItem value="apartment">Piso</SelectItem>
-            <SelectItem value="house">Casa</SelectItem>
-            <SelectItem value="penthouse">Ático</SelectItem>
-            <SelectItem value="duplex">Dúplex</SelectItem>
-            <SelectItem value="studio">Estudio</SelectItem>
-            <SelectItem value="chalet">Chalet</SelectItem>
+            <SelectItem value="all">{t("allTypes")}</SelectItem>
+            <SelectItem value="apartment">{t("apartment")}</SelectItem>
+            <SelectItem value="house">{t("house")}</SelectItem>
+            <SelectItem value="penthouse">{t("penthouse")}</SelectItem>
+            <SelectItem value="duplex">{t("duplex")}</SelectItem>
+            <SelectItem value="studio">{t("studio")}</SelectItem>
+            <SelectItem value="chalet">{t("chalet")}</SelectItem>
           </SelectContent>
         </Select>
       </div>
@@ -163,7 +165,7 @@ export function FiltersSidebar({ onClose, initialFilters, onFiltersChange }: Fil
       {/* Price Range */}
       <div className="space-y-4">
         <div className="flex items-center justify-between">
-          <Label className="text-sm font-medium">Precio</Label>
+          <Label className="text-sm font-medium">{t("price")}</Label>
           <span className="text-sm text-muted-foreground">
             {formatPrice(priceRange[0])} - {formatPrice(priceRange[1])}
           </span>
@@ -183,7 +185,7 @@ export function FiltersSidebar({ onClose, initialFilters, onFiltersChange }: Fil
       {/* Size Range */}
       <div className="space-y-4">
         <div className="flex items-center justify-between">
-          <Label className="text-sm font-medium">Superficie</Label>
+          <Label className="text-sm font-medium">{t("size")}</Label>
           <span className="text-sm text-muted-foreground">
             {sizeRange[0]} - {sizeRange[1]} m²
           </span>
@@ -202,7 +204,7 @@ export function FiltersSidebar({ onClose, initialFilters, onFiltersChange }: Fil
 
       {/* Rooms */}
       <div className="space-y-3">
-        <Label className="text-sm font-medium">Habitaciones</Label>
+        <Label className="text-sm font-medium">{t("bedrooms")}</Label>
         <div className="flex gap-2">
           {[1, 2, 3, 4, 5].map((num) => (
             <Button
@@ -222,7 +224,7 @@ export function FiltersSidebar({ onClose, initialFilters, onFiltersChange }: Fil
 
       {/* Bathrooms */}
       <div className="space-y-3">
-        <Label className="text-sm font-medium">Baños</Label>
+        <Label className="text-sm font-medium">{t("bathrooms")}</Label>
         <div className="flex gap-2">
           {[1, 2, 3, 4].map((num) => (
             <Button
@@ -245,7 +247,7 @@ export function FiltersSidebar({ onClose, initialFilters, onFiltersChange }: Fil
         <div className="flex items-center justify-between">
           <Label className="text-sm font-medium flex items-center gap-2">
             <ShieldCheck className="h-4 w-4 text-green-600" />
-            Verificación mínima
+            {t("minVerification")}
           </Label>
           <Badge variant="secondary">{minScore[0]}%</Badge>
         </div>
@@ -258,7 +260,7 @@ export function FiltersSidebar({ onClose, initialFilters, onFiltersChange }: Fil
           className="w-full"
         />
         <p className="text-xs text-muted-foreground">
-          Solo mostrar propiedades con score de autenticidad mayor a {minScore[0]}%
+          {t("minVerificationDesc", { score: minScore[0] })}
         </p>
       </div>
 
@@ -266,15 +268,15 @@ export function FiltersSidebar({ onClose, initialFilters, onFiltersChange }: Fil
 
       {/* Features */}
       <div className="space-y-3">
-        <Label className="text-sm font-medium">Características</Label>
+        <Label className="text-sm font-medium">{t("featuresLabel")}</Label>
         <div className="space-y-2">
           {[
-            { id: "parking", label: "Parking" },
-            { id: "elevator", label: "Ascensor" },
-            { id: "terrace", label: "Terraza" },
-            { id: "garden", label: "Jardín" },
-            { id: "pool", label: "Piscina" },
-            { id: "ac", label: "Aire acondicionado" },
+            { id: "parking", label: t("parking") },
+            { id: "elevator", label: t("elevator") },
+            { id: "terrace", label: t("terrace") },
+            { id: "garden", label: t("garden") },
+            { id: "pool", label: t("pool") },
+            { id: "ac", label: t("ac") },
           ].map((feature) => (
             <div key={feature.id} className="flex items-center space-x-2">
               <Checkbox id={feature.id} />
@@ -293,12 +295,12 @@ export function FiltersSidebar({ onClose, initialFilters, onFiltersChange }: Fil
 
       {/* Verification Status */}
       <div className="space-y-3">
-        <Label className="text-sm font-medium">Verificaci\u00f3n</Label>
+        <Label className="text-sm font-medium">{t("verification")}</Label>
         <div className="space-y-2">
           {[
-            { id: "verified", label: "Verificado por Catastro" },
-            { id: "pending", label: "Pendiente de verificar" },
-            { id: "all", label: "Todos" },
+            { id: "verified", label: t("verifiedCatastro") },
+            { id: "pending", label: t("pending") },
+            { id: "all", label: t("all") },
           ].map((status) => (
             <div key={status.id} className="flex items-center space-x-2">
               <Checkbox id={status.id} defaultChecked={status.id !== "pending"} />
@@ -316,7 +318,7 @@ export function FiltersSidebar({ onClose, initialFilters, onFiltersChange }: Fil
       {/* Apply Button (Mobile) */}
       {onClose && (
         <Button className="w-full mt-4" onClick={onClose}>
-          Aplicar filtros
+          {t("apply")}
         </Button>
       )}
     </div>

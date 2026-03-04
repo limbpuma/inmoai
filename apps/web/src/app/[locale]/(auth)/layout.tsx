@@ -1,6 +1,7 @@
 "use client";
 
-import Link from "next/link";
+import { Link } from "@/i18n/navigation";
+import { useTranslations } from "next-intl";
 import { Building2 } from "lucide-react";
 
 export default function AuthLayout({
@@ -8,6 +9,8 @@ export default function AuthLayout({
 }: {
   children: React.ReactNode;
 }) {
+  const t = useTranslations("auth");
+
   return (
     <div className="min-h-screen flex flex-col">
       {/* Header */}
@@ -29,8 +32,7 @@ export default function AuthLayout({
       <footer className="border-t py-4">
         <div className="container mx-auto px-4 text-center text-sm text-muted-foreground">
           <p>
-            &copy; {new Date().getFullYear()} InmoAI. Todos los derechos
-            reservados.
+            {t("rightsReserved", { year: new Date().getFullYear() })}
           </p>
         </div>
       </footer>

@@ -67,9 +67,9 @@ export default function ListingPage({ params }: ListingPageProps) {
 
   // Fallback to mock data when API is unavailable (demo mode)
   const mockListing = getMockListingById(id);
-  const listing = apiListing ?? (error || !isLoading ? mockListing : null);
+  const listing = apiListing ?? mockListing;
 
-  if (isLoading && !mockListing) {
+  if (isLoading && !listing) {
     return <ListingPageSkeleton />;
   }
 

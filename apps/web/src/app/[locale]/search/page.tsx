@@ -2,6 +2,7 @@
 
 import { Suspense, useState, useMemo, useEffect } from "react";
 import { useSearchParams } from "next/navigation";
+import { useTranslations } from "next-intl";
 import { Header } from "@/components/layout/Header";
 import { SearchBar } from "@/components/search/SearchBar";
 import { FiltersSidebar } from "@/components/search/FiltersSidebar";
@@ -27,11 +28,12 @@ function SearchPageContent({
   initialQuery: string;
   initialOperationType?: "sale" | "rent";
 }) {
-
+  const t = useTranslations("search");
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
   const [sortBy, setSortBy] = useState("relevance");
   const [filtersOpen, setFiltersOpen] = useState(false);
   const [operationType, setOperationType] = useState<"sale" | "rent">(initialOperationType);
+  const [visibleCount, setVisibleCount] = useState(9);
 
   // Semantic search flow
   const {
@@ -48,7 +50,7 @@ function SearchPageContent({
   // Fallback to recent listings when no search query
   const { data: recentListings, isLoading: isRecentLoading } = useRecentListings(
     parsedFilters?.city ?? "Madrid",
-    20,
+    50,
     operationType
   );
 
@@ -73,15 +75,15 @@ function SearchPageContent({
       title: item.title,
       price: item.price,
       location: [item.neighborhood, item.city].filter(Boolean).join(", "),
-      image: item.imageUrl ||
+      image: item.images?.[0]?.url || item.imageUrl ||
         "https://images.unsplash.com/photo-1560448204-e02f11c3d0e2?w=800&h=600&fit=crop",
       specs: {
         beds: item.bedrooms ?? 0,
         baths: item.bathrooms ?? 0,
-        sqm: item.sizeSqm ?? 0,
+        sqm: item.sizeSqm ?? item.sqMeters ?? 0,
       },
       score: item.authenticityScore ?? 0,
-      source: "InmoAI",
+      source: item.source?.name ?? "InmoAI",
     }));
   }, [apiListings]);
 
@@ -100,14 +102,23 @@ function SearchPageContent({
     }
   }, [listings, sortBy]);
 
+  // Reset pagination when listings or sort change
+  useEffect(() => {
+    setVisibleCount(9);
+  }, [apiListings, sortBy]);
+
   const handleSearch = (searchQuery: string) => {
     search(searchQuery);
   };
 
+  // Paginate sorted listings
+  const visibleListings = sortedListings.slice(0, visibleCount);
+  const hasMore = visibleCount < sortedListings.length;
+
   // Dynamic title based on search
   const pageTitle = isSearchActive
-    ? `Resultados para "${query}"`
-    : `Propiedades en ${parsedFilters?.city ?? "Madrid"}`;
+    ? t("resultsFor", { query })
+    : t("propertiesIn", { city: parsedFilters?.city ?? "Madrid" });
 
   return (
     <div className="min-h-screen bg-background">
@@ -120,7 +131,6 @@ function SearchPageContent({
             variant="minimal"
             onSearch={handleSearch}
             onQueryChange={setQuery}
-            placeholder="Buscar por zona, características..."
             isLoading={isSemanticLoading}
             defaultValue={initialQuery}
           />
@@ -134,7 +144,7 @@ function SearchPageContent({
             <div className="flex items-start gap-3">
               <Sparkles className="h-5 w-5 text-primary mt-0.5 flex-shrink-0" />
               <div>
-                <p className="text-sm font-medium text-primary mb-1">Análisis IA</p>
+                <p className="text-sm font-medium text-primary mb-1">{t("aiAnalysis")}</p>
                 <p className="text-sm text-muted-foreground">{analysis}</p>
               </div>
             </div>
@@ -145,7 +155,7 @@ function SearchPageContent({
         {isParsingQuery && (
           <div className="mb-6 p-3 rounded-lg bg-muted/50 flex items-center gap-2 text-sm text-muted-foreground">
             <Loader2 className="h-4 w-4 animate-spin" />
-            Analizando tu búsqueda...
+            {t("analyzing")}
           </div>
         )}
 
@@ -164,7 +174,7 @@ function SearchPageContent({
               <div>
                 <h1 className="text-2xl font-bold">{pageTitle}</h1>
                 <p className="text-muted-foreground">
-                  {isLoading ? "Buscando..." : `${sortedListings.length} resultados encontrados`}
+                  {isLoading ? t("searching") : `${t("resultsFound", { count: sortedListings.length })}${hasMore ? ` (${t("showing", { count: visibleCount })})` : ""}`}
                 </p>
               </div>
 
@@ -174,7 +184,7 @@ function SearchPageContent({
                   <SheetTrigger asChild>
                     <Button variant="outline" className="lg:hidden">
                       <SlidersHorizontal className="h-4 w-4 mr-2" />
-                      Filtros
+                      {t("sortBy")}
                     </Button>
                   </SheetTrigger>
                   <SheetContent side="left" className="w-80 p-0">
@@ -191,14 +201,14 @@ function SearchPageContent({
                 <Select value={sortBy} onValueChange={setSortBy}>
                   <SelectTrigger className="w-[180px]">
                     <ArrowUpDown className="h-4 w-4 mr-2" />
-                    <SelectValue placeholder="Ordenar por" />
+                    <SelectValue placeholder={t("sortBy")} />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="relevance">Relevancia</SelectItem>
-                    <SelectItem value="price_asc">Precio: menor a mayor</SelectItem>
-                    <SelectItem value="price_desc">Precio: mayor a menor</SelectItem>
-                    <SelectItem value="date">Más recientes</SelectItem>
-                    <SelectItem value="authenticity">Mayor verificación</SelectItem>
+                    <SelectItem value="relevance">{t("sortRelevance")}</SelectItem>
+                    <SelectItem value="price_asc">{t("sortPriceAsc")}</SelectItem>
+                    <SelectItem value="price_desc">{t("sortPriceDesc")}</SelectItem>
+                    <SelectItem value="date">{t("sortDate")}</SelectItem>
+                    <SelectItem value="authenticity">{t("sortAuthenticity")}</SelectItem>
                   </SelectContent>
                 </Select>
 
@@ -239,12 +249,12 @@ function SearchPageContent({
                   </div>
                 ))}
               </div>
-            ) : sortedListings.length === 0 ? (
+            ) : visibleListings.length === 0 ? (
               <div className="text-center py-12">
                 <p className="text-muted-foreground">
                   {isSearchActive
-                    ? "No se encontraron propiedades para tu búsqueda. Intenta con otros términos."
-                    : "No se encontraron propiedades con los filtros seleccionados."}
+                    ? t("noResultsSearch")
+                    : t("noResultsFilter")}
                 </p>
               </div>
             ) : (
@@ -253,18 +263,21 @@ function SearchPageContent({
                   ? "grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-6"
                   : "flex flex-col gap-4"
               }>
-                {sortedListings.map((listing) => (
+                {visibleListings.map((listing) => (
                   <ListingCard key={listing.id} listing={listing} />
                 ))}
               </div>
             )}
 
             {/* Load More */}
-            {sortedListings.length > 0 && (
+            {hasMore && (
               <div className="mt-8 text-center">
-                <Button variant="outline" size="lg" disabled={isLoading}>
-                  {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                  Cargar más resultados
+                <Button
+                  variant="outline"
+                  size="lg"
+                  onClick={() => setVisibleCount((prev) => prev + 9)}
+                >
+                  {t("loadMore", { remaining: sortedListings.length - visibleCount })}
                 </Button>
               </div>
             )}

@@ -1,8 +1,11 @@
 "use client";
 
-import Link from "next/link";
+import { useTranslations } from "next-intl";
+import { Link } from "@/i18n/navigation";
 
 export function Footer() {
+  const t = useTranslations("footer");
+
   return (
     <footer className="border-t py-12 md:py-16 bg-muted/10">
       <div className="container px-4 md:px-6 mx-auto flex flex-col md:flex-row justify-between items-center gap-8">
@@ -19,29 +22,29 @@ export function Footer() {
             href="/impressum"
             className="hover:text-foreground transition-colors"
           >
-            Impressum
+            {t("impressum")}
           </Link>
           <Link
             href="/terms"
             className="hover:text-foreground transition-colors"
           >
-            Terminos
+            {t("terms")}
           </Link>
           <Link
             href="/privacy"
             className="hover:text-foreground transition-colors"
           >
-            Privacidad
+            {t("privacy")}
           </Link>
           <Link
             href="/cookies"
             className="hover:text-foreground transition-colors"
           >
-            Cookies
+            {t("cookies")}
           </Link>
         </nav>
         <p className="text-sm text-muted-foreground text-center md:text-right">
-          &copy; 2026 Limber Martinez. Proyecto de portfolio.
+          {t("copyright")}
         </p>
       </div>
     </footer>
