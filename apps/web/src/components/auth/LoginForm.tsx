@@ -199,7 +199,7 @@ export function LoginForm() {
           className="w-full border-primary/40 hover:bg-primary/10"
           onClick={() => {
             setValue("email", "demo@inmoai.es");
-            setValue("password", "Demo2026!");
+            setValue("password", "DemoPass2026");
             handleSubmit(onSubmit)();
           }}
           disabled={isLoading}
